@@ -170,7 +170,8 @@
       root.addEventListener("blur", () => {
         if (!inspectorPinned) hideTargetInspector();
       });
-      root.addEventListener("click", () => {
+      root.addEventListener("click", (event) => {
+        event.stopPropagation();
         if (inspectorPinned && inspectedTargetIndex === index) {
           hideTargetInspector();
           return;
@@ -834,6 +835,7 @@
 
   function showTargetInspector(index) {
     inspectedTargetIndex = index;
+    targetInspector.classList.toggle("is-pinned", inspectorPinned);
     targetInspector.hidden = false;
     refreshTargetInspector();
   }
@@ -853,10 +855,15 @@
   function hideTargetInspector() {
     inspectedTargetIndex = null;
     inspectorPinned = false;
+    targetInspector.classList.remove("is-pinned");
     targetInspector.hidden = true;
   }
 
   resetButton.addEventListener("click", resetPieces);
+  targetInspector.addEventListener("click", hideTargetInspector);
+  document.addEventListener("click", () => {
+    if (!targetInspector.hidden) hideTargetInspector();
+  });
   svg.addEventListener("pointermove", (event) => {
     if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     const pointer = svgPoint(event);

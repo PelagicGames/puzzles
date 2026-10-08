@@ -527,6 +527,11 @@ h1 {
   transform: translate(-50%, -50%);
 }
 
+.target-inspector.is-pinned {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
 .target-inspector[hidden] {
   display: none;
 }
