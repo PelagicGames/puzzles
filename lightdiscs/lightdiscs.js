@@ -87,6 +87,7 @@
   let inspectedTargetIndex = null;
   let inspectorPinned = false;
   let activeDrag = null;
+  let activePan = null;
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
   addFixedDiscs();
@@ -337,6 +338,20 @@
     svg.setPointerCapture(event.pointerId);
   }
 
+  function beginBoardPan(event) {
+    if (event.pointerType !== "touch"
+      || event.target.closest(".piece-shape, .rotate-button, .target-pattern")) return;
+    activePan = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      scrollLeft: boardScroll.scrollLeft,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY
+    };
+    svg.setPointerCapture(event.pointerId);
+  }
+
   function svgPoint(event) {
     const point = new DOMPoint(event.clientX, event.clientY);
     return point.matrixTransform(svg.getScreenCTM().inverse());
@@ -393,6 +408,11 @@
     updateSuccess();
   }
 
+  function finishBoardPan(event) {
+    if (!activePan || event.pointerId !== activePan.pointerId) return;
+    activePan = null;
+  }
+
   function updatePiece(piece) {
     const transform = `translate(${piece.position.x} ${piece.position.y}) rotate(${piece.angle})`;
     piece.shape.setAttribute("transform", transform);
@@ -421,7 +441,11 @@
     if (activeDrag && svg.hasPointerCapture(activeDrag.pointerId)) {
       svg.releasePointerCapture(activeDrag.pointerId);
     }
+    if (activePan && svg.hasPointerCapture(activePan.pointerId)) {
+      svg.releasePointerCapture(activePan.pointerId);
+    }
     activeDrag = null;
+    activePan = null;
     hideTargetInspector();
     pieces.forEach((piece, pieceIndex) => {
       piece.position = { ...piece.home };
@@ -845,18 +869,30 @@
     hideTargetInspector();
   }, true);
   svg.addEventListener("pointermove", (event) => {
-    if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
-    const pointer = svgPoint(event);
-    activeDrag.piece.position = {
-      x: pointer.x - activeDrag.offset.x,
-      y: pointer.y - activeDrag.offset.y
-    };
-    constrainPiecePosition(activeDrag.piece);
-    updatePiece(activeDrag.piece);
-    updateSuccess();
+    if (activeDrag && event.pointerId === activeDrag.pointerId) {
+      const pointer = svgPoint(event);
+      activeDrag.piece.position = {
+        x: pointer.x - activeDrag.offset.x,
+        y: pointer.y - activeDrag.offset.y
+      };
+      constrainPiecePosition(activeDrag.piece);
+      updatePiece(activeDrag.piece);
+      updateSuccess();
+      return;
+    }
+    if (activePan && event.pointerId === activePan.pointerId) {
+      boardScroll.scrollLeft = activePan.scrollLeft - (event.clientX - activePan.clientX);
+      window.scrollTo(
+        activePan.scrollX,
+        activePan.scrollY - (event.clientY - activePan.clientY)
+      );
+    }
   });
+  svg.addEventListener("pointerdown", beginBoardPan);
   svg.addEventListener("pointerup", finishDrag);
+  svg.addEventListener("pointerup", finishBoardPan);
   svg.addEventListener("pointercancel", finishDrag);
+  svg.addEventListener("pointercancel", finishBoardPan);
   window.addEventListener("pageshow", updateBoardZoom);
   window.addEventListener("resize", updateBoardZoom);
   resetPieces();
