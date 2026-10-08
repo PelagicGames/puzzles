@@ -379,9 +379,7 @@ h1 {
   aspect-ratio: 20 / 19;
 }
 
-.interaction-board,
-.interaction-overlay,
-.filter-render {
+.interaction-board {
   position: absolute;
   inset: 0;
   display: block;
@@ -393,17 +391,6 @@ h1 {
   touch-action: pan-x pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.interaction-overlay {
-  z-index: 2;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.filter-render {
-  z-index: 1;
-  pointer-events: none;
 }
 
 .interaction-stage {
@@ -462,6 +449,7 @@ h1 {
 }
 
 .fixed-discs-layer,
+.filter-render,
 .piece-disc-outlines {
   pointer-events: none;
 }

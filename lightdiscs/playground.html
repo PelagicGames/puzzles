@@ -37,9 +37,7 @@
             <g class="fixed-discs-layer">
               <g class="fixed-discs" transform="translate(500 440)"></g>
             </g>
-          </svg>
-          <canvas class="filter-render" id="filter-canvas" width="1000" height="950" aria-hidden="true"></canvas>
-          <svg class="interaction-overlay" viewBox="0 0 1000 950">
+            <g class="filter-render" id="filter-render"></g>
             <g class="piece-disc-outlines" id="piece-discs"></g>
             <g class="target-display" transform="translate(500 440)" aria-label="Target patterns">
               <g id="target-discs"></g>
@@ -66,6 +64,7 @@
       </aside>
     </div>
   </main>
+  <script src="./filter-composition.js"></script>
   <script src="./lightdiscs.js"></script>
 </body>
 </html>

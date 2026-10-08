@@ -90,9 +90,10 @@ Moving a snapped triangle away immediately hides the success state.
 - `index.html` - main menu
 - `tutorial.html` and `tutorial.js` - rules and visual references
 - `playground.html` and `lightdiscs.js` - interactive generated game
+- `filter-composition.js` - shared mathematical colour renderer used by the tutorial and playground
 - `styles.css` - shared presentation
 - `assets/light-disc.svg` - game mark used on the main menu
 
 The project has no build step. Serve this directory with any static HTTP server and open `index.html`.
 
-The playground uses layered SVG and HTML canvas surfaces rather than embedding HTML in SVG, for consistent rendering across Chromium, Firefox, and WebKit-based browsers.
+The playground uses a single SVG coordinate system and vector colour composition for consistent alignment across Chromium, Firefox, and WebKit-based browsers.

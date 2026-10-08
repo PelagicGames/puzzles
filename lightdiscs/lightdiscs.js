@@ -4,6 +4,7 @@
   const successIndicator = document.querySelector("#success-indicator");
   const piecesLayer = document.querySelector("#pieces");
   const pieceDiscsLayer = document.querySelector("#piece-discs");
+  const filterRender = document.querySelector("#filter-render");
   const targetDiscsLayer = document.querySelector("#target-discs");
   const progressIndicator = document.querySelector("#progress-indicator");
   const targetInspector = document.querySelector("#target-inspector");
@@ -12,11 +13,10 @@
   const targetPreview = document.querySelector("#target-preview");
   const currentPreview = document.querySelector("#current-preview");
   const boardScroll = document.querySelector(".board-scroll");
-  const filterCanvas = document.querySelector("#filter-canvas");
-  const filterContext = filterCanvas.getContext("2d");
-  const filterImageData = filterContext.createImageData(filterCanvas.width, filterCanvas.height);
-  const filterMasks = new Uint8Array(filterCanvas.width * filterCanvas.height);
   const namespace = "http://www.w3.org/2000/svg";
+  const { filterCompositionMarkup } = window.LightDiscRendering;
+  const boardWidth = 1000;
+  const boardHeight = 950;
   const cornerRadius = 105;
   const corners = [
     { x: 0, y: -cornerRadius },
@@ -402,11 +402,11 @@
     const minY = Math.min(...rotatedCorners.map((corner) => corner.y)) - discRadius;
     const maxY = Math.max(...rotatedCorners.map((corner) => corner.y)) + discRadius;
     piece.position.x = Math.min(
-      filterCanvas.width - maxX,
+      boardWidth - maxX,
       Math.max(-minX, piece.position.x)
     );
     piece.position.y = Math.min(
-      filterCanvas.height - maxY,
+      boardHeight - maxY,
       Math.max(-minY, piece.position.y)
     );
   }
@@ -654,44 +654,11 @@
   }
 
   function visualDataUrl(layers) {
-    const layerMarkup = layers.map((layer) => {
-      const transform = `translate(${layer.x} ${layer.y})`;
-      return `<g transform="${transform}" style="mix-blend-mode:multiply">`
-        + `<circle r="${discRadius}" fill="${layer.filter.background.value}"/>`
-        + `<g transform="rotate(${layer.angle})" fill="${layer.filter.foreground.value}">`
-        + shapeMarkup(layer.filter.shape.value)
-        + "</g></g>";
-    }).join("");
     const markup = `<svg xmlns="${namespace}" viewBox="${-discRadius} ${-discRadius} ${discRadius * 2} ${discRadius * 2}" shape-rendering="crispEdges">`
-      + `<defs><clipPath id="disc"><circle r="${discRadius}"/></clipPath>`
-      + '<filter id="binary-colours" color-interpolation-filters="sRGB"><feComponentTransfer>'
-      + '<feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/>'
-      + '<feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer></filter></defs>'
-      + `<g clip-path="url(#disc)"><g filter="url(#binary-colours)" style="isolation:isolate">`
-      + `<circle r="${discRadius}" fill="#fff"/>${layerMarkup}</g></g>`
+      + `<defs><clipPath id="disc"><circle r="${discRadius}"/></clipPath></defs>`
+      + `<g clip-path="url(#disc)">${filterCompositionMarkup(layers, "preview")}</g>`
       + "</svg>";
     return `data:image/svg+xml,${encodeURIComponent(markup)}`;
-  }
-
-  function shapeMarkup(shape) {
-    if (shape === "none") return "";
-    if (shape === "square") {
-      return `<rect x="${-squareHalfSize}" y="${-squareHalfSize}" width="${squareHalfSize * 2}" height="${squareHalfSize * 2}"/>`;
-    }
-    if (shape === "square-star") {
-      return [0, 60, 120].map(
-        (angle) => `<rect x="${-squareHalfSize}" y="${-squareHalfSize}" width="${squareHalfSize * 2}" height="${squareHalfSize * 2}" transform="rotate(${angle})"/>`
-      ).join("");
-    }
-    if (shape === "triangle" || shape === "triangle-star") {
-      const upper = `0,${-triangleRadius} ${-triangleHalfWidth},${triangleBaseY} ${triangleHalfWidth},${triangleBaseY}`;
-      const lower = `0,${triangleRadius} ${-triangleHalfWidth},${-triangleBaseY} ${triangleHalfWidth},${-triangleBaseY}`;
-      return `<polygon points="${upper}"/>`
-        + (shape === "triangle-star" ? `<polygon points="${lower}"/>` : "");
-    }
-    if (shape === "large-disc") return `<circle r="${largeShapeRadius}"/>`;
-    if (shape === "small-disc") return `<circle r="${smallShapeRadius}"/>`;
-    return `<path d="M ${largeShapeRadius} 0 A ${largeShapeRadius} ${largeShapeRadius} 0 1 0 ${-largeShapeRadius} 0 A ${largeShapeRadius} ${largeShapeRadius} 0 1 0 ${largeShapeRadius} 0 M ${smallShapeRadius} 0 A ${smallShapeRadius} ${smallShapeRadius} 0 1 1 ${-smallShapeRadius} 0 A ${smallShapeRadius} ${smallShapeRadius} 0 1 1 ${smallShapeRadius} 0" fill-rule="evenodd"/>`;
   }
 
   function formationsMatch(left, right) {
@@ -768,46 +735,20 @@
   }
 
   function renderFilterLayer(poses) {
-    filterMasks.fill(255);
-    filterImageData.data.fill(0);
-    const touchedPixels = [];
+    const layers = [];
     poses.forEach((pose) => {
       const piece = pose.piece || pose;
       corners.forEach((corner, discIndex) => {
         const centre = transformedCorner(pose, corner);
-        const minX = Math.max(0, Math.floor(centre.x - discRadius));
-        const maxX = Math.min(filterCanvas.width - 1, Math.ceil(centre.x + discRadius));
-        const minY = Math.max(0, Math.floor(centre.y - discRadius));
-        const maxY = Math.min(filterCanvas.height - 1, Math.ceil(centre.y + discRadius));
-        for (let y = minY; y <= maxY; y += 1) {
-          for (let x = minX; x <= maxX; x += 1) {
-            const localX = x + 0.5 - centre.x;
-            const localY = y + 0.5 - centre.y;
-            if (localX * localX + localY * localY > discRadius * discRadius) continue;
-            const index = y * filterCanvas.width + x;
-            if (filterMasks[index] === 255) {
-              filterMasks[index] = 7;
-              touchedPixels.push(index);
-            }
-            filterMasks[index] &= filterMaskAt(
-              piece.discFilters[discIndex],
-              localX,
-              localY,
-              pose.angle
-            );
-          }
-        }
+        layers.push({
+          filter: piece.discFilters[discIndex],
+          angle: pose.angle,
+          x: centre.x,
+          y: centre.y
+        });
       });
     });
-    touchedPixels.forEach((index) => {
-      const mask = filterMasks[index];
-      const offset = index * 4;
-      filterImageData.data[offset] = mask & 4 ? 255 : 0;
-      filterImageData.data[offset + 1] = mask & 2 ? 255 : 0;
-      filterImageData.data[offset + 2] = mask & 1 ? 255 : 0;
-      filterImageData.data[offset + 3] = 255;
-    });
-    filterContext.putImageData(filterImageData, 0, 0);
+    filterRender.innerHTML = filterCompositionMarkup(layers, "board");
   }
 
   function updateSuccess() {

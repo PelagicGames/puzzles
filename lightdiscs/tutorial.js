@@ -1,5 +1,6 @@
 (() => {
   const namespace = "http://www.w3.org/2000/svg";
+  const { filterCompositionMarkup } = window.LightDiscRendering;
   const colours = [
     { name: "white", value: "#ffffff", mask: 7 },
     { name: "black", value: "#000000", mask: 0 },
@@ -49,23 +50,21 @@
       role: "img",
       "aria-label": `${left.name} and ${right.name} combine to ${result.name}`
     });
-    const clipId = `overlap-${left.mask}-${right.mask}-${index}`;
-    const definitions = createSvgElement("defs");
-    const clip = createSvgElement("clipPath", { id: clipId });
-    clip.append(createSvgElement("circle", { cx: 68, cy: 34, r: 28 }));
-    definitions.append(clip);
-    svg.append(
-      definitions,
-      createSvgElement("circle", { class: "demo-disc", cx: 44, cy: 34, r: 28, fill: left.value }),
-      createSvgElement("circle", { class: "demo-disc", cx: 68, cy: 34, r: 28, fill: right.value }),
-      createSvgElement("circle", {
-        cx: 44,
-        cy: 34,
-        r: 28,
-        fill: result.value,
-        "clip-path": `url(#${clipId})`
-      })
-    );
+    const noShape = { name: "no shape", value: "none" };
+    svg.innerHTML = filterCompositionMarkup([
+      {
+        filter: { background: left, foreground: left, shape: noShape },
+        angle: 0,
+        x: 44,
+        y: 34
+      },
+      {
+        filter: { background: right, foreground: right, shape: noShape },
+        angle: 0,
+        x: 68,
+        y: 34
+      }
+    ], `tutorial-${left.mask}-${right.mask}-${index}`, 28);
     const equation = document.createElement("p");
     equation.className = "reference-equation";
     equation.textContent = `${left.name} + ${right.name} = ${result.name}`;
