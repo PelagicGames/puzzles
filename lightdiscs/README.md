@@ -15,6 +15,7 @@ The board contains a fixed black triangle with three white corner discs. White r
 Three coloured triangles surround the fixed triangle:
 
 - Drag a triangle by its body.
+- Drag empty board space to scroll the page or the horizontally scrollable board on smaller screens.
 - Triangles remain within the rendered board, including while rotated.
 - Drop it while one or more of its corner discs overlap fixed corner discs to snap them together.
 - A drop with no overlapping corner returns the triangle to its starting position.
@@ -93,3 +94,5 @@ Moving a snapped triangle away immediately hides the success state.
 - `assets/light-disc.svg` - game mark used on the main menu
 
 The project has no build step. Serve this directory with any static HTTP server and open `index.html`.
+
+The playground uses layered SVG and HTML canvas surfaces rather than embedding HTML in SVG, for consistent rendering across Chromium, Firefox, and WebKit-based browsers.

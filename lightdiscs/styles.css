@@ -365,13 +365,45 @@ h1 {
   display: none;
 }
 
-.interaction-board {
+.board-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.board-surface {
+  position: relative;
+  width: max(100%, 50rem);
+  aspect-ratio: 20 / 19;
+}
+
+.interaction-board,
+.interaction-overlay,
+.filter-render {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  max-height: 72vh;
-  overflow: visible;
-  touch-action: none;
+  height: 100%;
+}
+
+.interaction-board {
+  touch-action: pan-x pan-y pinch-zoom;
   user-select: none;
+  -webkit-user-select: none;
+}
+
+.interaction-overlay {
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.filter-render {
+  z-index: 1;
+  pointer-events: none;
 }
 
 .interaction-stage {
@@ -430,15 +462,8 @@ h1 {
 }
 
 .fixed-discs-layer,
-.filter-render,
 .piece-disc-outlines {
   pointer-events: none;
-}
-
-.filter-render canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 .piece-disc-outlines .piece-disc {
@@ -451,6 +476,7 @@ h1 {
 
 .piece-shape {
   cursor: grab;
+  touch-action: none;
 }
 
 .piece-shape:active {
@@ -485,6 +511,8 @@ h1 {
 .target-pattern {
   cursor: zoom-in;
   outline: none;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
 .target-hit-area {
@@ -600,6 +628,7 @@ h1 {
 .rotate-button {
   cursor: pointer;
   outline: none;
+  touch-action: manipulation;
 }
 
 .rotate-button circle {
@@ -660,10 +689,6 @@ h1 {
     flex-wrap: wrap;
     align-items: center;
     margin-top: 16px;
-  }
-
-  .interaction-board {
-    max-height: none;
   }
 
   .interaction-stage {

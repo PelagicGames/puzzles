@@ -11,6 +11,7 @@
   const targetInspectorStatus = document.querySelector("#target-inspector-status");
   const targetPreview = document.querySelector("#target-preview");
   const currentPreview = document.querySelector("#current-preview");
+  const boardScroll = document.querySelector(".board-scroll");
   const filterCanvas = document.querySelector("#filter-canvas");
   const filterContext = filterCanvas.getContext("2d");
   const filterImageData = filterContext.createImageData(filterCanvas.width, filterCanvas.height);
@@ -429,6 +430,11 @@
     });
     randomizeTargets();
     updateSuccess();
+    requestAnimationFrame(centerBoard);
+  }
+
+  function centerBoard() {
+    boardScroll.scrollLeft = (boardScroll.scrollWidth - boardScroll.clientWidth) / 2;
   }
 
   function randomFilter() {
@@ -880,5 +886,6 @@
   });
   svg.addEventListener("pointerup", finishDrag);
   svg.addEventListener("pointercancel", finishDrag);
+  window.addEventListener("pageshow", centerBoard);
   resetPieces();
 })();

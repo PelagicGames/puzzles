@@ -16,7 +16,7 @@
         <h1>Playground</h1>
       </div>
       <div class="page-guidance">
-        <p class="page-help">Overlap discs to match the colour and pattern targets. Use the curved arrows to rotate a free triangle by 60&deg;.</p>
+        <p class="page-help">Overlap discs to match the colour and pattern targets. Drag empty board space to scroll, or use the curved arrows to rotate a free triangle by 60&deg;.</p>
         <p class="status-message" id="success-indicator" role="status" aria-live="polite" hidden>Success: targets matched</p>
         <button class="action-button" id="reset-button" type="button">Reset</button>
       </div>
@@ -27,22 +27,26 @@
         <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
         <p class="match-key"><span class="match-dot is-matched"></span> Matched <span class="match-dot is-unmatched"></span> Not matched</p>
       </div>
-      <svg class="interaction-board" viewBox="0 0 1000 950" role="application" aria-label="Triangle matching playground">
-        <g aria-label="Fixed black triangle" transform="translate(500 440)">
-          <path class="fixed-triangle triangle-path"></path>
-        </g>
-        <g id="pieces"></g>
-        <g class="fixed-discs-layer">
-          <g class="fixed-discs" transform="translate(500 440)"></g>
-        </g>
-        <foreignObject class="filter-render" x="0" y="0" width="1000" height="950">
-          <canvas id="filter-canvas" xmlns="http://www.w3.org/1999/xhtml" width="1000" height="950"></canvas>
-        </foreignObject>
-        <g class="piece-disc-outlines" id="piece-discs"></g>
-        <g class="target-display" transform="translate(500 440)" aria-label="Target patterns">
-          <g id="target-discs"></g>
-        </g>
-      </svg>
+      <div class="board-scroll">
+        <div class="board-surface">
+          <svg class="interaction-board" viewBox="0 0 1000 950" role="application" aria-label="Triangle matching playground">
+            <g aria-label="Fixed black triangle" transform="translate(500 440)">
+              <path class="fixed-triangle triangle-path"></path>
+            </g>
+            <g id="pieces"></g>
+            <g class="fixed-discs-layer">
+              <g class="fixed-discs" transform="translate(500 440)"></g>
+            </g>
+          </svg>
+          <canvas class="filter-render" id="filter-canvas" width="1000" height="950" aria-hidden="true"></canvas>
+          <svg class="interaction-overlay" viewBox="0 0 1000 950">
+            <g class="piece-disc-outlines" id="piece-discs"></g>
+            <g class="target-display" transform="translate(500 440)" aria-label="Target patterns">
+              <g id="target-discs"></g>
+            </g>
+          </svg>
+        </div>
+      </div>
       <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
         <div class="target-inspector-header">
           <strong id="target-inspector-title">Target detail</strong>
