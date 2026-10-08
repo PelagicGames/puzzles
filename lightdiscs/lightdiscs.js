@@ -780,7 +780,7 @@
   }
 
   function triangleKey(angle) {
-    return `triangle:${normalizeAngle(angle, 360)}`;
+    return `triangle:${normalizeAngle(angle, 120)}`;
   }
 
   function normalizeAngle(angle, period) {

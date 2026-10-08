@@ -3,6 +3,18 @@
     {
       title: "Puzzle 1",
       code: "RnrnrnrGngngngBnbnbnbTnrngnb"
+    },
+    {
+      title: "Puzzle 2",
+      code: "RnmncnmGnynynmBncncnyTnrnbng"
+    },
+    {
+      title: "Puzzle 3",
+      code: "RncnmnwGnynynmBncncnyTnrnbng"
+    },
+    {
+      title: "Puzzle 4",
+      code: "Rtwrt'rwtwrGtwgt'gwtkgBtwbt'bwxkbTtwrt'wkxkb"
     }
   ];
   const requestedLevel = Number(new URLSearchParams(window.location.search).get("level") || 1);

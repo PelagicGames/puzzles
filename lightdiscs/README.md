@@ -121,9 +121,15 @@ Shapes:
 
 Rotation marks follow the shape indicator and represent 60-degree steps. Squares support `s`, `s'`, and `s''`; triangles support `t` and `t'`. Other shapes cannot have rotation marks. For example, `s'wr` is a once-rotated red square on white.
 
-The first authored level is:
+The authored levels are:
 
 `RnrnrnrGngngngBnbnbnbTnrngnb`
+
+`RnmncnmGnynynmBncncnyTnrnbng`
+
+`RncnmnwGnynynmBncncnyTnrnbng`
+
+`Rtwrt'rwtwrGtwgt'gwtkgBtwbt'bwxkbTtwrt'wkxkb`
 
 ## Project files
 
