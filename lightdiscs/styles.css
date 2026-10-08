@@ -145,6 +145,11 @@ h1 {
   color: var(--light);
 }
 
+.menu-back-link {
+  display: inline-block;
+  margin-bottom: 32px;
+}
+
 .placeholder-content {
   margin: auto 0;
   padding-block: 56px;
