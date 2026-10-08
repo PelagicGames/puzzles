@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <title>Tutorial | Light Discs</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="page-shell content-page">
+    <a class="back-link" href="./index.html" aria-label="Back to main menu">&#8592; Menu</a>
+    <header class="page-header">
+      <div class="page-title">
+        <p class="eyebrow">Light Discs</p>
+        <h1>Tutorial</h1>
+      </div>
+      <p class="page-help">Learn how filters, patterns, rotation, and snapping combine to form each target.</p>
+    </header>
+
+    <div class="content-stack">
+      <section class="reference-section" aria-labelledby="mechanics-heading">
+        <p class="section-number">01 / How to play</p>
+        <h2 id="mechanics-heading">Build the target filters</h2>
+        <div class="instruction-grid">
+          <article class="instruction-card">
+            <span class="instruction-step">1</span>
+            <h3>Rotate</h3>
+            <p>Use the curved arrows to rotate a free triangle clockwise or anticlockwise by 60 degrees. Patterns rotate with their triangle.</p>
+          </article>
+          <article class="instruction-card">
+            <span class="instruction-step">2</span>
+            <h3>Drag and snap</h3>
+            <p>Drag a triangle within the board so that one or more of its corner discs overlap white fixed discs. Drop it to snap coincident circles together.</p>
+          </article>
+          <article class="instruction-card">
+            <span class="instruction-step">3</span>
+            <h3>Combine filters</h3>
+            <p>Only RGB light channels present in every overlapping filter remain. White passes all light; black blocks all light.</p>
+          </article>
+          <article class="instruction-card">
+            <span class="instruction-step">4</span>
+            <h3>Match the targets</h3>
+            <p>Reproduce the three small target discs, including colours, shapes, and orientation. Visually equivalent filter combinations also match.</p>
+          </article>
+        </div>
+        <div class="success-callout">
+          <strong>Success state</strong>
+          <p>Success appears when each movable triangle has at least one corner circle snapped to a fixed circle and all three colour-and-shape formations match their targets. Random targets use at least five snapped circles, but the player's solution does not need to. Moving a triangle away hides success again.</p>
+        </div>
+      </section>
+
+      <section class="reference-section" aria-labelledby="colours-heading">
+        <p class="section-number">02 / Colour reference</p>
+        <h2 id="colours-heading">Every filter interaction</h2>
+        <p class="section-copy">The lens-shaped overlap shows the resulting common RGB channels. The order of the two filters does not matter.</p>
+        <div class="reference-grid colour-reference-grid" id="colour-reference"></div>
+      </section>
+
+      <section class="reference-section" aria-labelledby="shapes-heading">
+        <p class="section-number">03 / Pattern reference</p>
+        <h2 id="shapes-heading">Every possible shape</h2>
+        <p class="section-copy">A shape may use a different filter colour from its surrounding disc. Squares and triangles fit inside the large disc; the small disc fits inside both.</p>
+        <div class="reference-grid shape-reference-grid" id="shape-reference"></div>
+      </section>
+    </div>
+  </main>
+  <script src="./tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+This is a generic repository for puzzle game prototypes.

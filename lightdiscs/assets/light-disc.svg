@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 184 184" role="img" aria-label="A rounded triangle with three patterned light-filter discs">
+  <defs>
+    <clipPath id="top-disc">
+      <circle cx="92" cy="38" r="22"/>
+    </clipPath>
+    <clipPath id="bottom-left-disc">
+      <circle cx="40" cy="128" r="22"/>
+    </clipPath>
+    <clipPath id="bottom-right-disc">
+      <circle cx="144" cy="128" r="22"/>
+    </clipPath>
+  </defs>
+
+  <rect width="184" height="184" rx="36" fill="#18211b"/>
+  <path d="M113.65 25.49
+           A25 25 0 0 0 70.35 25.49
+           L18.35 115.49
+           A25 25 0 0 0 40 153
+           L144 153
+           A25 25 0 0 0 165.65 115.49 Z"
+        fill="#050706" stroke="#d8ff68" stroke-width="3"/>
+
+  <circle cx="92" cy="38" r="22" fill="#00ffff"/>
+  <rect x="78" y="24" width="28" height="28" rx="2" fill="#ff00ff"
+        transform="rotate(30 92 38)" clip-path="url(#top-disc)"/>
+
+  <circle cx="40" cy="128" r="22" fill="#ffff00"/>
+  <circle cx="40" cy="128" r="10" fill="#0000ff" clip-path="url(#bottom-left-disc)"/>
+
+  <circle cx="144" cy="128" r="22" fill="#ff00ff"/>
+  <path d="M144 109 L160 138 H128 Z" fill="#00ff00"
+        clip-path="url(#bottom-right-disc)"/>
+
+  <g fill="none" stroke="#f4f1e8" stroke-opacity=".72" stroke-width="2">
+    <circle cx="92" cy="38" r="22"/>
+    <circle cx="40" cy="128" r="22"/>
+    <circle cx="144" cy="128" r="22"/>
+  </g>
+
+  <circle cx="83" cy="88" r="15" fill="#00ffff"/>
+  <circle cx="101" cy="88" r="15" fill="#ffff00"/>
+  <path d="M92 75 A15 15 0 0 1 92 101 A15 15 0 0 1 92 75 Z" fill="#00ff00"/>
+</svg>
