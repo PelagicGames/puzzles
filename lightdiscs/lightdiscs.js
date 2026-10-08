@@ -861,9 +861,12 @@
 
   resetButton.addEventListener("click", resetPieces);
   targetInspector.addEventListener("click", hideTargetInspector);
-  document.addEventListener("click", () => {
-    if (!targetInspector.hidden) hideTargetInspector();
-  });
+  document.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (targetInspector.hidden
+      || (target instanceof Element && target.closest(".target-pattern"))) return;
+    hideTargetInspector();
+  }, true);
   svg.addEventListener("pointermove", (event) => {
     if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     const pointer = svgPoint(event);
