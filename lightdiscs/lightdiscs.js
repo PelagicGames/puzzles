@@ -13,8 +13,14 @@
   const targetPreview = document.querySelector("#target-preview");
   const currentPreview = document.querySelector("#current-preview");
   const boardScroll = document.querySelector(".board-scroll");
+  const boardSurface = document.querySelector(".board-surface");
   const namespace = "http://www.w3.org/2000/svg";
   const { filterCompositionMarkup } = window.LightDiscRendering;
+  const { parsePuzzleCode } = window.LightDiscPuzzleCode;
+  const puzzleDefinition = document.body.dataset.puzzleCode
+    ? parsePuzzleCode(document.body.dataset.puzzleCode)
+    : null;
+  const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
   const boardHeight = 950;
   const cornerRadius = 105;
@@ -417,18 +423,21 @@
     }
     activeDrag = null;
     hideTargetInspector();
-    pieces.forEach((piece) => {
+    pieces.forEach((piece, pieceIndex) => {
       piece.position = { ...piece.home };
       piece.angle = 0;
       piece.snapped = false;
-      piece.discFilters = piece.discElements.map((disc) => {
-        const filter = randomFilter();
+      piece.discFilters = piece.discElements.map((disc, discIndex) => {
+        const filter = puzzleDefinition
+          ? puzzleDefinition.pieces[pieceIndex][discIndex]
+          : randomFilter();
         renderPatternDisc(disc, filter);
         return filter;
       });
       updatePiece(piece);
     });
-    randomizeTargets();
+    if (puzzleDefinition) setEncodedTargets(puzzleDefinition.targets);
+    else randomizeTargets();
     updateSuccess();
     requestAnimationFrame(centerBoard);
   }
@@ -437,12 +446,19 @@
     boardScroll.scrollLeft = (boardScroll.scrollWidth - boardScroll.clientWidth) / 2;
   }
 
+  function updateBoardZoom() {
+    const pixelRatio = window.devicePixelRatio || 1;
+    const pageZoom = Math.max(1, pixelRatio / initialPixelRatio);
+    boardSurface.style.setProperty("--page-zoom", pageZoom);
+    requestAnimationFrame(centerBoard);
+  }
+
   function randomFilter() {
     const background = randomItem(filterColors);
     const shape = randomItem(shapeTypes);
     let foreground = randomItem(filterColors);
     while (foreground.mask === background.mask) foreground = randomItem(filterColors);
-    return { background, shape, foreground };
+    return { background, shape, foreground, rotation: 0 };
   }
 
   function randomItem(items) {
@@ -453,6 +469,7 @@
     disc.background.style.fill = filter.background.value;
     disc.pattern.replaceChildren();
     disc.pattern.style.fill = filter.foreground.value;
+    disc.pattern.setAttribute("transform", `rotate(${filter.rotation || 0})`);
     createShapeElements(filter.shape.value).forEach((element) => disc.pattern.append(element));
     const description = filter.shape.value === "none"
       ? `${filter.background.name} disc`
@@ -500,6 +517,16 @@
     );
     targetFormations = formationsForPoses(solutionPoses);
     targetVisuals = visualsForPoses(solutionPoses);
+    targetVisuals.forEach((visual, index) => renderTarget(targetDisplays[index], visual));
+  }
+
+  function setEncodedTargets(targets) {
+    targetFormations = targets.map((filter) => [
+      { filter, angle: filter.rotation || 0 }
+    ]);
+    targetVisuals = targets.map((filter) => [
+      { filter, angle: filter.rotation || 0, x: 0, y: 0 }
+    ]);
     targetVisuals.forEach((visual, index) => renderTarget(targetDisplays[index], visual));
   }
 
@@ -561,7 +588,8 @@
         corners.forEach((corner, discIndex) => {
           const centre = transformedCorner(pose, corner);
           if (Math.hypot(target.x - centre.x, target.y - centre.y) < 0.5) {
-            filters.push({ filter: piece.discFilters[discIndex], angle: pose.angle });
+            const filter = piece.discFilters[discIndex];
+            filters.push({ filter, angle: pose.angle + (filter.rotation || 0) });
           }
         });
       });
@@ -584,9 +612,10 @@
           const y = centre.y - target.y;
           const distance = Math.hypot(x, y);
           if (distance < discRadius * 2) {
+            const filter = piece.discFilters[discIndex];
             layers.push({
-              filter: piece.discFilters[discIndex],
-              angle: pose.angle,
+              filter,
+              angle: pose.angle + (filter.rotation || 0),
               x: distance < 0.5 ? 0 : x,
               y: distance < 0.5 ? 0 : y
             });
@@ -740,9 +769,10 @@
       const piece = pose.piece || pose;
       corners.forEach((corner, discIndex) => {
         const centre = transformedCorner(pose, corner);
+        const filter = piece.discFilters[discIndex];
         layers.push({
-          filter: piece.discFilters[discIndex],
-          angle: pose.angle,
+          filter,
+          angle: pose.angle + (filter.rotation || 0),
           x: centre.x,
           y: centre.y
         });
@@ -827,6 +857,7 @@
   });
   svg.addEventListener("pointerup", finishDrag);
   svg.addEventListener("pointercancel", finishDrag);
-  window.addEventListener("pageshow", centerBoard);
+  window.addEventListener("pageshow", updateBoardZoom);
+  window.addEventListener("resize", updateBoardZoom);
   resetPieces();
 })();

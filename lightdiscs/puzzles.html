@@ -4,17 +4,83 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101713">
-  <title>Puzzles | Light Discs</title>
+  <title>Puzzle 1 | Light Discs</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="placeholder-shell">
+  <main class="page-shell">
     <a class="back-link" href="./index.html" aria-label="Back to main menu">&#8592; Menu</a>
-    <section class="placeholder-content">
+
+    <div id="puzzle-game">
+      <header class="page-header">
+        <div class="page-title">
+          <p class="eyebrow">Light Discs</p>
+          <h1 id="puzzle-title">Puzzle 1</h1>
+        </div>
+        <div class="page-guidance">
+          <p class="page-help">Overlap discs to match the colour and pattern targets. Drag empty board space to scroll the page, or use the curved arrows to rotate a free triangle by 60&deg;.</p>
+          <p class="status-message" id="success-indicator" role="status" aria-live="polite" hidden>Success: targets matched</p>
+          <button class="action-button" id="reset-button" type="button">Reset</button>
+        </div>
+      </header>
+
+      <div class="interaction-stage">
+        <div class="match-summary">
+          <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
+          <p class="match-key"><span class="match-dot is-matched"></span> Matched <span class="match-dot is-unmatched"></span> Not matched</p>
+        </div>
+        <div class="board-scroll">
+          <div class="board-surface">
+            <svg class="interaction-board" viewBox="0 0 1000 950" role="application" aria-label="Triangle matching puzzle">
+              <g aria-label="Fixed black triangle" transform="translate(500 440)">
+                <path class="fixed-triangle triangle-path"></path>
+              </g>
+              <g id="pieces"></g>
+              <g class="fixed-discs-layer">
+                <g class="fixed-discs" transform="translate(500 440)"></g>
+              </g>
+              <g class="filter-render" id="filter-render"></g>
+              <g class="piece-disc-outlines" id="piece-discs"></g>
+              <g class="target-display" transform="translate(500 440)" aria-label="Target patterns">
+                <g id="target-discs"></g>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
+          <div class="target-inspector-header">
+            <strong id="target-inspector-title">Target detail</strong>
+            <span id="target-inspector-status"></span>
+          </div>
+          <div class="target-comparison">
+            <figure>
+              <img id="target-preview" alt="Enlarged target pattern">
+              <figcaption>Target</figcaption>
+            </figure>
+            <figure>
+              <img id="current-preview" alt="Enlarged current result">
+              <figcaption>Current</figcaption>
+            </figure>
+          </div>
+          <p class="target-inspector-help">Tap here or anywhere outside to close. Press Escape to close with a keyboard.</p>
+        </aside>
+      </div>
+    </div>
+
+    <section class="placeholder-content puzzle-coming-soon" id="puzzle-coming-soon" hidden>
       <p class="eyebrow">Light Discs</p>
-      <h1>Puzzles</h1>
-      <p class="coming-soon">Coming soon</p>
+      <h1>More puzzles are coming</h1>
+      <p class="coming-soon">New challenges will appear here.</p>
     </section>
+
+    <nav class="puzzle-navigation" aria-label="Puzzle navigation">
+      <a id="previous-puzzle" href="./puzzles.html" hidden>&#8592; Previous</a>
+      <span id="puzzle-position"></span>
+      <a id="next-puzzle" href="./puzzles.html?level=2">Next &#8594;</a>
+    </nav>
   </main>
+  <script src="./filter-composition.js"></script>
+  <script src="./puzzle-code.js"></script>
+  <script src="./puzzles.js"></script>
 </body>
 </html>

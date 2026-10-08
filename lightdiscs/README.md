@@ -15,7 +15,7 @@ The board contains a fixed black triangle with three white corner discs. White r
 Three coloured triangles surround the fixed triangle:
 
 - Drag a triangle by its body.
-- Drag empty board space to scroll the page or the horizontally scrollable board on smaller screens.
+- Drag empty board space to scroll the page. At increased browser page zoom, the enlarged board can also be scrolled horizontally.
 - Triangles remain within the rendered board, including while rotated.
 - Drop it while one or more of its corner discs overlap fixed corner discs to snap them together.
 - A drop with no overlapping corner returns the triangle to its starting position.
@@ -85,12 +85,54 @@ Success requires all of the following:
 
 Moving a snapped triangle away immediately hides the success state.
 
+## Puzzle codes
+
+Authored levels are listed in `puzzles.js`. Each level has a title and a compact code containing four sections in this order:
+
+`R<red triangle>G<green triangle>B<blue triangle>T<targets>`
+
+Each section contains exactly three circles in top, left, bottom order, with no separators. A circle starts with one lowercase shape indicator. `n` is followed by one background colour; every other shape is followed by a background colour and a shape colour.
+
+Colours:
+
+| Code | Colour |
+| --- | --- |
+| `w` | White |
+| `r` | Red |
+| `g` | Green |
+| `b` | Blue |
+| `y` | Yellow |
+| `c` | Cyan |
+| `m` | Magenta |
+| `k` | Black |
+
+Shapes:
+
+| Code | Shape |
+| --- | --- |
+| `n` | No shape |
+| `s` | Square |
+| `t` | Equilateral triangle |
+| `l` | Large disc |
+| `d` | Small disc |
+| `a` | Annulus |
+| `v` | 12-pointed star |
+| `x` | Six-pointed star |
+
+Rotation marks follow the shape indicator and represent 60-degree steps. Squares support `s`, `s'`, and `s''`; triangles support `t` and `t'`. Other shapes cannot have rotation marks. For example, `s'wr` is a once-rotated red square on white.
+
+The first authored level is:
+
+`RnrnrnrGngngngBnbnbnbTnrngnb`
+
 ## Project files
 
 - `index.html` - main menu
 - `tutorial.html` and `tutorial.js` - rules and visual references
 - `playground.html` and `lightdiscs.js` - interactive generated game
 - `filter-composition.js` - shared mathematical colour renderer used by the tutorial and playground
+- `puzzle-code.js` - strict parser for authored puzzle codes
+- `puzzles.html` and `puzzles.js` - authored-level page and level list
 - `styles.css` - shared presentation
 - `assets/light-disc.svg` - game mark used on the main menu
 
