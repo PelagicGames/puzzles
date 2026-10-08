@@ -88,6 +88,11 @@
   let inspectorPinned = false;
   let activeDrag = null;
   let activePan = null;
+  let dragUpdateFrame = null;
+  let renderedFilterSignature = "";
+  let renderedFilterGeometry = [];
+  let filterLayerCircles = [];
+  let filterLayerMasks = [];
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
   addFixedDiscs();
@@ -405,6 +410,10 @@
     }
     updatePiece(piece);
     activeDrag = null;
+    if (dragUpdateFrame !== null) {
+      cancelAnimationFrame(dragUpdateFrame);
+      dragUpdateFrame = null;
+    }
     updateSuccess();
   }
 
@@ -446,6 +455,10 @@
     }
     activeDrag = null;
     activePan = null;
+    if (dragUpdateFrame !== null) {
+      cancelAnimationFrame(dragUpdateFrame);
+      dragUpdateFrame = null;
+    }
     hideTargetInspector();
     pieces.forEach((piece, pieceIndex) => {
       piece.position = { ...piece.home };
@@ -802,13 +815,45 @@
         });
       });
     });
-    filterRender.innerHTML = filterCompositionMarkup(layers, "board");
+    const signature = layers.map(({ filter }) => (
+      `${filter.background.mask}:${filter.foreground.mask}:${filter.shape.value}`
+    )).join("|");
+    const geometry = layers.map(({ x, y, angle }) => `${x}:${y}:${angle}`);
+    if (signature !== renderedFilterSignature) {
+      filterRender.innerHTML = filterCompositionMarkup(layers, "board");
+      renderedFilterSignature = signature;
+      renderedFilterGeometry = geometry;
+      filterLayerCircles = [...filterRender.querySelectorAll("[data-filter-layer]")];
+      filterLayerMasks = [...filterRender.querySelectorAll("[data-filter-mask-layer]")];
+      return;
+    }
+    const changedLayers = new Set();
+    geometry.forEach((value, index) => {
+      if (value !== renderedFilterGeometry[index]) changedLayers.add(index);
+    });
+    filterLayerCircles.forEach((circle) => {
+      const index = Number(circle.dataset.filterLayer);
+      if (!changedLayers.has(index)) return;
+      const layer = layers[index];
+      circle.setAttribute("cx", layer.x);
+      circle.setAttribute("cy", layer.y);
+    });
+    filterLayerMasks.forEach((mask) => {
+      const index = Number(mask.dataset.filterMaskLayer);
+      if (!changedLayers.has(index)) return;
+      const layer = layers[index];
+      mask.setAttribute(
+        "transform",
+        `translate(${layer.x} ${layer.y}) rotate(${layer.angle})`
+      );
+    });
+    renderedFilterGeometry = geometry;
   }
 
   function updateSuccess() {
     renderFilterLayer(pieces);
     currentFormations = formationsForPoses(pieces);
-    currentVisuals = visualsForPoses(pieces);
+    if (inspectedTargetIndex !== null) currentVisuals = visualsForPoses(pieces);
     const allPiecesSnapped = pieces.every((piece) => piece.snapped);
     const snappedCircleCount = pieces.reduce(
       (count, piece) => count + countFixedMatches(piece),
@@ -838,7 +883,16 @@
     inspectedTargetIndex = index;
     targetInspector.classList.toggle("is-pinned", inspectorPinned);
     targetInspector.hidden = false;
+    currentVisuals = visualsForPoses(pieces);
     refreshTargetInspector();
+  }
+
+  function scheduleDragUpdate() {
+    if (dragUpdateFrame !== null) return;
+    dragUpdateFrame = requestAnimationFrame(() => {
+      dragUpdateFrame = null;
+      updateSuccess();
+    });
   }
 
   function refreshTargetInspector() {
@@ -870,14 +924,18 @@
   }, true);
   svg.addEventListener("pointermove", (event) => {
     if (activeDrag && event.pointerId === activeDrag.pointerId) {
-      const pointer = svgPoint(event);
+      const coalescedEvents = event.getCoalescedEvents
+        ? event.getCoalescedEvents()
+        : [];
+      const latestEvent = coalescedEvents[coalescedEvents.length - 1] || event;
+      const pointer = svgPoint(latestEvent);
       activeDrag.piece.position = {
         x: pointer.x - activeDrag.offset.x,
         y: pointer.y - activeDrag.offset.y
       };
       constrainPiecePosition(activeDrag.piece);
       updatePiece(activeDrag.piece);
-      updateSuccess();
+      scheduleDragUpdate();
       return;
     }
     if (activePan && event.pointerId === activePan.pointerId) {

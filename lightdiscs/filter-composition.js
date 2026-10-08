@@ -13,7 +13,7 @@
       { bit: 1, color: "#0000ff", name: "blue" }
     ];
     const discUnion = layers.map(
-      ({ x, y }) => `<circle cx="${x}" cy="${y}" r="${discRadius}"/>`
+      ({ x, y }, index) => `<circle data-filter-layer="${index}" cx="${x}" cy="${y}" r="${discRadius}"/>`
     ).join("");
     const masks = [];
     const channelLayers = channels.map((channel) => {
@@ -25,7 +25,7 @@
         maskIds.push(id);
         masks.push(`<mask id="${id}" maskUnits="userSpaceOnUse" x="-2000" y="-2000" width="5000" height="5000" style="mask-type:luminance">`
           + '<rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff"/>'
-          + `<g transform="translate(${layer.x} ${layer.y}) rotate(${layer.angle})">${blocked}</g>`
+          + `<g data-filter-mask-layer="${index}" transform="translate(${layer.x} ${layer.y}) rotate(${layer.angle})">${blocked}</g>`
           + "</mask>");
       });
       const visibleChannel = maskIds.reduce(
