@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <title>Design | Light Discs</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-puzzle-code="R: nr ng nb G: nr ng nb B: nr ng nb T: nr ng nb">
+  <main class="page-shell">
+    <a class="back-link" href="./index.html" aria-label="Back to main menu">&#8592; Menu</a>
+    <header class="page-header design-header">
+      <div class="page-title">
+        <p class="eyebrow">Light Discs</p>
+        <h1>Design</h1>
+      </div>
+      <div class="page-guidance">
+        <p class="page-help">Enter a level code, then set the layout. Applying a code keeps the current triangle positions and rotations; Reset returns them home.</p>
+        <p class="status-message" id="success-indicator" role="status" aria-live="polite" hidden>Success: targets matched</p>
+        <button class="action-button" id="reset-button" type="button">Reset</button>
+      </div>
+    </header>
+
+    <section class="design-panel" aria-labelledby="design-code-label">
+      <div class="design-panel-heading">
+        <label id="design-code-label" for="puzzle-code-input">Level code</label>
+        <button class="text-button" id="code-help-button" type="button">Code help</button>
+      </div>
+      <div
+        class="code-input"
+        id="puzzle-code-input"
+        role="textbox"
+        aria-labelledby="design-code-label"
+        aria-describedby="code-status"
+        aria-multiline="false"
+        contenteditable="true"
+        spellcheck="false"
+      >R: nr ng nb G: nr ng nb B: nr ng nb T: nr ng nb</div>
+      <div class="design-actions">
+        <button class="action-button primary-action" id="set-layout-button" type="button">Set layout</button>
+        <p class="code-status" id="code-status" role="status" aria-live="polite">Edit or paste a complete code.</p>
+      </div>
+    </section>
+
+    <div class="interaction-stage">
+      <div class="match-summary">
+        <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
+        <p class="match-key"><span class="match-dot is-matched"></span> Matched <span class="match-dot is-unmatched"></span> Not matched</p>
+      </div>
+      <div class="board-scroll">
+        <div class="board-surface">
+          <svg class="interaction-board" viewBox="0 0 1000 950" role="application" aria-label="Designed triangle matching puzzle">
+            <g aria-label="Fixed black triangle" transform="translate(500 440)">
+              <path class="fixed-triangle triangle-path"></path>
+            </g>
+            <g id="pieces"></g>
+            <g class="fixed-discs-layer">
+              <g class="fixed-discs" transform="translate(500 440)"></g>
+            </g>
+            <g class="filter-render" id="filter-render"></g>
+            <g class="piece-disc-outlines" id="piece-discs"></g>
+            <g class="target-display" transform="translate(500 440)" aria-label="Target patterns">
+              <g id="target-discs"></g>
+            </g>
+          </svg>
+        </div>
+      </div>
+      <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
+        <div class="target-inspector-header">
+          <strong id="target-inspector-title">Target detail</strong>
+          <span id="target-inspector-status"></span>
+        </div>
+        <div class="target-comparison">
+          <figure>
+            <img id="target-preview" alt="Enlarged target pattern">
+            <figcaption>Target</figcaption>
+          </figure>
+          <figure>
+            <img id="current-preview" alt="Enlarged current result">
+            <figcaption>Current</figcaption>
+          </figure>
+        </div>
+        <p class="target-inspector-help">Tap here or anywhere outside to close. Press Escape to close with a keyboard.</p>
+      </aside>
+    </div>
+  </main>
+
+  <dialog class="code-help" id="code-help-dialog" aria-labelledby="code-help-title">
+    <div class="code-help-header">
+      <div>
+        <p class="eyebrow">Level-code reference</p>
+        <h2 id="code-help-title">Design a layout</h2>
+      </div>
+      <button class="text-button" id="code-help-close" type="button">Close</button>
+    </div>
+    <p>Use four sections in this order: <code>R:</code>, <code>G:</code>, <code>B:</code>, and <code>T:</code>. Each section contains three components in top, left, bottom order.</p>
+    <p>A component starts with a shape, followed by its background colour and, for shaped discs, its shape colour. For example, <code>twr</code> is a red triangle on white, while <code>nr</code> is a plain red disc.</p>
+    <div class="code-help-grid">
+      <section>
+        <h3>Colours</h3>
+        <dl><div><dt>w</dt><dd>white</dd></div><div><dt>r</dt><dd>red</dd></div><div><dt>g</dt><dd>green</dd></div><div><dt>b</dt><dd>blue</dd></div><div><dt>y</dt><dd>yellow</dd></div><div><dt>c</dt><dd>cyan</dd></div><div><dt>m</dt><dd>magenta</dd></div><div><dt>k</dt><dd>black</dd></div></dl>
+      </section>
+      <section>
+        <h3>Shapes</h3>
+        <dl><div><dt>n</dt><dd>no shape</dd></div><div><dt>s</dt><dd>square</dd></div><div><dt>t</dt><dd>triangle</dd></div><div><dt>l</dt><dd>large disc</dd></div><div><dt>d</dt><dd>small disc</dd></div><div><dt>a</dt><dd>annulus</dd></div><div><dt>v</dt><dd>12-pointed star</dd></div><div><dt>x</dt><dd>six-pointed star</dd></div></dl>
+      </section>
+    </div>
+    <p>Put rotation marks after squares or triangles: <code>s</code>, <code>s'</code>, <code>s''</code>; or <code>t</code>, <code>t'</code>.</p>
+    <p class="code-example"><strong>Example</strong><br><code>R: twr t'rw twr G: twg t'gw tkg B: twb t'bw xkb T: twr t'wk xkb</code></p>
+  </dialog>
+
+  <script src="./filter-composition.js"></script>
+  <script src="./puzzle-code.js"></script>
+  <script src="./lightdiscs.js"></script>
+  <script src="./design.js"></script>
+</body>
+</html>

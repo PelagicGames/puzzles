@@ -2,19 +2,23 @@
   const levels = [
     {
       title: "Puzzle 1",
-      code: "RnrnrnrGngngngBnbnbnbTnrngnb"
+      code: "R: nr nr nr G: ng ng ng B: nb nb nb T: nr ng nb"
     },
     {
       title: "Puzzle 2",
-      code: "RnmncnmGnynynmBncncnyTnrnbng"
+      code: "R: nm nc nm G: ny ny nm B: nc nc ny T: nr nb ng"
     },
     {
       title: "Puzzle 3",
-      code: "RncnmnwGnynynmBncncnyTnrnbng"
+      code: "R: nc nm nw G: ny ny nm B: nc nc ny T: nr nb ng"
     },
     {
       title: "Puzzle 4",
-      code: "Rtwrt'rwtwrGtwgt'gwtkgBtwbt'bwxkbTtwrt'wkxkb"
+      code: "R: twr t'rw twr G: twg t'gw tkg B: twb t'bw xkb T: twr t'wk xkb"
+    },
+    {
+      title: "Puzzle 5",
+      code: "R: dbk nc aym G: drk sbg lbm B: vbk lyr vgk T: lkr nk vbk"
     }
   ];
   const requestedLevel = Number(new URLSearchParams(window.location.search).get("level") || 1);

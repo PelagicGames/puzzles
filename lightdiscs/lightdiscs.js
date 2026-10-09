@@ -17,7 +17,7 @@
   const namespace = "http://www.w3.org/2000/svg";
   const { filterCompositionMarkup } = window.LightDiscRendering;
   const { parsePuzzleCode } = window.LightDiscPuzzleCode;
-  const puzzleDefinition = document.body.dataset.puzzleCode
+  let puzzleDefinition = document.body.dataset.puzzleCode
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
     : null;
   const initialPixelRatio = window.devicePixelRatio || 1;
@@ -65,6 +65,17 @@
     { name: "small disc", value: "small-disc" },
     { name: "annulus", value: "annulus" }
   ];
+  const colourCodes = ["k", "b", "g", "c", "r", "m", "y", "w"];
+  const shapeCodes = {
+    none: "n",
+    square: "s",
+    triangle: "t",
+    "large-disc": "l",
+    "small-disc": "d",
+    annulus: "a",
+    "square-star": "v",
+    "triangle-star": "x"
+  };
   const snapDistributions = [
     [1, 1, 3],
     [1, 2, 2],
@@ -477,6 +488,103 @@
     else randomizeTargets();
     updateSuccess();
     requestAnimationFrame(centerBoard);
+  }
+
+  function applyPuzzleCode(code) {
+    puzzleDefinition = parsePuzzleCode(code);
+    document.body.dataset.puzzleCode = puzzleDefinition.code;
+    pieces.forEach((piece, pieceIndex) => {
+      piece.discFilters = piece.discElements.map((disc, discIndex) => {
+        const filter = puzzleDefinition.pieces[pieceIndex][discIndex];
+        renderPatternDisc(disc, filter);
+        return filter;
+      });
+    });
+    setEncodedTargets(puzzleDefinition.targets);
+    updateSuccess();
+  }
+
+  function levelCode() {
+    if (puzzleDefinition) return puzzleDefinition.code;
+    const sections = pieces.map((piece, index) => (
+      `${["R", "G", "B"][index]}: ${piece.discFilters.map(filterCode).join(" ")}`
+    ));
+    sections.push(`T: ${targetFormations.map(formationCode).join(" ")}`);
+    return sections.join(" ");
+  }
+
+  function filterCode(filter) {
+    const shapeCode = shapeCodes[filter.shape.value];
+    const backgroundCode = colourCodes[filter.background.mask];
+    if (shapeCode === "n") return `${shapeCode}${backgroundCode}`;
+    const rotationMarks = "'".repeat((filter.rotation || 0) / 60);
+    return `${shapeCode}${rotationMarks}${backgroundCode}${colourCodes[filter.foreground.mask]}`;
+  }
+
+  function formationCode(formation) {
+    const keys = [...new Set(
+      formation.flatMap(({ filter, angle }) => shapeKeys(filter.shape.value, angle))
+    )];
+    const assignments = [];
+    for (let bits = 0; bits < 2 ** keys.length; bits += 1) {
+      const assignment = new Map(
+        keys.map((key, index) => [key, Boolean(bits & (2 ** index))])
+      );
+      if (isPossibleAssignment(assignment)) {
+        assignments.push({ assignment, mask: formationMask(formation, assignment) });
+      }
+    }
+
+    for (const candidate of encodedShapeCandidates()) {
+      const candidateKeys = shapeKeys(candidate.shape.value, candidate.rotation);
+      if (candidateKeys.some((key) => !keys.includes(key))) continue;
+      let backgroundMask = null;
+      let foregroundMask = null;
+      let valid = true;
+      assignments.forEach(({ assignment, mask }) => {
+        const inside = shapeExpression(
+          candidate.shape.value,
+          candidate.rotation,
+          assignment
+        );
+        if (inside) {
+          if (foregroundMask === null) foregroundMask = mask;
+          else if (foregroundMask !== mask) valid = false;
+        } else {
+          if (backgroundMask === null) backgroundMask = mask;
+          else if (backgroundMask !== mask) valid = false;
+        }
+      });
+      if (!valid || backgroundMask === null
+        || (candidate.shape.value !== "none" && foregroundMask === null)) continue;
+      const filter = {
+        background: filterColors[backgroundMask],
+        foreground: filterColors[
+          foregroundMask === null ? backgroundMask : foregroundMask
+        ],
+        shape: candidate.shape,
+        rotation: candidate.rotation
+      };
+      return filterCode(filter);
+    }
+    return "?";
+  }
+
+  function encodedShapeCandidates() {
+    const shape = (value) => shapeTypes.find((candidate) => candidate.value === value);
+    return [
+      { shape: shape("none"), rotation: 0 },
+      { shape: shape("square"), rotation: 0 },
+      { shape: shape("square"), rotation: 60 },
+      { shape: shape("square"), rotation: 120 },
+      { shape: shape("triangle"), rotation: 0 },
+      { shape: shape("triangle"), rotation: 60 },
+      { shape: shape("large-disc"), rotation: 0 },
+      { shape: shape("small-disc"), rotation: 0 },
+      { shape: shape("annulus"), rotation: 0 },
+      { shape: shape("square-star"), rotation: 0 },
+      { shape: shape("triangle-star"), rotation: 0 }
+    ];
   }
 
   function centerBoard() {
@@ -953,5 +1061,6 @@
   svg.addEventListener("pointercancel", finishBoardPan);
   window.addEventListener("pageshow", updateBoardZoom);
   window.addEventListener("resize", updateBoardZoom);
+  window.LightDiscGame = { applyPuzzleCode, levelCode };
   resetPieces();
 })();

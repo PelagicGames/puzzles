@@ -5,8 +5,9 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 ## Pages
 
 - **Tutorial** documents every colour interaction, every available shape, the controls, and the success conditions.
-- **Playground** generates a new solvable filter puzzle whenever the page loads or Reset is pressed.
-- **Puzzles** is reserved for a future set of authored levels.
+- **Puzzles** contains the authored levels.
+- **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
+- **Design** accepts a level code so custom layouts can be edited and tested.
 
 ## How to play
 
@@ -87,11 +88,13 @@ Moving a snapped triangle away immediately hides the success state.
 
 ## Puzzle codes
 
-Authored levels are listed in `puzzles.js`. Each level has a title and a compact code containing four sections in this order:
+Authored levels are listed in `puzzles.js`. Each level has a title and a code containing four sections in this order:
 
-`R<red triangle>G<green triangle>B<blue triangle>T<targets>`
+`R: <red triangle> G: <green triangle> B: <blue triangle> T: <targets>`
 
-Each section contains exactly three circles in top, left, bottom order, with no separators. A circle starts with one lowercase shape indicator. `n` is followed by one background colour; every other shape is followed by a background colour and a shape colour.
+Each section contains exactly three space-separated circles in top, left, bottom order. A circle starts with one lowercase shape indicator. `n` is followed by one background colour; every other shape is followed by a background colour and a shape colour.
+
+Random codes use `?` for a target whose combined filters do not reduce to one encodable shape.
 
 Colours:
 
@@ -123,20 +126,25 @@ Rotation marks follow the shape indicator and represent 60-degree steps. Squares
 
 The authored levels are:
 
-`RnrnrnrGngngngBnbnbnbTnrngnb`
+`R: nr nr nr G: ng ng ng B: nb nb nb T: nr ng nb`
 
-`RnmncnmGnynynmBncncnyTnrnbng`
+`R: nm nc nm G: ny ny nm B: nc nc ny T: nr nb ng`
 
-`RncnmnwGnynynmBncncnyTnrnbng`
+`R: nc nm nw G: ny ny nm B: nc nc ny T: nr nb ng`
 
-`Rtwrt'rwtwrGtwgt'gwtkgBtwbt'bwxkbTtwrt'wkxkb`
+`R: twr t'rw twr G: twg t'gw tkg B: twb t'bw xkb T: twr t'wk xkb`
+
+`R: dbk nc aym G: drk sbg lbm B: vbk lyr vgk T: lkr nk vbk`
 
 ## Project files
 
 - `index.html` - main menu
 - `tutorial.html` and `tutorial.js` - rules and visual references
-- `playground.html` and `lightdiscs.js` - interactive generated game
-- `filter-composition.js` - shared mathematical colour renderer used by the tutorial and playground
+- `random.html` and `lightdiscs.js` - interactive generated game
+- `random.js` - read-only Random code display and copy action
+- `design.html` and `design.js` - custom level-code editor and game
+- `playground.html` - redirect retained for old Random links
+- `filter-composition.js` - shared mathematical colour renderer used throughout the game
 - `puzzle-code.js` - strict parser for authored puzzle codes
 - `puzzles.html` and `puzzles.js` - authored-level page and level list
 - `styles.css` - shared presentation
@@ -144,4 +152,4 @@ The authored levels are:
 
 The project has no build step. Serve this directory with any static HTTP server and open `index.html`.
 
-The playground uses a single SVG coordinate system and vector colour composition for consistent alignment across Chromium, Firefox, and WebKit-based browsers.
+The game uses a single SVG coordinate system and vector colour composition for consistent alignment across Chromium, Firefox, and WebKit-based browsers.
