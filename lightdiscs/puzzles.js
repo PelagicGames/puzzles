@@ -19,6 +19,18 @@
     {
       title: "Puzzle 5",
       code: "R: dbk nc aym G: drk sbg lbm B: vbk lyr vgk T: lkr nk vbk"
+    },
+    {
+      title: "Puzzle 6",
+      code: "R: nr ny tgk G: akg lmw dmw B: dbm xmk dcb T: akg nk xrk"
+    },
+    {
+      title: "Puzzle 7",
+      code: "R: lkg sbk lbg G: drg swg vbc B: sbc ary ny T: lkg vbc lkg"
+    },
+    {
+      title: "Puzzle 8",
+      code: "R: tcy dwy dcr G: vmy ayw trg B: acm nc lwg T: vbg ayw trg"
     }
   ];
   const requestedLevel = Number(new URLSearchParams(window.location.search).get("level") || 1);
