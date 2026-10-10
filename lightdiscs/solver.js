@@ -43,7 +43,7 @@
   const poseGraph = buildPoseGraph();
   const shortestPaths = buildShortestPaths();
 
-  function analyzePuzzle(codeOrDefinition) {
+  function analyzePuzzle(codeOrDefinition, options = {}) {
     const definition = typeof codeOrDefinition === "string"
       ? window.LightDiscPuzzleCode.parsePuzzleCode(codeOrDefinition)
       : codeOrDefinition;
@@ -143,7 +143,9 @@
       solutionCount: solutions.length,
       stats
     };
-    analysis.complexity = calculateComplexity(analysis);
+    analysis.complexity = options.includeComplexity === false
+      ? null
+      : calculateComplexity(analysis);
     return analysis;
   }
 

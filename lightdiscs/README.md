@@ -5,7 +5,7 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 ## Pages
 
 - **Tutorial** documents every colour interaction, every available shape, the controls, and the success conditions.
-- **Puzzles** contains the authored levels.
+- **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
 
@@ -86,6 +86,11 @@ Success requires all of the following:
 
 Moving a snapped triangle away immediately hides the success state.
 
+Completed authored puzzles are stored by their exact puzzle code rather than
+their displayed number. The puzzle menu shows a tick beside completed levels.
+After a puzzle is solved, its page reveals a link to the next unsolved puzzle in
+difficulty order.
+
 ## Solvability framework
 
 `solver.js` treats the continuous-looking board as a finite constraint problem. A
@@ -155,9 +160,12 @@ Complexity is derived from the complete solution set, reset path-distance, and
 near-solution traps. Multiple-solution puzzles are classified **Very low**.
 Unique-solution puzzles start at **Moderate** and increase according to their
 minimum reset path and the number and severity of states with low
-solution-distance but high path-distance. The authored puzzle page computes and
-displays the classification, score details, and solution count for the selected
-level.
+solution-distance but high path-distance.
+
+Solver and complexity calculations never run in browser pages. Run
+`node lightdiscs/generate-puzzle-analysis.js` from the repository root to create
+the gitignored `lightdiscs/puzzle-analysis.local.json` report. It contains
+complexity details and up to five example solutions for every authored level.
 
 ## Puzzle codes
 
@@ -208,9 +216,14 @@ Rotation marks follow the shape indicator and represent 60-degree steps. Squares
 - `filter-composition.js` - shared mathematical colour renderer used throughout the game
 - `puzzle-math.js` - exact Boolean-region formation algebra
 - `puzzle-code.js` - strict parser for authored puzzle codes
+- `puzzle-levels.js` - authored-level data shared by the page and offline tooling
+- `puzzle-progress.js` - code-keyed completion storage and next-unsolved selection
 - `solver.js` - reduced constraint solver, state vectors, distances, and complexity
+- `generate-puzzle-analysis.js` - writes the gitignored offline analysis report
 - `solver.test.js` - headless regression checks for the mathematical framework
-- `puzzles.html` and `puzzles.js` - authored-level page and level list
+- `puzzle-progress.test.js` - completion and next-unsolved regression checks
+- `puzzles.html` and `puzzles.js` - difficulty-grouped authored-puzzle menu
+- `puzzle.html` and `puzzle.js` - individual authored-puzzle page
 - `styles.css` - shared presentation
 - `assets/light-disc.svg` - game mark used on the main menu
 

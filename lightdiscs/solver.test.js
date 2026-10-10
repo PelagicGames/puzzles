@@ -4,7 +4,12 @@ const path = require("path");
 const vm = require("vm");
 
 global.window = {};
-["puzzle-code.js", "puzzle-math.js", "solver.js"].forEach((file) => {
+[
+  "puzzle-code.js",
+  "puzzle-math.js",
+  "solver.js",
+  "puzzle-levels.js"
+].forEach((file) => {
   vm.runInThisContext(
     fs.readFileSync(path.join(__dirname, file), "utf8"),
     { filename: file }
@@ -67,24 +72,85 @@ const authoredPuzzles = [
     solutions: 3,
     resetPath: 7,
     first: "T1:R2+G1+B2 T2:G2 T3:G3"
+  },
+  {
+    code: "R: s''mw dmc xbw G: t'rg s''cy vky B: s'kb tgm s''yc T: s''yc s''mw s''cy",
+    rawSolutions: 1,
+    solutions: 1,
+    resetPath: 3,
+    complexity: "Moderate",
+    score: 59,
+    first: "T1:B3'' T2:R1'' T3:G2''"
+  },
+  {
+    code: "R: s'by vmg s''cb G: xcm vmc s''mg B: t'yw s'ck s'rc T: s'rc s'by vmc",
+    rawSolutions: 3,
+    solutions: 1,
+    resetPath: 3,
+    complexity: "Moderate",
+    score: 54,
+    first: "T1:B3' T2:R1' T3:G2"
+  },
+  {
+    code: "R: xbm vmb vcm G: vbg t'cy tgb B: vry arc drm T: drm xbm t'cy",
+    rawSolutions: 18,
+    solutions: 1,
+    resetPath: 3,
+    complexity: "Moderate",
+    score: 54,
+    first: "T1:B3 T2:R1 T3:G2'"
+  },
+  {
+    code: "R: dkc s'rc lwy G: dgy vbr s'gm B: drc swy nm T: dkg vbr drc",
+    rawSolutions: 9,
+    solutions: 1,
+    resetPath: 10,
+    complexity: "Very high",
+    score: 94,
+    first: "T1:R1+B2'' T2:G2+B3 T3:B1"
+  },
+  {
+    code: "R: amw t'wy vgk G: vgm s'mg t'cy B: xrb s'wy s''bc T: swy nk nk",
+    rawSolutions: 2,
+    solutions: 1,
+    resetPath: 11,
+    complexity: "Very high",
+    score: 86,
+    first: "T1:B2 T2:R3+B3' T3:R2+G3'+B1"
+  },
+  {
+    code: "R: tgr s'ky lwk G: nc ayk lyb B: tyk nr t'wb T: dkr lck twb",
+    rawSolutions: 1,
+    solutions: 1,
+    resetPath: 10,
+    complexity: "Very high",
+    score: 89,
+    first: "T1:R1'+G2+B2 T2:R3+G1 T3:B3"
   }
 ];
 
 assert.strictEqual(window.LightDiscSolver.poseTemplates.length, 39);
+assert.deepStrictEqual(
+  window.LightDiscLevels.map(({ code }) => code),
+  authoredPuzzles.map(({ code }) => code)
+);
 
 authoredPuzzles.forEach(({
   code,
   rawSolutions,
   solutions,
   resetPath,
+  complexity = "Very low",
+  score,
   first
 }, index) => {
   const analysis = window.LightDiscSolver.analyzePuzzle(code);
   assert.strictEqual(analysis.solvable, true, `Puzzle ${index + 1} should be solvable`);
   assert.strictEqual(analysis.stats.rawSolutionCount, rawSolutions);
   assert.strictEqual(analysis.solutionCount, solutions);
-  assert.strictEqual(analysis.complexity.label, "Very low");
+  assert.strictEqual(analysis.complexity.label, complexity);
   assert.strictEqual(analysis.complexity.resetPathDistance, resetPath);
+  if (score !== undefined) assert.strictEqual(analysis.complexity.score, score);
   assert.strictEqual(analysis.solutions[0].shorthand, first);
 
   const firstSolution = analysis.solutions[0];

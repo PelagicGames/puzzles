@@ -24,17 +24,8 @@
     shapeExpression,
     shapeKeys
   } = window.LightDiscMath;
-  const {
-    analyzePuzzle,
-    pathDistance,
-    poseIdFor,
-    solutionDistance
-  } = window.LightDiscSolver;
   let puzzleDefinition = document.body.dataset.puzzleCode
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
-    : null;
-  let puzzleAnalysis = puzzleDefinition
-    ? window.LightDiscPuzzleAnalysis || analyzePuzzle(puzzleDefinition)
     : null;
   const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
@@ -120,6 +111,7 @@
   let renderedFilterGeometry = [];
   let filterLayerCircles = [];
   let filterLayerMasks = [];
+  let reportedSolvedState = false;
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
   addFixedDiscs();
@@ -508,7 +500,6 @@
 
   function applyPuzzleCode(code) {
     puzzleDefinition = parsePuzzleCode(code);
-    puzzleAnalysis = analyzePuzzle(puzzleDefinition);
     document.body.dataset.puzzleCode = puzzleDefinition.code;
     pieces.forEach((piece, pieceIndex) => {
       piece.discFilters = piece.discElements.map((disc, discIndex) => {
@@ -916,34 +907,18 @@
     );
     const targetsMatch = targetMatches.every(Boolean);
     targetMatches.forEach((matches, index) => updateTargetStatus(index, matches));
-    const metrics = currentDistanceMetrics();
-    const metricText = metrics
-      ? ` \u00b7 Solution distance ${metrics.solution} \u00b7 Path distance ${metrics.path}`
-      : "";
-    progressIndicator.textContent = `Targets ${targetMatches.filter(Boolean).length}/3 \u00b7 Triangles ${pieces.filter((piece) => piece.snapped).length}/3 \u00b7 Snapped circles ${snappedCircleCount}${metricText}`;
+    progressIndicator.textContent = `Targets ${targetMatches.filter(Boolean).length}/3 \u00b7 Triangles ${pieces.filter((piece) => piece.snapped).length}/3 \u00b7 Snapped circles ${snappedCircleCount}`;
     if (inspectedTargetIndex !== null) refreshTargetInspector();
-    successIndicator.hidden = !allPiecesSnapped || !targetsMatch;
-  }
-
-  function currentDistanceMetrics() {
-    if (!puzzleDefinition || !puzzleAnalysis?.solvable) return null;
-    const poseIds = pieces.map((piece) => {
-      const mapping = corners.map((corner) => {
-        const moving = transformedCorner(piece, corner);
-        return corners.findIndex((fixedCorner) => (
-          Math.hypot(
-            fixedPosition.x + fixedCorner.x - moving.x,
-            fixedPosition.y + fixedCorner.y - moving.y
-          ) < 0.5
-        ));
-      });
-      return poseIdFor(piece.angle, mapping, piece.snapped);
-    });
-    if (poseIds.some((poseId) => !poseId)) return null;
-    return {
-      solution: solutionDistance(puzzleDefinition, poseIds),
-      path: pathDistance(poseIds, puzzleAnalysis)
-    };
+    const solved = allPiecesSnapped && targetsMatch;
+    successIndicator.hidden = !solved;
+    if (solved && !reportedSolvedState) {
+      reportedSolvedState = true;
+      document.dispatchEvent(new CustomEvent("lightdiscs:solved", {
+        detail: { code: puzzleDefinition?.code || null }
+      }));
+    } else if (!solved) {
+      reportedSolvedState = false;
+    }
   }
 
   function updateTargetStatus(index, matches) {
