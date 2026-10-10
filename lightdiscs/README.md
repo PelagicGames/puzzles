@@ -86,6 +86,79 @@ Success requires all of the following:
 
 Moving a snapped triangle away immediately hides the success state.
 
+## Solvability framework
+
+`solver.js` treats the continuous-looking board as a finite constraint problem. A
+rigid equilateral triangle can have only 39 distinct snapped poses: 27 with one
+snapped circle, 9 with two, and 3 with all three. The solver never samples
+arbitrary screen coordinates.
+
+For triangle \(i\), its placement vector is
+
+`P_i = (s, M, T, r, m_0, m_1, m_2)`
+
+where `s` is its snapped-circle count, `M` and `T` are three-bit masks for its
+moving and target circles, `r` is its rotation in 60-degree steps, and `m_j` is
+the target position occupied by moving circle `j` or `-1`.
+
+A snapped filter has component vector
+
+`F = (background RGB mask, shape RGB mask, shape kind, rotation)`
+
+and contributes to exactly one target circle. The complete state vector is the
+ordered tuple of the three placement vectors, the three ordered multisets of
+filter contributions, and the snapped-triangle count. Snapping is addition to a
+target's contribution multiset. This is not ordinary vector addition: evaluating
+the sum intersects the three-bit RGB masks in every geometric region. Shape
+regions are represented by Boolean variables, so equivalent composite shapes
+and colours compare exactly without pixel sampling.
+
+Solvability uses the following reductions before search:
+
+1. Enumerate the distinct local ways that zero to three movable circles can make
+   each target. A target with no construction proves the puzzle unsolvable.
+2. If a target has one local construction, restrict every triangle to poses
+   compatible with those forced circles and orientations.
+3. Enforce generalized arc consistency. A pose is removed unless every target
+   has a supporting pair of poses from the other triangles. This catches forced
+   target constructions that cannot coexist.
+4. If choices remain, branch on the triangle with the smallest domain, propagate
+   constraints again, and memoize local target compositions. Search therefore
+   considers only supported poses rather than the full Cartesian product.
+
+Solutions are equivalence classes. Two poses are the same solution when they use
+the same source circles at each target and every snapped shape has the same
+canonical geometric orientation. Rotating a no-shape disc, circular shape,
+12-pointed star, or six-pointed star therefore does not create another solution.
+Equivalent poses remain available internally so every equivalent solved state
+has path-distance zero. Each returned solution contains its state vector,
+minimum-move formulation, and a shorthand such as `T1:R2+G1'`.
+
+### Distance metrics
+
+The **solution-distance** is the sum of the three target-circle distances plus
+one for every unsnapped triangle. A target-circle distance compares background
+RGB channels, shape RGB channels, shape-region keys, distinct shape rotations,
+and exact Boolean-region output. It is zero precisely when the current
+formation matches that target.
+
+The **path-distance** is the shortest weighted path from the current placement
+vectors to any solution. Its pose graph charges one move for each 60-degree
+rotation of a singly snapped circle, change of snapped circle or target
+position, change of the free circle or free target position with two circles
+snapped, 120-degree rotation with three circles snapped, and snap or unsnap
+operation. Dijkstra's algorithm finds the minimum over all solution states.
+
+### Complexity
+
+Complexity is derived from the complete solution set, reset path-distance, and
+near-solution traps. Multiple-solution puzzles are classified **Very low**.
+Unique-solution puzzles start at **Moderate** and increase according to their
+minimum reset path and the number and severity of states with low
+solution-distance but high path-distance. The authored puzzle page computes and
+displays the classification, score details, and solution count for the selected
+level.
+
 ## Puzzle codes
 
 Authored levels are listed in `puzzles.js`. Each level has a title and a code containing four sections in this order:
@@ -133,7 +206,10 @@ Rotation marks follow the shape indicator and represent 60-degree steps. Squares
 - `design.html` and `design.js` - custom level-code editor and game
 - `playground.html` - redirect retained for old Random links
 - `filter-composition.js` - shared mathematical colour renderer used throughout the game
+- `puzzle-math.js` - exact Boolean-region formation algebra
 - `puzzle-code.js` - strict parser for authored puzzle codes
+- `solver.js` - reduced constraint solver, state vectors, distances, and complexity
+- `solver.test.js` - headless regression checks for the mathematical framework
 - `puzzles.html` and `puzzles.js` - authored-level page and level list
 - `styles.css` - shared presentation
 - `assets/light-disc.svg` - game mark used on the main menu

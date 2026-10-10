@@ -42,6 +42,8 @@
   const previousLink = document.querySelector("#previous-puzzle");
   const nextLink = document.querySelector("#next-puzzle");
   const position = document.querySelector("#puzzle-position");
+  const complexity = document.querySelector("#puzzle-complexity");
+  const solutionSummary = document.querySelector("#puzzle-solutions");
 
   if (!level && !comingSoon) {
     window.location.replace("./puzzles.html");
@@ -62,6 +64,22 @@
   document.title = `${level.title} | Light Discs`;
   document.querySelector("#puzzle-title").textContent = level.title;
   document.body.dataset.puzzleCode = level.code;
+  const analysis = window.LightDiscSolver.analyzePuzzle(level.code);
+  window.LightDiscPuzzleAnalysis = analysis;
+  const solutionLabel = `${analysis.solutionCount} ${analysis.solutionCount === 1 ? "solution" : "solutions"}`;
+  complexity.textContent = `Complexity: ${analysis.complexity.label} \u00b7 ${solutionLabel}`;
+  complexity.title = `Score ${analysis.complexity.score}/100; shortest reset path ${analysis.complexity.resetPathDistance} moves`;
+  const shownSolutions = analysis.solutions.slice(0, 5);
+  solutionSummary.replaceChildren();
+  const solutionHeading = document.createElement("p");
+  solutionHeading.textContent = `First ${shownSolutions.length} unique ${shownSolutions.length === 1 ? "solution" : "solutions"}:`;
+  const solutionList = document.createElement("ol");
+  shownSolutions.forEach(({ shorthand }) => {
+    const item = document.createElement("li");
+    item.textContent = shorthand;
+    solutionList.append(item);
+  });
+  solutionSummary.append(solutionHeading, solutionList);
   position.textContent = `${levelNumber} / ${levels.length}`;
   if (levelNumber > 1) {
     previousLink.hidden = false;
