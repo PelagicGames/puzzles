@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   function formationsMatch(left, right) {
     return formationDifference(left, right) === 0;

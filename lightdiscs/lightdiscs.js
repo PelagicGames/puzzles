@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const svg = document.querySelector(".interaction-board");
   const resetButton = document.querySelector("#reset-button");

@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const colours = {
     w: { name: "white", value: "#ffffff", mask: 7 },

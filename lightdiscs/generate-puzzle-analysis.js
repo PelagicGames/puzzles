@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -30,6 +32,7 @@ const puzzles = window.LightDiscLevels.map(({ title, difficulty, code }) => {
   };
 });
 const report = {
+  _copyright: "Copyright (C) 2026 Pelagic Games",
   generatedAt: new Date().toISOString(),
   puzzles
 };

@@ -1,1 +1,8 @@
+# Copyright (C) 2026 Pelagic Games
+
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*
+
 lightdiscs/puzzle-analysis.local.json

@@ -1,3 +1,5 @@
+<!-- Copyright (C) 2026 Pelagic Games -->
+
 # Light Discs
 
 Light Discs is a browser puzzle about combining coloured light filters and geometric patterns. The player rotates and moves three translucent triangles around a fixed black triangle, then overlaps their corner discs to reproduce three target appearances.

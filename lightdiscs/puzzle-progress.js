@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const storageKey = "lightdiscs.completedPuzzleCodes";
   const difficulties = [

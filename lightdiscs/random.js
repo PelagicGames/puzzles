@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const codeInput = document.querySelector("#random-code");
   const copyButton = document.querySelector("#copy-random-code");

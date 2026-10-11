@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const input = document.querySelector("#puzzle-code-input");
   const setButton = document.querySelector("#set-layout-button");

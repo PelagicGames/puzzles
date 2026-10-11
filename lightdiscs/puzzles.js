@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const levels = window.LightDiscLevels;
   const { difficulties, isCompleted } = window.LightDiscProgress;

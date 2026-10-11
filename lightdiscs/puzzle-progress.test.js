@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 const assert = require("assert");
 const fs = require("fs");
 const path = require("path");

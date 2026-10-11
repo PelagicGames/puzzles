@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const largeShapeRadius = 30;
   const smallShapeRadius = 12;

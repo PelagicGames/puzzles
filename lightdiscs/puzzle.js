@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const levels = window.LightDiscLevels;
   const requestedLevel = Number(new URLSearchParams(window.location.search).get("level") || 1);

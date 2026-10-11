@@ -1,3 +1,5 @@
+// Copyright (C) 2026 Pelagic Games
+
 (() => {
   const namespace = "http://www.w3.org/2000/svg";
   const { filterCompositionMarkup } = window.LightDiscRendering;
