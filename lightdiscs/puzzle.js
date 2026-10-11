@@ -15,10 +15,20 @@
     return;
   }
 
-  document.title = `${level.title} | Light Discs`;
-  document.querySelector("#puzzle-title").textContent = level.title;
+  const difficulty = window.LightDiscProgress.difficulties.find(
+    ({ id }) => id === level.difficulty
+  );
+  const difficultyLevels = levels.filter(
+    ({ difficulty: candidate }) => candidate === level.difficulty
+  );
+  const difficultyNumber = difficultyLevels.findIndex(
+    ({ code }) => code === level.code
+  ) + 1;
+  const displayTitle = `${difficulty.label} puzzle ${difficultyNumber}`;
+  document.title = `${displayTitle} | Light Discs`;
+  document.querySelector("#puzzle-title").textContent = displayTitle;
   document.body.dataset.puzzleCode = level.code;
-  position.textContent = `${levelNumber} / ${levels.length}`;
+  position.textContent = `${difficultyNumber} / ${difficultyLevels.length}`;
 
   function updateNextLink() {
     if (!window.LightDiscProgress.isCompleted(level.code)) {

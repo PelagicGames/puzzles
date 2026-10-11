@@ -164,6 +164,7 @@
         label: "Unsolvable",
         score: null,
         solutionCount: 0,
+        minimumSnappedCircles: null,
         resetPathDistance: Infinity,
         nearTrapCount: 0,
         maximumDetour: 0
@@ -736,14 +737,44 @@
 
   function calculateComplexity(analysis) {
     const resetPathDistance = pathDistance(["u0", "u0", "u0"], analysis);
-    if (analysis.solutionCount > 1) {
+    const minimumSnappedCircles = Math.min(
+      ...analysis.solutions.flatMap(({ equivalentPoseIds }) => (
+        equivalentPoseIds.map((poseIds) => poseIds.reduce((total, poseId) => (
+          total + poseById.get(poseId).snapCount
+        ), 0))
+      ))
+    );
+    if (minimumSnappedCircles === 3) {
       return {
-        label: "Very low",
-        score: Math.max(
-          1,
-          24 - Math.ceil(Math.log2(analysis.solutionCount + 1)) * 2
-        ),
+        label: "Very easy",
+        score: Math.min(24, 6 + resetPathDistance),
         solutionCount: analysis.solutionCount,
+        minimumSnappedCircles,
+        resetPathDistance,
+        nearTrapCount: 0,
+        maximumDetour: 0
+      };
+    }
+    if (analysis.solutionCount > 1) {
+      const easy = minimumSnappedCircles >= 5;
+      return {
+        label: easy ? "Easy" : "Very easy",
+        score: easy
+          ? Math.min(47, 25 + minimumSnappedCircles * 2)
+          : Math.min(24, 8 + resetPathDistance),
+        solutionCount: analysis.solutionCount,
+        minimumSnappedCircles,
+        resetPathDistance,
+        nearTrapCount: 0,
+        maximumDetour: 0
+      };
+    }
+    if (minimumSnappedCircles < 5) {
+      return {
+        label: "Easy",
+        score: Math.min(47, 25 + resetPathDistance),
+        solutionCount: 1,
+        minimumSnappedCircles,
         resetPathDistance,
         nearTrapCount: 0,
         maximumDetour: 0
@@ -767,18 +798,26 @@
         });
       });
     });
-    const score = Math.min(
+    const uncappedScore = Math.min(
       100,
       48
         + Math.min(20, resetPathDistance * 2)
         + Math.min(20, maximumDetour * 3)
         + Math.min(12, Math.ceil(Math.log2(nearTrapCount + 1)))
     );
-    const label = score >= 85 ? "Very high" : score >= 68 ? "High" : "Moderate";
+    const score = minimumSnappedCircles >= 6
+      ? uncappedScore
+      : Math.min(84, uncappedScore);
+    const label = score >= 85
+      ? "Very hard"
+      : score >= 76
+        ? "Hard"
+        : "Medium";
     return {
       label,
       score,
       solutionCount: 1,
+      minimumSnappedCircles,
       resetPathDistance,
       nearTrapCount,
       maximumDetour

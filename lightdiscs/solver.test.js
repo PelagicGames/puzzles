@@ -24,6 +24,9 @@ const authoredPuzzles = [
     rawSolutions: 729,
     solutions: 27,
     resetPath: 3,
+    complexity: "Very easy",
+    score: 9,
+    minimumSnaps: 3,
     first: "T1:R3 T2:G3 T3:B2"
   },
   {
@@ -31,6 +34,9 @@ const authoredPuzzles = [
     rawSolutions: 105,
     solutions: 57,
     resetPath: 8,
+    complexity: "Easy",
+    score: 37,
+    minimumSnaps: 6,
     first: "T1:R3+B3 T2:G3+B1 T3:G2+B2"
   },
   {
@@ -38,6 +44,9 @@ const authoredPuzzles = [
     rawSolutions: 42,
     solutions: 26,
     resetPath: 8,
+    complexity: "Easy",
+    score: 37,
+    minimumSnaps: 6,
     first: "T1:R2+G1 T2:R3+G3+B1 T3:R1+B3"
   },
   {
@@ -45,6 +54,9 @@ const authoredPuzzles = [
     rawSolutions: 4,
     solutions: 2,
     resetPath: 6,
+    complexity: "Very easy",
+    score: 14,
+    minimumSnaps: 4,
     first: "T1:R3 T2:G1'+B1' T3:B3"
   },
   {
@@ -52,6 +64,9 @@ const authoredPuzzles = [
     rawSolutions: 58,
     solutions: 24,
     resetPath: 6,
+    complexity: "Easy",
+    score: 35,
+    minimumSnaps: 5,
     first: "T1:G3+B2 T2:R1+B3 T3:B1"
   },
   {
@@ -59,6 +74,9 @@ const authoredPuzzles = [
     rawSolutions: 26,
     solutions: 16,
     resetPath: 8,
+    complexity: "Easy",
+    score: 35,
+    minimumSnaps: 5,
     first: "T1:G1 T2:R3'+G3 T3:R2+B2"
   },
   {
@@ -66,6 +84,9 @@ const authoredPuzzles = [
     rawSolutions: 12,
     solutions: 2,
     resetPath: 6,
+    complexity: "Very easy",
+    score: 14,
+    minimumSnaps: 4,
     first: "T1:R3+B3 T2:G3 T3:R1"
   },
   {
@@ -73,6 +94,9 @@ const authoredPuzzles = [
     rawSolutions: 27,
     solutions: 3,
     resetPath: 7,
+    complexity: "Easy",
+    score: 35,
+    minimumSnaps: 5,
     first: "T1:R2+G1+B2 T2:G2 T3:G3"
   },
   {
@@ -80,8 +104,9 @@ const authoredPuzzles = [
     rawSolutions: 1,
     solutions: 1,
     resetPath: 3,
-    complexity: "Moderate",
-    score: 59,
+    complexity: "Very easy",
+    score: 9,
+    minimumSnaps: 3,
     first: "T1:B3'' T2:R1'' T3:G2''"
   },
   {
@@ -89,8 +114,9 @@ const authoredPuzzles = [
     rawSolutions: 3,
     solutions: 1,
     resetPath: 3,
-    complexity: "Moderate",
-    score: 54,
+    complexity: "Very easy",
+    score: 9,
+    minimumSnaps: 3,
     first: "T1:B3' T2:R1' T3:G2"
   },
   {
@@ -98,8 +124,9 @@ const authoredPuzzles = [
     rawSolutions: 18,
     solutions: 1,
     resetPath: 3,
-    complexity: "Moderate",
-    score: 54,
+    complexity: "Very easy",
+    score: 9,
+    minimumSnaps: 3,
     first: "T1:B3 T2:R1 T3:G2'"
   },
   {
@@ -107,8 +134,9 @@ const authoredPuzzles = [
     rawSolutions: 9,
     solutions: 1,
     resetPath: 10,
-    complexity: "Very high",
-    score: 94,
+    complexity: "Hard",
+    score: 84,
+    minimumSnaps: 5,
     first: "T1:R1+B2'' T2:G2+B3 T3:B1"
   },
   {
@@ -116,8 +144,9 @@ const authoredPuzzles = [
     rawSolutions: 2,
     solutions: 1,
     resetPath: 11,
-    complexity: "Very high",
+    complexity: "Very hard",
     score: 86,
+    minimumSnaps: 6,
     first: "T1:B2 T2:R3+B3' T3:R2+G3'+B1"
   },
   {
@@ -125,34 +154,39 @@ const authoredPuzzles = [
     rawSolutions: 1,
     solutions: 1,
     resetPath: 10,
-    complexity: "Very high",
+    complexity: "Very hard",
     score: 89,
+    minimumSnaps: 6,
     first: "T1:R1'+G2+B2 T2:R3+G1 T3:B3"
   }
 ];
 
 assert.strictEqual(window.LightDiscSolver.poseTemplates.length, 39);
-assert.deepStrictEqual(
-  window.LightDiscLevels.map(({ code }) => code),
-  authoredPuzzles.map(({ code }) => code)
-);
+assert.strictEqual(window.LightDiscLevels.length, 30);
+assert.strictEqual(new Set(window.LightDiscLevels.map(({ code }) => code)).size, 30);
+const catalogCodes = new Set(window.LightDiscLevels.map(({ code }) => code));
+authoredPuzzles.forEach(({ code }) => assert.strictEqual(catalogCodes.has(code), true));
+const analyses = new Map();
 
 authoredPuzzles.forEach(({
   code,
   rawSolutions,
   solutions,
   resetPath,
-  complexity = "Very low",
+  complexity,
   score,
+  minimumSnaps,
   first
 }, index) => {
   const analysis = window.LightDiscSolver.analyzePuzzle(code);
+  analyses.set(code, analysis);
   assert.strictEqual(analysis.solvable, true, `Puzzle ${index + 1} should be solvable`);
   assert.strictEqual(analysis.stats.rawSolutionCount, rawSolutions);
   assert.strictEqual(analysis.solutionCount, solutions);
   assert.strictEqual(analysis.complexity.label, complexity);
+  assert.strictEqual(analysis.complexity.minimumSnappedCircles, minimumSnaps);
   assert.strictEqual(analysis.complexity.resetPathDistance, resetPath);
-  if (score !== undefined) assert.strictEqual(analysis.complexity.score, score);
+  assert.strictEqual(analysis.complexity.score, score);
   assert.strictEqual(analysis.solutions[0].shorthand, first);
 
   const firstSolution = analysis.solutions[0];
@@ -178,6 +212,18 @@ authoredPuzzles.forEach(({
       `Puzzle ${index + 1} equivalent solved pose should have zero path-distance`
     );
   });
+});
+
+window.LightDiscLevels.forEach((level, index) => {
+  const analysis = analyses.get(level.code)
+    || window.LightDiscSolver.analyzePuzzle(level.code);
+  analyses.set(level.code, analysis);
+  assert.strictEqual(analysis.solvable, true, `Catalog puzzle ${index + 1} should be solvable`);
+  assert.strictEqual(
+    analysis.complexity.label.toLowerCase().replace(" ", "-"),
+    level.difficulty,
+    `Catalog puzzle ${index + 1} should match its difficulty band`
+  );
 });
 
 const impossible = window.LightDiscSolver.analyzePuzzle(

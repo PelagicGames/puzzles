@@ -30,14 +30,23 @@ assert.deepStrictEqual(
   progress.difficulties.map(({ id }) => id),
   ["very-easy", "easy", "medium", "hard", "very-hard"]
 );
+const ordered = progress.orderedLevels(levels);
 assert.deepStrictEqual(
-  progress.orderedLevels(levels).map(({ level }) => level.difficulty),
+  ordered.map(({ level }) => level.difficulty),
   [
-    ...Array(8).fill("very-easy"),
-    ...Array(3).fill("medium"),
-    ...Array(3).fill("very-hard")
+    ...Array(6).fill("very-easy"),
+    ...Array(6).fill("easy"),
+    ...Array(6).fill("medium"),
+    ...Array(6).fill("hard"),
+    ...Array(6).fill("very-hard")
   ]
 );
+progress.difficulties.forEach(({ id }) => {
+  assert.deepStrictEqual(
+    levels.filter(({ difficulty }) => difficulty === id).map(({ title }) => title),
+    ["Puzzle 1", "Puzzle 2", "Puzzle 3", "Puzzle 4", "Puzzle 5", "Puzzle 6"]
+  );
+});
 
 progress.markCompleted(levels[0].code);
 assert.strictEqual(progress.isCompleted(levels[0].code), true);
@@ -48,10 +57,10 @@ assert.deepStrictEqual(
 );
 
 let next = progress.nextUnsolved(levels, levels[0].code);
-assert.strictEqual(next.level.code, levels[1].code);
-progress.markCompleted(levels[1].code);
-next = progress.nextUnsolved(levels, levels[13].code);
-assert.strictEqual(next.level.code, levels[2].code);
+assert.strictEqual(next.level.code, ordered[1].level.code);
+progress.markCompleted(ordered[1].level.code);
+next = progress.nextUnsolved(levels, ordered.at(-1).level.code);
+assert.strictEqual(next.level.code, ordered[2].level.code);
 
 levels.forEach(({ code }) => progress.markCompleted(code));
 assert.strictEqual(progress.nextUnsolved(levels, levels[0].code), null);

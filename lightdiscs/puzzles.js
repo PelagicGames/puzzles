@@ -29,7 +29,7 @@
 
     const selectors = document.createElement("div");
     selectors.className = "puzzle-selectors";
-    matchingLevels.forEach(({ level, index }) => {
+    matchingLevels.forEach(({ level, index }, difficultyIndex) => {
       const completed = isCompleted(level.code);
       const link = document.createElement("a");
       link.className = "puzzle-selector";
@@ -47,7 +47,7 @@
 
       const number = document.createElement("span");
       number.className = "puzzle-selector-number";
-      number.textContent = String(index + 1).padStart(2, "0");
+      number.textContent = String(difficultyIndex + 1).padStart(2, "0");
 
       link.append(checkbox, number);
       selectors.append(link);

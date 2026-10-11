@@ -7,7 +7,7 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 ## Pages
 
 - **Tutorial** documents every colour interaction, every available shape, the controls, and the success conditions.
-- **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
+- **Puzzles** groups six authored levels into each of five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
 
@@ -158,11 +158,16 @@ operation. Dijkstra's algorithm finds the minimum over all solution states.
 
 ### Complexity
 
-Complexity is derived from the complete solution set, reset path-distance, and
-near-solution traps. Multiple-solution puzzles are classified **Very low**.
-Unique-solution puzzles start at **Moderate** and increase according to their
-minimum reset path and the number and severity of states with low
-solution-distance but high path-distance.
+Complexity first considers the easiest solution's snapped-circle count. A
+solution with one snapped circle from each triangle is always **Very easy**,
+before near-solution traps are considered. Multiple-solution puzzles are
+**Very easy**, or **Easy** when every solution requires at least five snapped
+circles. Unique-solution puzzles need at least five snapped circles to reach
+**Medium** or **Hard**, and at least six to reach **Very hard**. Eligible unique
+puzzles then increase according to their minimum reset path and the number and
+severity of states with low solution-distance but high path-distance. Medium
+puzzles may contain modest near-solution traps; a score of 76 or more is needed
+to reach Hard.
 
 Solver and complexity calculations never run in browser pages. Run
 `node lightdiscs/generate-puzzle-analysis.js` from the repository root to create
