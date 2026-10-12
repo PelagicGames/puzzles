@@ -74,9 +74,8 @@ Patterns rotate with their triangle. Matching is based on the resulting colour-a
 Low-contrast foreground and background combinations can receive a black or
 white shape outline. Rendering starts with outlines only in targets and
 enlarged target comparisons, then uses measured drag performance, without
-browser or device identification, to move between four quality levels:
+browser or device identification, to move between three quality levels:
 
-- Outlines on the live board, moving triangles, targets, and comparisons.
 - Live-board outlines hidden whenever a triangle is moving.
 - Outlines only in targets and enlarged target comparisons.
 - No contrast outlines.

@@ -773,8 +773,7 @@ h1 {
   display: none;
 }
 
-.interaction-board:not([data-contrast-quality="full"])
-  .piece-disc-outlines .piece-disc-set.is-dragging .filter-pattern {
+.piece-disc-outlines .piece-disc-set.is-dragging .filter-pattern {
   stroke: none !important;
 }
 

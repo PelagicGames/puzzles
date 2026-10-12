@@ -1181,7 +1181,7 @@
   }
 
   function contrastOutlinesOnBoard() {
-    return contrastQuality === "full" || contrastQuality === "drag-hidden";
+    return contrastQuality === "drag-hidden";
   }
 
   function percentile(values, fraction) {
@@ -1224,10 +1224,10 @@
       adaptationCooldown -= 1;
       return;
     }
-    const qualities = ["full", "drag-hidden", "targets-only", "none"];
+    const qualities = ["drag-hidden", "targets-only", "none"];
     const qualityIndex = qualities.indexOf(contrastQuality);
-    const downgradeThresholds = [21, 32, 45];
-    const upgradeThresholds = [null, 17, 24, 34];
+    const downgradeThresholds = [32, 45];
+    const upgradeThresholds = [null, 24, 34];
     let direction = null;
     if (qualityIndex < qualities.length - 1
       && interval > downgradeThresholds[qualityIndex]) {
