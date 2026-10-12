@@ -13,8 +13,9 @@
     longTasks: document.querySelector("#profile-long-tasks"),
     descendants: document.querySelector("#profile-descendants"),
     masks: document.querySelector("#profile-masks"),
-    images: document.querySelector("#profile-images")
+    canvases: document.querySelector("#profile-canvases")
   };
+  const rendererStatus = document.querySelector("#profile-renderer-status");
   const clearButton = document.querySelector("#clear-profile");
   let state;
   let renderTimer = null;
@@ -85,7 +86,7 @@
       : `${state.longTasks} (${state.longTaskDuration.toFixed(1)} ms)`;
     output.descendants.textContent = String(stats.descendants);
     output.masks.textContent = String(stats.masks);
-    output.images.textContent = String(stats.images);
+    output.canvases.textContent = String(stats.canvases);
   }
 
   function record(type, detail) {
@@ -146,6 +147,16 @@
   clearButton.addEventListener("click", clear);
   state = emptyState();
   window.LightDiscProfiler = { record };
+
+  function updateRendererStatus(detail) {
+    rendererStatus.textContent = detail?.message || "";
+    rendererStatus.classList.toggle("is-error", detail?.status === "error");
+  }
+
+  document.addEventListener("lightdiscs:renderer-status", (event) => {
+    updateRendererStatus(event.detail);
+  });
+  updateRendererStatus(window.LightDiscRendererStatus);
 
   if ("PerformanceObserver" in window) {
     try {

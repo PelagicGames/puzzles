@@ -10,8 +10,8 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 - **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
-- **Profiling** generates Random-mode puzzles and compares the luminance-mask,
-  bounded alpha-mask, and flattened multiply-image live-board renderers. It
+- **Profiling** generates Random-mode puzzles and compares the SVG luminance-mask,
+  worker-backed WebGL, and WebGL-with-contrast live-board renderers. It
   reports frame intervals, JavaScript update time, composition frames, long
   tasks, and renderer complexity.
 
@@ -81,11 +81,16 @@ composition omits these outlines to keep dragging responsive. The outlines are
 rendering aids only and do not participate in filter composition, matching,
 solution vectors, or solver logic.
 
-The standard and profiling live-board renderers use RGB channel masks. Alpha
-profiling mode replaces the board's luminance masks with board-bounded alpha
-masks. Multiply profiling mode flattens each source disc into a cached SVG image
-and combines the images with `mix-blend-mode: multiply`. All three modes share
-the same puzzle generation, matching, target rendering, and drag behavior.
+The standard and profiling live-board renderers use SVG RGB channel masks.
+WebGL profiling mode transfers a board-sized canvas to a worker as an
+`OffscreenCanvas`, evaluates filter shapes in a WebGL2 fragment shader, and
+intersects RGB channels with GPU multiplicative blending. All modes share the
+same puzzle generation, matching, target rendering, and drag behavior.
+The optional WebGL contrast mode adds a post-process outline around
+low-contrast boundaries in the final composed image. That post-process is
+disabled during dragging and restored when the drag ends.
+The WebGL live-contrast mode keeps the same post-process active throughout
+dragging so its cost can be compared directly.
 Profiling URLs carry a random seed and puzzle iteration so switching renderer
 keeps the exact same generated puzzle, including composite targets that cannot
 be represented by a level-code component.

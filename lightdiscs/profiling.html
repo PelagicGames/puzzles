@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101713">
   <title>Profiling | Light Discs</title>
-  <link rel="stylesheet" href="./styles.css?v=20261012">
+  <link rel="stylesheet" href="./styles.css?v=20261012b">
 </head>
 <body data-profiling="true">
   <main class="page-shell">
@@ -30,9 +30,11 @@
       </div>
       <nav class="renderer-modes" aria-label="Renderer mode">
         <a href="./profiling.html?renderer=profile" data-renderer-link="profile">Profile</a>
-        <a href="./profiling.html?renderer=alpha" data-renderer-link="alpha">Alpha masks</a>
-        <a href="./profiling.html?renderer=multiply" data-renderer-link="multiply">Multiply images</a>
+        <a href="./profiling.html?renderer=webgl" data-renderer-link="webgl">WebGL + OffscreenCanvas</a>
+        <a href="./profiling.html?renderer=webgl-contrast" data-renderer-link="webgl-contrast">WebGL + contrast</a>
+        <a href="./profiling.html?renderer=webgl-contrast-live" data-renderer-link="webgl-contrast-live">WebGL + live contrast</a>
       </nav>
+      <p class="renderer-status" id="profile-renderer-status" role="status" aria-live="polite"></p>
       <dl class="profile-metrics" aria-live="polite">
         <div><dt>Renderer</dt><dd id="profile-renderer">&#8212;</dd></div>
         <div><dt>Drag frames</dt><dd id="profile-frames">0</dd></div>
@@ -45,7 +47,7 @@
         <div><dt>Long tasks</dt><dd id="profile-long-tasks">0</dd></div>
         <div><dt>SVG descendants</dt><dd id="profile-descendants">0</dd></div>
         <div><dt>Masks</dt><dd id="profile-masks">0</dd></div>
-        <div><dt>Images</dt><dd id="profile-images">0</dd></div>
+        <div><dt>Canvases</dt><dd id="profile-canvases">0</dd></div>
       </dl>
     </section>
 
@@ -100,13 +102,13 @@
       </aside>
     </div>
   </main>
-  <script src="./rendering-mode.js?v=20261012"></script>
-  <script src="./filter-composition.js?v=20261012"></script>
+  <script src="./rendering-mode.js?v=20261012c"></script>
+  <script src="./filter-composition.js?v=20261012b"></script>
   <script src="./game-geometry.js"></script>
   <script src="./puzzle-code.js"></script>
   <script src="./puzzle-math.js"></script>
-  <script src="./lightdiscs.js?v=20261012"></script>
+  <script src="./lightdiscs.js?v=20261012c"></script>
   <script src="./random.js"></script>
-  <script src="./profiler.js?v=20261012"></script>
+  <script src="./profiler.js?v=20261012b"></script>
 </body>
 </html>

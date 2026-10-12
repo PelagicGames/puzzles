@@ -23,7 +23,6 @@ const {
 const {
   contrastOutlineColour,
   filterCompositionMarkup,
-  multiplyCompositionMarkup,
   needsContrastOutline
 } = window.LightDiscRendering;
 
@@ -157,26 +156,5 @@ const boardMarkup = filterCompositionMarkup([
 ], "board-test", discRadius, { includeContrastOutlines: false });
 assert(!boardMarkup.includes("data-contrast-boundaries"));
 assert(!boardMarkup.includes("-visible"));
-const alphaMarkup = filterCompositionMarkup([
-  { filter: filter(7, 6, "square-star"), x: 100, y: 200, angle: 60 }
-], "alpha-test", discRadius, {
-  includeContrastOutlines: false,
-  maskMode: "alpha",
-  maskBounds: { x: 0, y: 0, width: 1000, height: 950 }
-});
-assert(alphaMarkup.includes("mask-type:alpha"));
-assert(alphaMarkup.includes('width="1000"'));
-assert(!alphaMarkup.includes("mask-type:luminance"));
-assert(!alphaMarkup.includes("-2000"));
-const multiplyMarkup = multiplyCompositionMarkup([
-  { filter: filter(7, 6, "triangle"), x: 100, y: 200, angle: 0 },
-  { filter: filter(3, 2, "square"), x: 200, y: 300, angle: 60 }
-], discRadius);
-assert.strictEqual(
-  (multiplyMarkup.match(/data-filter-image-layer=/g) || []).length,
-  2
-);
-assert(multiplyMarkup.includes("mix-blend-mode:multiply"));
-assert(!multiplyMarkup.includes("<mask"));
 
 console.log("Game geometry tests passed.");

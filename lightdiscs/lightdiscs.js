@@ -20,7 +20,6 @@
   const {
     contrastOutlineColour,
     filterCompositionMarkup,
-    multiplyCompositionMarkup,
     needsContrastOutline
   } = window.LightDiscRendering;
   const {
@@ -141,19 +140,106 @@
   let renderedFilterSignature = "";
   let renderedFilterGeometry = [];
   let filterLayerCircles = [];
-  let filterLayerImages = [];
   let filterLayerMasks = [];
   let filterLayerOutlines = [];
   let reportedSolvedState = false;
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
   addFixedDiscs();
+  const webglRenderer = renderingMode.startsWith("webgl")
+    ? createWebglRenderer()
+    : null;
   const targetDisplays = createTargetDisplays();
 
   function createSvgElement(tag, attributes = {}) {
     const element = document.createElementNS(namespace, tag);
     Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
     return element;
+  }
+
+  function createWebglRenderer() {
+    const foreignObject = createSvgElement("foreignObject", {
+      class: "webgl-filter-render",
+      x: 0,
+      y: 0,
+      width: boardWidth,
+      height: boardHeight,
+      "pointer-events": "none"
+    });
+    const canvas = document.createElement("canvas");
+    const renderPixelRatio = Math.min(initialPixelRatio, 2);
+    canvas.className = "webgl-filter-canvas";
+    canvas.width = Math.round(boardWidth * renderPixelRatio);
+    canvas.height = Math.round(boardHeight * renderPixelRatio);
+    foreignObject.append(canvas);
+    filterRender.after(foreignObject);
+
+    if (!canvas.transferControlToOffscreen) {
+      setRendererStatus(
+        "error",
+        "OffscreenCanvas transfer is unavailable in this browser."
+      );
+      return { render() {} };
+    }
+    if (!window.Worker) {
+      setRendererStatus(
+        "error",
+        "Web Workers are unavailable in this browser."
+      );
+      return { render() {} };
+    }
+
+    const worker = new Worker("./webgl-renderer-worker.js?v=20261012b");
+    worker.addEventListener("message", (event) => {
+      if (event.data.type === "ready") {
+        setRendererStatus("ready", "Offscreen WebGL2 renderer ready.");
+      } else if (event.data.type === "error") {
+        setRendererStatus("error", event.data.message);
+      }
+    });
+    worker.addEventListener("error", (event) => {
+      setRendererStatus(
+        "error",
+        event.message || "The WebGL rendering worker failed."
+      );
+    });
+    const offscreenCanvas = canvas.transferControlToOffscreen();
+    worker.postMessage({
+      type: "init",
+      boardHeight,
+      boardWidth,
+      canvas: offscreenCanvas,
+      height: canvas.height,
+      width: canvas.width
+    }, [offscreenCanvas]);
+
+    return {
+      render(layers) {
+        worker.postMessage({
+          type: "render",
+          contrast: webglContrastEnabled(),
+          layers: layers.map(({ filter, x, y, angle }) => ({
+            angle,
+            backgroundMask: filter.background.mask,
+            foregroundMask: filter.foreground.mask,
+            radius: discRadius,
+            shape: filter.shape.value,
+            x,
+            y
+          }))
+        });
+      }
+    };
+  }
+
+  function setRendererStatus(status, message) {
+    window.LightDiscRendererStatus = { status, message };
+    document.dispatchEvent(new CustomEvent("lightdiscs:renderer-status", {
+      detail: { status, message }
+    }));
+    if (status === "error") {
+      console.error(`Light Discs renderer: ${message}`);
+    }
   }
 
   function roundedTrianglePath(vertices, radius) {
@@ -526,6 +612,12 @@
   }
 
   function hideDraggedFilterLayers(piece) {
+    if (webglRenderer) {
+      webglRenderer.render(filterLayersForPoses(
+        pieces.filter((other) => other !== piece)
+      ));
+      return;
+    }
     const firstLayer = piece.index * corners.length;
     const hiddenLayers = new Set(
       corners.map((_, index) => firstLayer + index)
@@ -535,12 +627,6 @@
       if (!hiddenLayers.has(index)) return;
       circle.setAttribute("cx", -5000);
       circle.setAttribute("cy", -5000);
-    });
-    filterLayerImages.forEach((image) => {
-      const index = Number(image.dataset.filterImageLayer);
-      if (hiddenLayers.has(index)) {
-        image.setAttribute("transform", "translate(-5000 -5000)");
-      }
     });
     filterLayerMasks.forEach((mask) => {
       const index = Number(mask.dataset.filterMaskLayer);
@@ -1079,23 +1165,12 @@
   }
 
   function boardCompositionMarkup(layers) {
-    if (renderingMode === "multiply") {
-      return multiplyCompositionMarkup(layers, discRadius);
-    }
-    const options = { includeContrastOutlines: false };
-    if (renderingMode === "alpha") {
-      options.maskMode = "alpha";
-      options.maskBounds = {
-        x: 0,
-        y: 0,
-        width: boardWidth,
-        height: boardHeight
-      };
-    }
-    return filterCompositionMarkup(layers, "board", discRadius, options);
+    return filterCompositionMarkup(layers, "board", discRadius, {
+      includeContrastOutlines: false
+    });
   }
 
-  function renderFilterLayer(poses) {
+  function filterLayersForPoses(poses) {
     const layers = [];
     poses.forEach((pose) => {
       const piece = pose.piece || pose;
@@ -1110,6 +1185,15 @@
         });
       });
     });
+    return layers;
+  }
+
+  function renderFilterLayer(poses) {
+    const layers = filterLayersForPoses(poses);
+    if (webglRenderer) {
+      webglRenderer.render(layers);
+      return;
+    }
     const signature = layers.map(({ filter }) => (
       `${filter.background.mask}:${filter.foreground.mask}:${filter.shape.value}`
     )).join("|");
@@ -1119,7 +1203,6 @@
       renderedFilterSignature = signature;
       renderedFilterGeometry = geometry;
       filterLayerCircles = [...filterRender.querySelectorAll("[data-filter-layer]")];
-      filterLayerImages = [...filterRender.querySelectorAll("[data-filter-image-layer]")];
       filterLayerMasks = [...filterRender.querySelectorAll("[data-filter-mask-layer]")];
       filterLayerOutlines = [...filterRender.querySelectorAll("[data-filter-outline-layer]")];
       return;
@@ -1134,15 +1217,6 @@
       const layer = layers[index];
       circle.setAttribute("cx", layer.x);
       circle.setAttribute("cy", layer.y);
-    });
-    filterLayerImages.forEach((image) => {
-      const index = Number(image.dataset.filterImageLayer);
-      if (!changedLayers.has(index)) return;
-      const layer = layers[index];
-      image.setAttribute(
-        "transform",
-        `translate(${layer.x} ${layer.y}) rotate(${layer.angle})`
-      );
     });
     filterLayerMasks.forEach((mask) => {
       const index = Number(mask.dataset.filterMaskLayer);
@@ -1221,11 +1295,18 @@
 
   function renderStats() {
     return {
+      canvases: webglRenderer ? 1 : 0,
+      contrast: webglContrastEnabled(),
       descendants: filterRender.querySelectorAll("*").length,
-      images: filterLayerImages.length,
       masks: filterRender.querySelectorAll("mask").length,
       renderer: renderingMode
     };
+  }
+
+  function webglContrastEnabled() {
+    return renderingMode === "webgl-contrast-live"
+      || (renderingMode === "webgl-contrast"
+        && !svg.classList.contains("is-dragging-piece"));
   }
 
   function profileIdentity() {

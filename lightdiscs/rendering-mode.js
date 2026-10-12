@@ -6,13 +6,17 @@
       heading: "Profiling",
       title: "Profiling | Light Discs"
     },
-    alpha: {
-      heading: "Alpha masks",
-      title: "Alpha masks | Light Discs"
+    webgl: {
+      heading: "WebGL",
+      title: "WebGL | Light Discs"
     },
-    multiply: {
-      heading: "Multiply images",
-      title: "Multiply images | Light Discs"
+    "webgl-contrast": {
+      heading: "WebGL + contrast",
+      title: "WebGL + contrast | Light Discs"
+    },
+    "webgl-contrast-live": {
+      heading: "WebGL + live contrast",
+      title: "WebGL + live contrast | Light Discs"
     }
   };
   const parameters = new URLSearchParams(window.location.search);

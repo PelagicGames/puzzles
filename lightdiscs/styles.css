@@ -885,6 +885,28 @@ h1 {
   outline: none;
 }
 
+.renderer-status {
+  min-height: 1.5em;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font: 400 0.7rem/1.5 "DM Mono", monospace;
+}
+
+.renderer-status.is-error {
+  color: var(--warm);
+}
+
+.webgl-filter-render {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.webgl-filter-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .profile-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
