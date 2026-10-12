@@ -20,6 +20,7 @@
   const {
     contrastOutlineColour,
     filterCompositionMarkup,
+    multiplyCompositionMarkup,
     needsContrastOutline
   } = window.LightDiscRendering;
   const {
@@ -36,6 +37,15 @@
   } = window.LightDiscMath;
   let puzzleDefinition = document.body.dataset.puzzleCode
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
+    : null;
+  const renderingMode = document.body.dataset.renderMode || "standard";
+  const randomSeed = document.body.dataset.randomSeed || "";
+  let randomIteration = Math.max(
+    0,
+    Number(document.body.dataset.randomIteration) || 0
+  );
+  let seededRandom = randomSeed
+    ? createSeededRandom(`${randomSeed}:${randomIteration}`)
     : null;
   const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
@@ -131,6 +141,7 @@
   let renderedFilterSignature = "";
   let renderedFilterGeometry = [];
   let filterLayerCircles = [];
+  let filterLayerImages = [];
   let filterLayerMasks = [];
   let filterLayerOutlines = [];
   let reportedSolvedState = false;
@@ -404,6 +415,10 @@
     svg.classList.add("is-dragging-piece");
     hideDraggedFilterLayers(piece);
     svg.setPointerCapture(event.pointerId);
+    reportProfileEvent("drag-start", {
+      pointerType: event.pointerType,
+      renderer: renderingMode
+    });
   }
 
   function beginBoardPan(event) {
@@ -462,6 +477,7 @@
   function finishDrag(event) {
     if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     const { piece } = activeDrag;
+    const wasComposing = activeDrag.composing;
     const snap = findSnap(piece);
     if (snap) {
       piece.position.x += snap.target.x - snap.movingCorner.x;
@@ -484,6 +500,10 @@
       dragUpdateFrame = null;
     }
     updateSuccess();
+    reportProfileEvent("drag-end", {
+      composing: wasComposing,
+      renderer: renderingMode
+    });
   }
 
   function finishBoardPan(event) {
@@ -515,6 +535,12 @@
       if (!hiddenLayers.has(index)) return;
       circle.setAttribute("cx", -5000);
       circle.setAttribute("cy", -5000);
+    });
+    filterLayerImages.forEach((image) => {
+      const index = Number(image.dataset.filterImageLayer);
+      if (hiddenLayers.has(index)) {
+        image.setAttribute("transform", "translate(-5000 -5000)");
+      }
     });
     filterLayerMasks.forEach((mask) => {
       const index = Number(mask.dataset.filterMaskLayer);
@@ -554,7 +580,8 @@
     });
   }
 
-  function updateDragRendering() {
+  function updateDragRendering(frameTime) {
+    const updateStart = performance.now();
     const { piece } = activeDrag;
     updateDraggedPiece(piece);
     const composing = draggedPieceHasFilterOverlap();
@@ -566,6 +593,12 @@
       hideDraggedFilterLayers(piece);
     }
     activeDrag.composing = composing;
+    reportProfileEvent("drag-frame", {
+      composing,
+      frameTime,
+      renderer: renderingMode,
+      updateDuration: performance.now() - updateStart
+    });
   }
 
   function pieceState(piece) {
@@ -652,6 +685,7 @@
   }
 
   function resetPieces() {
+    const cancelledDrag = Boolean(activeDrag);
     if (activeDrag && svg.hasPointerCapture(activeDrag.pointerId)) {
       svg.releasePointerCapture(activeDrag.pointerId);
     }
@@ -665,6 +699,13 @@
     if (dragUpdateFrame !== null) {
       cancelAnimationFrame(dragUpdateFrame);
       dragUpdateFrame = null;
+    }
+    if (cancelledDrag) {
+      reportProfileEvent("drag-end", {
+        cancelled: true,
+        composing: false,
+        renderer: renderingMode
+      });
     }
     hideTargetInspector();
     pieces.forEach((piece, pieceIndex) => {
@@ -803,7 +844,7 @@
   }
 
   function randomItem(items) {
-    return items[Math.floor(Math.random() * items.length)];
+    return items[Math.floor(randomValue() * items.length)];
   }
 
   function renderPatternDisc(disc, filter) {
@@ -892,7 +933,7 @@
 
   function shuffle(items) {
     for (let index = items.length - 1; index > 0; index -= 1) {
-      const swapIndex = Math.floor(Math.random() * (index + 1));
+      const swapIndex = Math.floor(randomValue() * (index + 1));
       [items[index], items[swapIndex]] = [items[swapIndex], items[index]];
     }
     return items;
@@ -1037,6 +1078,23 @@
     return `data:image/svg+xml,${encodeURIComponent(markup)}`;
   }
 
+  function boardCompositionMarkup(layers) {
+    if (renderingMode === "multiply") {
+      return multiplyCompositionMarkup(layers, discRadius);
+    }
+    const options = { includeContrastOutlines: false };
+    if (renderingMode === "alpha") {
+      options.maskMode = "alpha";
+      options.maskBounds = {
+        x: 0,
+        y: 0,
+        width: boardWidth,
+        height: boardHeight
+      };
+    }
+    return filterCompositionMarkup(layers, "board", discRadius, options);
+  }
+
   function renderFilterLayer(poses) {
     const layers = [];
     poses.forEach((pose) => {
@@ -1057,10 +1115,11 @@
     )).join("|");
     const geometry = layers.map(({ x, y, angle }) => `${x}:${y}:${angle}`);
     if (signature !== renderedFilterSignature) {
-      filterRender.innerHTML = filterCompositionMarkup(layers, "board");
+      filterRender.innerHTML = boardCompositionMarkup(layers);
       renderedFilterSignature = signature;
       renderedFilterGeometry = geometry;
       filterLayerCircles = [...filterRender.querySelectorAll("[data-filter-layer]")];
+      filterLayerImages = [...filterRender.querySelectorAll("[data-filter-image-layer]")];
       filterLayerMasks = [...filterRender.querySelectorAll("[data-filter-mask-layer]")];
       filterLayerOutlines = [...filterRender.querySelectorAll("[data-filter-outline-layer]")];
       return;
@@ -1075,6 +1134,15 @@
       const layer = layers[index];
       circle.setAttribute("cx", layer.x);
       circle.setAttribute("cy", layer.y);
+    });
+    filterLayerImages.forEach((image) => {
+      const index = Number(image.dataset.filterImageLayer);
+      if (!changedLayers.has(index)) return;
+      const layer = layers[index];
+      image.setAttribute(
+        "transform",
+        `translate(${layer.x} ${layer.y}) rotate(${layer.angle})`
+      );
     });
     filterLayerMasks.forEach((mask) => {
       const index = Number(mask.dataset.filterMaskLayer);
@@ -1145,10 +1213,57 @@
 
   function scheduleDragUpdate() {
     if (dragUpdateFrame !== null) return;
-    dragUpdateFrame = requestAnimationFrame(() => {
+    dragUpdateFrame = requestAnimationFrame((frameTime) => {
       dragUpdateFrame = null;
-      if (activeDrag) updateDragRendering();
+      if (activeDrag) updateDragRendering(frameTime);
     });
+  }
+
+  function renderStats() {
+    return {
+      descendants: filterRender.querySelectorAll("*").length,
+      images: filterLayerImages.length,
+      masks: filterRender.querySelectorAll("mask").length,
+      renderer: renderingMode
+    };
+  }
+
+  function profileIdentity() {
+    return {
+      iteration: String(randomIteration),
+      seed: randomSeed
+    };
+  }
+
+  function randomValue() {
+    return seededRandom ? seededRandom() : Math.random();
+  }
+
+  function createSeededRandom(seed) {
+    let state = 2166136261;
+    for (let index = 0; index < seed.length; index += 1) {
+      state ^= seed.charCodeAt(index);
+      state = Math.imul(state, 16777619);
+    }
+    return () => {
+      state += 0x6D2B79F5;
+      let value = state;
+      value = Math.imul(value ^ value >>> 15, value | 1);
+      value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function resetPuzzle() {
+    if (randomSeed && !puzzleDefinition) {
+      randomIteration += 1;
+      seededRandom = createSeededRandom(`${randomSeed}:${randomIteration}`);
+    }
+    resetPieces();
+  }
+
+  function reportProfileEvent(type, detail) {
+    window.LightDiscProfiler?.record(type, detail);
   }
 
   function refreshTargetInspector() {
@@ -1170,7 +1285,7 @@
     targetInspector.hidden = true;
   }
 
-  resetButton.addEventListener("click", resetPieces);
+  resetButton.addEventListener("click", resetPuzzle);
   targetInspector.addEventListener("click", hideTargetInspector);
   document.addEventListener("pointerdown", (event) => {
     const target = event.target;
@@ -1208,6 +1323,11 @@
   svg.addEventListener("pointercancel", finishBoardPan);
   window.addEventListener("pageshow", updateBoardZoom);
   window.addEventListener("resize", updateBoardZoom);
-  window.LightDiscGame = { applyPuzzleCode, levelCode };
+  window.LightDiscGame = {
+    applyPuzzleCode,
+    levelCode,
+    profileIdentity,
+    renderStats
+  };
   resetPieces();
 })();

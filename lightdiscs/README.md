@@ -10,6 +10,10 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 - **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
+- **Profiling** generates Random-mode puzzles and compares the luminance-mask,
+  bounded alpha-mask, and flattened multiply-image live-board renderers. It
+  reports frame intervals, JavaScript update time, composition frames, long
+  tasks, and renderer complexity.
 
 ## How to play
 
@@ -72,8 +76,19 @@ Each movable corner disc has a background filter colour and may contain a differ
 Patterns rotate with their triangle. Matching is based on the resulting colour-and-shape formation rather than the names of the source shapes. Composite shapes are expanded into their geometric parts, so three rotated squares are equivalent to a 12-pointed star and complementary colour patterns can simplify to a solid disc.
 
 Low-contrast foreground and background combinations receive a black or white
-shape outline for visibility. These outlines are rendering aids only and do not
-participate in filter composition, matching, solution vectors, or solver logic.
+shape outline in targets and enlarged target comparisons. Live board
+composition omits these outlines to keep dragging responsive. The outlines are
+rendering aids only and do not participate in filter composition, matching,
+solution vectors, or solver logic.
+
+The standard and profiling live-board renderers use RGB channel masks. Alpha
+profiling mode replaces the board's luminance masks with board-bounded alpha
+masks. Multiply profiling mode flattens each source disc into a cached SVG image
+and combines the images with `mix-blend-mode: multiply`. All three modes share
+the same puzzle generation, matching, target rendering, and drag behavior.
+Profiling URLs carry a random seed and puzzle iteration so switching renderer
+keeps the exact same generated puzzle, including composite targets that cannot
+be represented by a level-code component.
 
 ## Targets and success
 

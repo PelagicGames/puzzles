@@ -52,6 +52,6 @@
   updateNextLink();
 
   const gameScript = document.createElement("script");
-  gameScript.src = "./lightdiscs.js";
+  gameScript.src = "./lightdiscs.js?v=20261012";
   document.body.append(gameScript);
 })();
