@@ -189,7 +189,7 @@
       return { render() {} };
     }
 
-    const worker = new Worker("./webgl-renderer-worker.js?v=20261012b");
+    const worker = new Worker("./webgl-renderer-worker.js?v=20261012c");
     worker.addEventListener("message", (event) => {
       if (event.data.type === "ready") {
         setRendererStatus("ready", "Offscreen WebGL2 renderer ready.");

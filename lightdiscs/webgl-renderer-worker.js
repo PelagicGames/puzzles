@@ -147,7 +147,7 @@ float luminance(vec3 colour) {
 void main() {
   vec4 centre = texture(u_scene, v_textureCoordinate);
   vec2 distance = u_texel * u_outlineWidth;
-  vec2 offsets[8] = vec2[](
+  highp vec2 offsets[8] = vec2[](
     vec2(-distance.x, 0.0),
     vec2(distance.x, 0.0),
     vec2(0.0, -distance.y),
