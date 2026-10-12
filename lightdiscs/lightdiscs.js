@@ -134,8 +134,7 @@
   let filterLayerMasks = [];
   let filterLayerOutlines = [];
   let reportedSolvedState = false;
-  let contrastQuality = "full";
-  let calibrationFrame = null;
+  let contrastQuality = "targets-only";
   let dragCapabilitySamples = [];
   let previousDragFrameTime = null;
   let adaptationDirection = null;
@@ -1190,13 +1189,6 @@
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
   }
 
-  function qualityForFrameInterval(interval) {
-    if (interval <= 19) return "full";
-    if (interval <= 27) return "drag-hidden";
-    if (interval <= 42) return "targets-only";
-    return "none";
-  }
-
   function setContrastQuality(quality, useCooldown = true) {
     if (quality === contrastQuality) return;
     const previewsChanged = (contrastQuality === "none") !== (quality === "none");
@@ -1216,45 +1208,6 @@
       });
       if (inspectedTargetIndex !== null) refreshTargetInspector();
     }
-  }
-
-  function scheduleContrastCalibration() {
-    const samples = [];
-    let previousFrameTime = null;
-    let offset = false;
-    const originalX = pieces[0].position.x;
-    const measure = (frameTime) => {
-      if (document.hidden || activeDrag) {
-        previousFrameTime = null;
-        calibrationFrame = requestAnimationFrame(measure);
-        return;
-      }
-      if (previousFrameTime !== null) {
-        const interval = frameTime - previousFrameTime;
-        samples.push(interval);
-        if (interval > 80) {
-          pieces[0].position.x = originalX;
-          renderFilterLayer(pieces);
-          calibrationFrame = null;
-          setContrastQuality("none", false);
-          return;
-        }
-      }
-      previousFrameTime = frameTime;
-      offset = !offset;
-      pieces[0].position.x = originalX + (offset ? 0.25 : 0);
-      renderFilterLayer(pieces);
-      pieces[0].position.x = originalX;
-      if (samples.length < 6) {
-        calibrationFrame = requestAnimationFrame(measure);
-        return;
-      }
-      renderFilterLayer(pieces);
-      calibrationFrame = null;
-      const interval = percentile(samples, 0.75);
-      setContrastQuality(qualityForFrameInterval(interval), false);
-    };
-    calibrationFrame = requestAnimationFrame(measure);
   }
 
   function recordDragCapability(frameTime) {
@@ -1371,5 +1324,4 @@
     levelCode
   };
   resetPieces();
-  scheduleContrastCalibration();
 })();

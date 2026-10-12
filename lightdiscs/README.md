@@ -72,9 +72,9 @@ Each movable corner disc has a background filter colour and may contain a differ
 Patterns rotate with their triangle. Matching is based on the resulting colour-and-shape formation rather than the names of the source shapes. Composite shapes are expanded into their geometric parts, so three rotated squares are equivalent to a 12-pointed star and complementary colour patterns can simplify to a solid disc.
 
 Low-contrast foreground and background combinations can receive a black or
-white shape outline. A short startup benchmark measures actual SVG mask frame
-times, without browser or device identification, and chooses one of four
-quality levels:
+white shape outline. Rendering starts with outlines only in targets and
+enlarged target comparisons, then uses measured drag performance, without
+browser or device identification, to move between four quality levels:
 
 - Outlines on the live board, moving triangles, targets, and comparisons.
 - Live-board outlines hidden whenever a triangle is moving.
