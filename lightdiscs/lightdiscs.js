@@ -17,7 +17,15 @@
   const boardScroll = document.querySelector(".board-scroll");
   const boardSurface = document.querySelector(".board-surface");
   const namespace = "http://www.w3.org/2000/svg";
-  const { filterCompositionMarkup } = window.LightDiscRendering;
+  const {
+    contrastOutlineColour,
+    filterCompositionMarkup,
+    needsContrastOutline
+  } = window.LightDiscRendering;
+  const {
+    expandedTrianglesOverlap,
+    nearestValidPlacement
+  } = window.LightDiscGeometry;
   const { parsePuzzleCode } = window.LightDiscPuzzleCode;
   const {
     formationMask,
@@ -39,13 +47,20 @@
     { x: cornerRadius * Math.sqrt(3) / 2, y: cornerRadius / 2 }
   ];
   const fixedPosition = { x: 500, y: 440 };
+  const targetCornerRadius = 35;
   const targetCorners = [
-    { x: 0, y: -28 },
-    { x: -24, y: 14 },
-    { x: 24, y: 14 }
+    { x: 0, y: -targetCornerRadius },
+    {
+      x: -targetCornerRadius * Math.sqrt(3) / 2,
+      y: targetCornerRadius / 2
+    },
+    {
+      x: targetCornerRadius * Math.sqrt(3) / 2,
+      y: targetCornerRadius / 2
+    }
   ];
   const discRadius = 38;
-  const targetRadius = 16;
+  const targetRadius = 28;
   const largeShapeRadius = 30;
   const smallShapeRadius = 12;
   const squareHalfSize = 21;
@@ -53,6 +68,10 @@
   const triangleHalfWidth = triangleRadius * Math.sqrt(3) / 2;
   const triangleBaseY = triangleRadius / 2;
   const snapDistance = discRadius * 2;
+  const filterOverlapCentreDistance = cornerRadius * 2 + discRadius * 2;
+  const filterOverlapCentreDistanceSquared = filterOverlapCentreDistance ** 2;
+  const filterOverlapDistanceSquared = (discRadius * 2) ** 2;
+  const trianglePadding = discRadius + 5.5;
   const trianglePath = roundedTrianglePath(corners, discRadius + 4);
   const filterColors = [
     { name: "black", value: "#000000", mask: 0 },
@@ -96,9 +115,9 @@
     [3, 3, 3]
   ];
   const pieceDefinitions = [
-    { name: "Red", color: "#ff3b4f", home: { x: 240, y: 270 } },
-    { name: "Green", color: "#35e86f", home: { x: 760, y: 270 } },
-    { name: "Blue", color: "#4285ff", home: { x: 500, y: 740 } }
+    { name: "Red", color: "#ff3b4f", home: { x: 150, y: 160 } },
+    { name: "Green", color: "#35e86f", home: { x: 850, y: 160 } },
+    { name: "Blue", color: "#4285ff", home: { x: 300, y: 790 } }
   ];
   let targetFormations = [];
   let targetVisuals = [];
@@ -113,6 +132,7 @@
   let renderedFilterGeometry = [];
   let filterLayerCircles = [];
   let filterLayerMasks = [];
+  let filterLayerOutlines = [];
   let reportedSolvedState = false;
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
@@ -188,7 +208,7 @@
       });
       const hitArea = createSvgElement("circle", {
         class: "target-hit-area",
-        r: 22
+        r: targetRadius + 4
       });
       const outline = createSvgElement("circle", {
         class: "target-disc",
@@ -263,6 +283,7 @@
       discFilters: [],
       controls,
       home: definition.home,
+      index,
       position: { ...definition.home },
       angle: 0,
       snapped: false
@@ -328,10 +349,13 @@
     }[event.key];
     if (!movement) return;
     event.preventDefault();
+    const previous = pieceState(piece);
+    if (piece.snapped) piece.position = { ...piece.home };
     piece.snapped = false;
     piece.position.x += movement.x;
     piece.position.y += movement.y;
     constrainPiecePosition(piece);
+    if (!isSafeFreePlacement(piece)) restorePieceState(piece, previous);
     updatePiece(piece);
     updateSuccess();
   }
@@ -341,8 +365,10 @@
     const button = event?.currentTarget || this;
     const piece = pieces[Number(button.dataset.piece)];
     if (piece.snapped) return;
+    const previous = pieceState(piece);
     piece.angle = (piece.angle + Number(button.dataset.direction) * 60 + 360) % 360;
     constrainPiecePosition(piece);
+    if (!isSafeFreePlacement(piece)) restorePieceState(piece, previous);
     updatePiece(piece);
     updateSuccess();
   }
@@ -350,10 +376,23 @@
   function beginDrag(event, piece) {
     if (event.button !== 0) return;
     event.preventDefault();
-    const pointer = svgPoint(event);
+    const inverseScreenMatrix = svg.getScreenCTM().inverse();
+    const pointer = svgPoint(event, inverseScreenMatrix);
     activeDrag = {
       piece,
       pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      previous: pieceState(piece),
+      bounds: piecePositionBounds(piece),
+      composing: false,
+      cornerOffsets: corners.map((corner) => rotatePoint(corner, piece.angle)),
+      filterObstacles: pieces
+        .filter((other) => other !== piece)
+        .map((other) => ({
+          position: { ...other.position },
+          discCentres: corners.map((corner) => transformedCorner(other, corner))
+        })),
+      inverseScreenMatrix,
       offset: {
         x: pointer.x - piece.position.x,
         y: pointer.y - piece.position.y
@@ -361,6 +400,9 @@
     };
     piece.snapped = false;
     piece.root.classList.remove("is-snapped");
+    piece.discs.classList.add("is-dragging");
+    svg.classList.add("is-dragging-piece");
+    hideDraggedFilterLayers(piece);
     svg.setPointerCapture(event.pointerId);
   }
 
@@ -378,9 +420,9 @@
     svg.setPointerCapture(event.pointerId);
   }
 
-  function svgPoint(event) {
+  function svgPoint(event, inverseScreenMatrix = svg.getScreenCTM().inverse()) {
     const point = new DOMPoint(event.clientX, event.clientY);
-    return point.matrixTransform(svg.getScreenCTM().inverse());
+    return point.matrixTransform(inverseScreenMatrix);
   }
 
   function rotatePoint(point, angle) {
@@ -425,10 +467,16 @@
       piece.position.x += snap.target.x - snap.movingCorner.x;
       piece.position.y += snap.target.y - snap.movingCorner.y;
       piece.snapped = true;
-    } else {
-      piece.position = { ...piece.home };
+      moveObscuredFreePieces(piece);
+    } else if (isSafeFreePlacement(piece)) {
       piece.snapped = false;
+    } else if (bumpToSafeFreePlacement(piece)) {
+      piece.snapped = false;
+    } else {
+      restorePieceState(piece, activeDrag.previous);
     }
+    svg.classList.remove("is-dragging-piece");
+    piece.discs.classList.remove("is-dragging");
     updatePiece(piece);
     activeDrag = null;
     if (dragUpdateFrame !== null) {
@@ -451,19 +499,155 @@
     piece.root.classList.toggle("is-snapped", piece.snapped);
   }
 
-  function constrainPiecePosition(piece) {
+  function updateDraggedPiece(piece) {
+    const transform = `translate(${piece.position.x} ${piece.position.y}) rotate(${piece.angle})`;
+    piece.shape.setAttribute("transform", transform);
+    piece.discs.setAttribute("transform", transform);
+  }
+
+  function hideDraggedFilterLayers(piece) {
+    const firstLayer = piece.index * corners.length;
+    const hiddenLayers = new Set(
+      corners.map((_, index) => firstLayer + index)
+    );
+    filterLayerCircles.forEach((circle) => {
+      const index = Number(circle.dataset.filterLayer);
+      if (!hiddenLayers.has(index)) return;
+      circle.setAttribute("cx", -5000);
+      circle.setAttribute("cy", -5000);
+    });
+    filterLayerMasks.forEach((mask) => {
+      const index = Number(mask.dataset.filterMaskLayer);
+      if (hiddenLayers.has(index)) {
+        mask.setAttribute("transform", "translate(-5000 -5000)");
+      }
+    });
+    filterLayerOutlines.forEach((outline) => {
+      const index = Number(outline.dataset.filterOutlineLayer);
+      if (hiddenLayers.has(index)) {
+        outline.setAttribute("transform", "translate(-5000 -5000)");
+      }
+    });
+    hiddenLayers.forEach((index) => {
+      renderedFilterGeometry[index] = "";
+    });
+  }
+
+  function draggedPieceHasFilterOverlap() {
+    const { piece, cornerOffsets, filterObstacles } = activeDrag;
+    return filterObstacles.some((obstacle) => {
+      const centreDx = piece.position.x - obstacle.position.x;
+      const centreDy = piece.position.y - obstacle.position.y;
+      if (centreDx * centreDx + centreDy * centreDy
+        > filterOverlapCentreDistanceSquared) {
+        return false;
+      }
+      return cornerOffsets.some((corner) => {
+        const x = piece.position.x + corner.x;
+        const y = piece.position.y + corner.y;
+        return obstacle.discCentres.some((centre) => {
+          const dx = x - centre.x;
+          const dy = y - centre.y;
+          return dx * dx + dy * dy < filterOverlapDistanceSquared;
+        });
+      });
+    });
+  }
+
+  function updateDragRendering() {
+    const { piece } = activeDrag;
+    updateDraggedPiece(piece);
+    const composing = draggedPieceHasFilterOverlap();
+    if (composing) {
+      piece.discs.classList.remove("is-dragging");
+      renderFilterLayer(pieces);
+    } else if (activeDrag.composing) {
+      piece.discs.classList.add("is-dragging");
+      hideDraggedFilterLayers(piece);
+    }
+    activeDrag.composing = composing;
+  }
+
+  function pieceState(piece) {
+    return {
+      position: { ...piece.position },
+      angle: piece.angle,
+      snapped: piece.snapped
+    };
+  }
+
+  function restorePieceState(piece, state) {
+    piece.position = { ...state.position };
+    piece.angle = state.angle;
+    piece.snapped = state.snapped;
+  }
+
+  function isSafeFreePlacement(piece) {
+    return !trianglesOverlap(
+      piece,
+      { position: fixedPosition, angle: 0 }
+    );
+  }
+
+  function trianglesOverlap(left, right) {
+    return expandedTrianglesOverlap(
+      left.position,
+      left.angle,
+      right.position,
+      right.angle,
+      corners,
+      trianglePadding
+    );
+  }
+
+  function bumpToSafeFreePlacement(piece, avoidedPieces = []) {
+    const position = nearestValidPlacement(
+      piece.position,
+      piecePositionBounds(piece),
+      (candidate) => {
+        const pose = { position: candidate, angle: piece.angle };
+        return isSafeFreePlacement(pose)
+          && avoidedPieces.every((other) => !trianglesOverlap(pose, other));
+      }
+    );
+    if (!position) return false;
+    piece.position = position;
+    return true;
+  }
+
+  function moveObscuredFreePieces(snappedPiece) {
+    const snappedPieces = pieces.filter((piece) => piece.snapped);
+    pieces.filter((piece) => !piece.snapped).forEach((piece) => {
+      if (!trianglesOverlap(piece, snappedPiece)) return;
+      if (!bumpToSafeFreePlacement(piece, snappedPieces)) {
+        piece.position = { ...piece.home };
+      }
+      updatePiece(piece);
+    });
+  }
+
+  function piecePositionBounds(piece) {
     const rotatedCorners = corners.map((corner) => rotatePoint(corner, piece.angle));
     const minX = Math.min(...rotatedCorners.map((corner) => corner.x)) - discRadius;
     const maxX = Math.max(...rotatedCorners.map((corner) => corner.x)) + discRadius;
     const minY = Math.min(...rotatedCorners.map((corner) => corner.y)) - discRadius;
     const maxY = Math.max(...rotatedCorners.map((corner) => corner.y)) + discRadius;
+    return {
+      minX: -minX,
+      maxX: boardWidth - maxX,
+      minY: -minY,
+      maxY: boardHeight - maxY
+    };
+  }
+
+  function constrainPiecePosition(piece, bounds = piecePositionBounds(piece)) {
     piece.position.x = Math.min(
-      boardWidth - maxX,
-      Math.max(-minX, piece.position.x)
+      bounds.maxX,
+      Math.max(bounds.minX, piece.position.x)
     );
     piece.position.y = Math.min(
-      boardHeight - maxY,
-      Math.max(-minY, piece.position.y)
+      bounds.maxY,
+      Math.max(bounds.minY, piece.position.y)
     );
   }
 
@@ -476,6 +660,8 @@
     }
     activeDrag = null;
     activePan = null;
+    svg.classList.remove("is-dragging-piece");
+    pieces.forEach((piece) => piece.discs.classList.remove("is-dragging"));
     if (dragUpdateFrame !== null) {
       cancelAnimationFrame(dragUpdateFrame);
       dragUpdateFrame = null;
@@ -624,6 +810,12 @@
     disc.background.style.fill = filter.background.value;
     disc.pattern.replaceChildren();
     disc.pattern.style.fill = filter.foreground.value;
+    disc.pattern.style.stroke = needsContrastOutline(filter)
+      ? contrastOutlineColour(filter)
+      : "none";
+    disc.pattern.style.strokeWidth = needsContrastOutline(filter) ? "1.5" : "0";
+    disc.pattern.style.strokeLinejoin = "round";
+    disc.pattern.style.strokeLinecap = "round";
     disc.pattern.setAttribute("transform", `rotate(${filter.rotation || 0})`);
     createShapeElements(filter.shape.value).forEach((element) => disc.pattern.append(element));
     const description = filter.shape.value === "none"
@@ -870,6 +1062,7 @@
       renderedFilterGeometry = geometry;
       filterLayerCircles = [...filterRender.querySelectorAll("[data-filter-layer]")];
       filterLayerMasks = [...filterRender.querySelectorAll("[data-filter-mask-layer]")];
+      filterLayerOutlines = [...filterRender.querySelectorAll("[data-filter-outline-layer]")];
       return;
     }
     const changedLayers = new Set();
@@ -888,6 +1081,15 @@
       if (!changedLayers.has(index)) return;
       const layer = layers[index];
       mask.setAttribute(
+        "transform",
+        `translate(${layer.x} ${layer.y}) rotate(${layer.angle})`
+      );
+    });
+    filterLayerOutlines.forEach((outline) => {
+      const index = Number(outline.dataset.filterOutlineLayer);
+      if (!changedLayers.has(index)) return;
+      const layer = layers[index];
+      outline.setAttribute(
         "transform",
         `translate(${layer.x} ${layer.y}) rotate(${layer.angle})`
       );
@@ -945,7 +1147,7 @@
     if (dragUpdateFrame !== null) return;
     dragUpdateFrame = requestAnimationFrame(() => {
       dragUpdateFrame = null;
-      updateSuccess();
+      if (activeDrag) updateDragRendering();
     });
   }
 
@@ -982,13 +1184,12 @@
         ? event.getCoalescedEvents()
         : [];
       const latestEvent = coalescedEvents[coalescedEvents.length - 1] || event;
-      const pointer = svgPoint(latestEvent);
+      const pointer = svgPoint(latestEvent, activeDrag.inverseScreenMatrix);
       activeDrag.piece.position = {
         x: pointer.x - activeDrag.offset.x,
         y: pointer.y - activeDrag.offset.y
       };
-      constrainPiecePosition(activeDrag.piece);
-      updatePiece(activeDrag.piece);
+      constrainPiecePosition(activeDrag.piece, activeDrag.bounds);
       scheduleDragUpdate();
       return;
     }

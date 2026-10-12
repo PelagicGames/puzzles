@@ -2,12 +2,12 @@
 
 # Light Discs
 
-Light Discs is a browser puzzle about combining coloured light filters and geometric patterns. The player rotates and moves three translucent triangles around a fixed black triangle, then overlaps their corner discs to reproduce three target appearances.
+Light Discs is a browser puzzle about combining coloured light filters and geometric patterns. The player rotates and moves three triangles around a fixed central triangle, with each triangle containing a disc in each corner. The aim is to overlap the corner discs to produce a particular set of target patterns.
 
 ## Pages
 
 - **Tutorial** documents every colour interaction, every available shape, the controls, and the success conditions.
-- **Puzzles** groups six authored levels into each of five difficulty bands and tracks completed puzzle codes in local browser storage.
+- **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
 
@@ -18,17 +18,15 @@ The board contains a fixed black triangle with three white corner discs. White r
 Three coloured triangles surround the fixed triangle:
 
 - Drag a triangle by its body.
-- Drag empty board space to scroll the page. At increased browser page zoom, the enlarged board can also be scrolled horizontally.
-- Triangles remain within the rendered board, including while rotated.
-- Drop it while one or more of its corner discs overlap fixed corner discs to snap them together.
-- A drop with no overlapping corner returns the triangle to its starting position.
+- Drop it while one or more of its corner discs overlap fixed triangle's corner discs to snap them together.
+- Drop it elsewhere to keep it in any in-bounds position that does not currently overlap the central triangle.
 - Use the curved arrows to rotate a free triangle clockwise or anticlockwise in 60-degree steps.
-- Rotation is disabled after a triangle has snapped.
+- Rotation is disabled after a triangle has snapped, so it must be unsnapped to rotate.
 
 The small discs in the centre of the fixed triangle show the required target appearances. Their status rings indicate whether each target currently matches:
 
 - Green: matched
-- Orange: not matched
+- Grey: not matched
 
 Hover, focus, click, or tap a target to open an enlarged, vector-rendered target-versus-current comparison. The progress summary also reports matched targets, snapped triangles, and snapped circles.
 
@@ -73,23 +71,27 @@ Each movable corner disc has a background filter colour and may contain a differ
 
 Patterns rotate with their triangle. Matching is based on the resulting colour-and-shape formation rather than the names of the source shapes. Composite shapes are expanded into their geometric parts, so three rotated squares are equivalent to a 12-pointed star and complementary colour patterns can simplify to a solid disc.
 
+Low-contrast foreground and background combinations receive a black or white
+shape outline for visibility. These outlines are rendering aids only and do not
+participate in filter composition, matching, solution vectors, or solver logic.
+
 ## Targets and success
 
 Generated target states use one, two, or three snapped circles from each movable triangle. Possible distributions are:
 
 `1-1-3`, `1-2-2`, `1-2-3`, `1-3-3`, `2-2-2`, `2-2-3`, `2-3-3`, and `3-3-3`.
 
-The generated target pose always contains at least five snapped circles. This makes random targets more constrained, but it is not a condition the player's solution must reproduce.
+In random mode, the generated target pose always contains at least five snapped circles. This makes random targets more constrained, but it is not a condition the player's solution must reproduce.
 
 Success requires all of the following:
 
 1. Each of the three movable triangles has at least one corner circle snapped to a fixed circle.
 2. All three resulting colour-and-pattern formations match their targets.
 
-Moving a snapped triangle away immediately hides the success state.
+Moving a snapped triangle away immediately reverts from the success state.
 
 Completed authored puzzles are stored by their exact puzzle code rather than
-their displayed number. The puzzle menu shows a tick beside completed levels.
+their displayed number to alow for new puzzles to be added without breaking the completed puzzle tracking. The puzzle menu shows a tick beside completed levels.
 After a puzzle is solved, its page reveals a link to the next unsolved puzzle in
 difficulty order.
 
@@ -159,8 +161,7 @@ operation. Dijkstra's algorithm finds the minimum over all solution states.
 ### Complexity
 
 Complexity first considers the easiest solution's snapped-circle count. A
-solution with one snapped circle from each triangle is always **Very easy**,
-before near-solution traps are considered. Multiple-solution puzzles are
+solution with one snapped circle from each triangle is always **Very easy**. Multiple-solution puzzles are
 **Very easy**, or **Easy** when every solution requires at least five snapped
 circles. Unique-solution puzzles need at least five snapped circles to reach
 **Medium** or **Hard**, and at least six to reach **Very hard**. Eligible unique

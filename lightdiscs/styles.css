@@ -12,6 +12,8 @@
   --light: #d8ff68;
   --light-soft: rgba(216, 255, 104, 0.12);
   --warm: #ff8d5c;
+  --matched: #39ff14;
+  --unmatched: #696868;
   font-family: "Manrope", sans-serif;
 }
 
@@ -739,12 +741,12 @@ h1 {
 }
 
 .match-dot.is-matched {
-  color: var(--light);
+  color: var(--matched);
 }
 
 .match-dot.is-unmatched {
   margin-left: 8px;
-  color: var(--warm);
+  color: var(--unmatched);
 }
 
 .fixed-triangle {
@@ -763,11 +765,19 @@ h1 {
   pointer-events: none;
 }
 
-.piece-disc-outlines .piece-disc {
+.piece-disc-outlines .piece-disc-set:not(.is-dragging) .piece-disc {
   fill: transparent !important;
 }
 
-.piece-disc-outlines .filter-pattern {
+.piece-disc-outlines .piece-disc-set:not(.is-dragging) .filter-pattern {
+  display: none;
+}
+
+.piece-disc-outlines .piece-disc-set.is-dragging .filter-pattern {
+  stroke: none !important;
+}
+
+.interaction-board.is-dragging-piece .rotation-controls {
   display: none;
 }
 
@@ -827,11 +837,11 @@ h1 {
 }
 
 .target-pattern.is-matched .target-disc {
-  stroke: var(--light);
+  stroke: var(--matched);
 }
 
 .target-pattern.is-unmatched .target-disc {
-  stroke: var(--warm);
+  stroke: var(--unmatched);
 }
 
 .target-pattern:hover .target-disc,
@@ -872,11 +882,11 @@ h1 {
 }
 
 .target-inspector-status.is-matched {
-  color: var(--light);
+  color: var(--matched);
 }
 
 .target-inspector-status.is-unmatched {
-  color: var(--warm);
+  color: var(--unmatched);
 }
 
 .target-comparison {
