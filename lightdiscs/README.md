@@ -10,10 +10,6 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 - **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
-- **Profiling** generates Random-mode puzzles and compares the SVG luminance-mask,
-  worker-backed WebGL, and WebGL-with-contrast live-board renderers. It
-  reports frame intervals, JavaScript update time, composition frames, long
-  tasks, and renderer complexity.
 
 ## How to play
 
@@ -75,25 +71,23 @@ Each movable corner disc has a background filter colour and may contain a differ
 
 Patterns rotate with their triangle. Matching is based on the resulting colour-and-shape formation rather than the names of the source shapes. Composite shapes are expanded into their geometric parts, so three rotated squares are equivalent to a 12-pointed star and complementary colour patterns can simplify to a solid disc.
 
-Low-contrast foreground and background combinations receive a black or white
-shape outline in targets and enlarged target comparisons. Live board
-composition omits these outlines to keep dragging responsive. The outlines are
-rendering aids only and do not participate in filter composition, matching,
-solution vectors, or solver logic.
+Low-contrast foreground and background combinations can receive a black or
+white shape outline. A short startup benchmark measures actual SVG mask frame
+times, without browser or device identification, and chooses one of four
+quality levels:
 
-The standard and profiling live-board renderers use SVG RGB channel masks.
-WebGL profiling mode transfers a board-sized canvas to a worker as an
-`OffscreenCanvas`, evaluates filter shapes in a WebGL2 fragment shader, and
-intersects RGB channels with GPU multiplicative blending. All modes share the
-same puzzle generation, matching, target rendering, and drag behavior.
-The optional WebGL contrast mode adds a post-process outline around
-low-contrast boundaries in the final composed image. That post-process is
-disabled during dragging and restored when the drag ends.
-The WebGL live-contrast mode keeps the same post-process active throughout
-dragging so its cost can be compared directly.
-Profiling URLs carry a random seed and puzzle iteration so switching renderer
-keeps the exact same generated puzzle, including composite targets that cannot
-be represented by a level-code component.
+- Outlines on the live board, moving triangles, targets, and comparisons.
+- Live-board outlines hidden whenever a triangle is moving.
+- Outlines only in targets and enlarged target comparisons.
+- No contrast outlines.
+
+Drag frame timing can lower or raise the selected quality as performance
+changes. Promotion requires sustained faster frames and uses separate
+thresholds from demotion, with a cooldown after changes to prevent
+flip-flopping. The outlines are rendering aids only and do not participate in
+filter composition, matching, solution vectors, or solver logic.
+
+The game uses the SVG RGB-channel-mask renderer.
 
 ## Targets and success
 

@@ -37,15 +37,6 @@
   let puzzleDefinition = document.body.dataset.puzzleCode
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
     : null;
-  const renderingMode = document.body.dataset.renderMode || "standard";
-  const randomSeed = document.body.dataset.randomSeed || "";
-  let randomIteration = Math.max(
-    0,
-    Number(document.body.dataset.randomIteration) || 0
-  );
-  let seededRandom = randomSeed
-    ? createSeededRandom(`${randomSeed}:${randomIteration}`)
-    : null;
   const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
   const boardHeight = 950;
@@ -143,103 +134,23 @@
   let filterLayerMasks = [];
   let filterLayerOutlines = [];
   let reportedSolvedState = false;
+  let contrastQuality = "full";
+  let calibrationFrame = null;
+  let dragCapabilitySamples = [];
+  let previousDragFrameTime = null;
+  let adaptationDirection = null;
+  let adaptationEvidence = 0;
+  let adaptationCooldown = 0;
 
   document.querySelector(".triangle-path").setAttribute("d", trianglePath);
+  svg.dataset.contrastQuality = contrastQuality;
   addFixedDiscs();
-  const webglRenderer = renderingMode.startsWith("webgl")
-    ? createWebglRenderer()
-    : null;
   const targetDisplays = createTargetDisplays();
 
   function createSvgElement(tag, attributes = {}) {
     const element = document.createElementNS(namespace, tag);
     Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
     return element;
-  }
-
-  function createWebglRenderer() {
-    const foreignObject = createSvgElement("foreignObject", {
-      class: "webgl-filter-render",
-      x: 0,
-      y: 0,
-      width: boardWidth,
-      height: boardHeight,
-      "pointer-events": "none"
-    });
-    const canvas = document.createElement("canvas");
-    const renderPixelRatio = Math.min(initialPixelRatio, 2);
-    canvas.className = "webgl-filter-canvas";
-    canvas.width = Math.round(boardWidth * renderPixelRatio);
-    canvas.height = Math.round(boardHeight * renderPixelRatio);
-    foreignObject.append(canvas);
-    filterRender.after(foreignObject);
-
-    if (!canvas.transferControlToOffscreen) {
-      setRendererStatus(
-        "error",
-        "OffscreenCanvas transfer is unavailable in this browser."
-      );
-      return { render() {} };
-    }
-    if (!window.Worker) {
-      setRendererStatus(
-        "error",
-        "Web Workers are unavailable in this browser."
-      );
-      return { render() {} };
-    }
-
-    const worker = new Worker("./webgl-renderer-worker.js?v=20261012c");
-    worker.addEventListener("message", (event) => {
-      if (event.data.type === "ready") {
-        setRendererStatus("ready", "Offscreen WebGL2 renderer ready.");
-      } else if (event.data.type === "error") {
-        setRendererStatus("error", event.data.message);
-      }
-    });
-    worker.addEventListener("error", (event) => {
-      setRendererStatus(
-        "error",
-        event.message || "The WebGL rendering worker failed."
-      );
-    });
-    const offscreenCanvas = canvas.transferControlToOffscreen();
-    worker.postMessage({
-      type: "init",
-      boardHeight,
-      boardWidth,
-      canvas: offscreenCanvas,
-      height: canvas.height,
-      width: canvas.width
-    }, [offscreenCanvas]);
-
-    return {
-      render(layers) {
-        worker.postMessage({
-          type: "render",
-          contrast: webglContrastEnabled(),
-          layers: layers.map(({ filter, x, y, angle }) => ({
-            angle,
-            backgroundMask: filter.background.mask,
-            foregroundMask: filter.foreground.mask,
-            radius: discRadius,
-            shape: filter.shape.value,
-            x,
-            y
-          }))
-        });
-      }
-    };
-  }
-
-  function setRendererStatus(status, message) {
-    window.LightDiscRendererStatus = { status, message };
-    document.dispatchEvent(new CustomEvent("lightdiscs:renderer-status", {
-      detail: { status, message }
-    }));
-    if (status === "error") {
-      console.error(`Light Discs renderer: ${message}`);
-    }
   }
 
   function roundedTrianglePath(vertices, radius) {
@@ -499,12 +410,10 @@
     piece.root.classList.remove("is-snapped");
     piece.discs.classList.add("is-dragging");
     svg.classList.add("is-dragging-piece");
+    dragCapabilitySamples = [];
+    previousDragFrameTime = null;
     hideDraggedFilterLayers(piece);
     svg.setPointerCapture(event.pointerId);
-    reportProfileEvent("drag-start", {
-      pointerType: event.pointerType,
-      renderer: renderingMode
-    });
   }
 
   function beginBoardPan(event) {
@@ -563,7 +472,6 @@
   function finishDrag(event) {
     if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     const { piece } = activeDrag;
-    const wasComposing = activeDrag.composing;
     const snap = findSnap(piece);
     if (snap) {
       piece.position.x += snap.target.x - snap.movingCorner.x;
@@ -578,6 +486,8 @@
       restorePieceState(piece, activeDrag.previous);
     }
     svg.classList.remove("is-dragging-piece");
+    dragCapabilitySamples = [];
+    previousDragFrameTime = null;
     piece.discs.classList.remove("is-dragging");
     updatePiece(piece);
     activeDrag = null;
@@ -586,10 +496,6 @@
       dragUpdateFrame = null;
     }
     updateSuccess();
-    reportProfileEvent("drag-end", {
-      composing: wasComposing,
-      renderer: renderingMode
-    });
   }
 
   function finishBoardPan(event) {
@@ -612,12 +518,6 @@
   }
 
   function hideDraggedFilterLayers(piece) {
-    if (webglRenderer) {
-      webglRenderer.render(filterLayersForPoses(
-        pieces.filter((other) => other !== piece)
-      ));
-      return;
-    }
     const firstLayer = piece.index * corners.length;
     const hiddenLayers = new Set(
       corners.map((_, index) => firstLayer + index)
@@ -667,7 +567,6 @@
   }
 
   function updateDragRendering(frameTime) {
-    const updateStart = performance.now();
     const { piece } = activeDrag;
     updateDraggedPiece(piece);
     const composing = draggedPieceHasFilterOverlap();
@@ -679,12 +578,7 @@
       hideDraggedFilterLayers(piece);
     }
     activeDrag.composing = composing;
-    reportProfileEvent("drag-frame", {
-      composing,
-      frameTime,
-      renderer: renderingMode,
-      updateDuration: performance.now() - updateStart
-    });
+    recordDragCapability(frameTime);
   }
 
   function pieceState(piece) {
@@ -771,7 +665,6 @@
   }
 
   function resetPieces() {
-    const cancelledDrag = Boolean(activeDrag);
     if (activeDrag && svg.hasPointerCapture(activeDrag.pointerId)) {
       svg.releasePointerCapture(activeDrag.pointerId);
     }
@@ -785,13 +678,6 @@
     if (dragUpdateFrame !== null) {
       cancelAnimationFrame(dragUpdateFrame);
       dragUpdateFrame = null;
-    }
-    if (cancelledDrag) {
-      reportProfileEvent("drag-end", {
-        cancelled: true,
-        composing: false,
-        renderer: renderingMode
-      });
     }
     hideTargetInspector();
     pieces.forEach((piece, pieceIndex) => {
@@ -1159,14 +1045,20 @@
   function visualDataUrl(layers) {
     const markup = `<svg xmlns="${namespace}" viewBox="${-discRadius} ${-discRadius} ${discRadius * 2} ${discRadius * 2}" shape-rendering="crispEdges">`
       + `<defs><clipPath id="disc"><circle r="${discRadius}"/></clipPath></defs>`
-      + `<g clip-path="url(#disc)">${filterCompositionMarkup(layers, "preview")}</g>`
+      + `<g clip-path="url(#disc)">${filterCompositionMarkup(
+        layers,
+        "preview",
+        discRadius,
+        { includeContrastOutlines: contrastQuality !== "none" }
+      )}</g>`
       + "</svg>";
     return `data:image/svg+xml,${encodeURIComponent(markup)}`;
   }
 
   function boardCompositionMarkup(layers) {
     return filterCompositionMarkup(layers, "board", discRadius, {
-      includeContrastOutlines: false
+      includeContrastOutlines: contrastQuality === "full"
+        || contrastQuality === "drag-hidden"
     });
   }
 
@@ -1190,11 +1082,7 @@
 
   function renderFilterLayer(poses) {
     const layers = filterLayersForPoses(poses);
-    if (webglRenderer) {
-      webglRenderer.render(layers);
-      return;
-    }
-    const signature = layers.map(({ filter }) => (
+    const signature = `${contrastOutlinesOnBoard()}:` + layers.map(({ filter }) => (
       `${filter.background.mask}:${filter.foreground.mask}:${filter.shape.value}`
     )).join("|");
     const geometry = layers.map(({ x, y, angle }) => `${x}:${y}:${angle}`);
@@ -1293,58 +1181,132 @@
     });
   }
 
-  function renderStats() {
-    return {
-      canvases: webglRenderer ? 1 : 0,
-      contrast: webglContrastEnabled(),
-      descendants: filterRender.querySelectorAll("*").length,
-      masks: filterRender.querySelectorAll("mask").length,
-      renderer: renderingMode
-    };
+  function contrastOutlinesOnBoard() {
+    return contrastQuality === "full" || contrastQuality === "drag-hidden";
   }
 
-  function webglContrastEnabled() {
-    return renderingMode === "webgl-contrast-live"
-      || (renderingMode === "webgl-contrast"
-        && !svg.classList.contains("is-dragging-piece"));
+  function percentile(values, fraction) {
+    const sorted = [...values].sort((left, right) => left - right);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
   }
 
-  function profileIdentity() {
-    return {
-      iteration: String(randomIteration),
-      seed: randomSeed
+  function qualityForFrameInterval(interval) {
+    if (interval <= 19) return "full";
+    if (interval <= 27) return "drag-hidden";
+    if (interval <= 42) return "targets-only";
+    return "none";
+  }
+
+  function setContrastQuality(quality, useCooldown = true) {
+    if (quality === contrastQuality) return;
+    const previewsChanged = (contrastQuality === "none") !== (quality === "none");
+    contrastQuality = quality;
+    svg.dataset.contrastQuality = quality;
+    adaptationDirection = null;
+    adaptationEvidence = 0;
+    adaptationCooldown = useCooldown ? 2 : 0;
+    renderedFilterSignature = "";
+    renderFilterLayer(pieces);
+    if (activeDrag && !activeDrag.composing) {
+      hideDraggedFilterLayers(activeDrag.piece);
+    }
+    if (previewsChanged) {
+      targetVisuals.forEach((visual, index) => {
+        renderTarget(targetDisplays[index], visual);
+      });
+      if (inspectedTargetIndex !== null) refreshTargetInspector();
+    }
+  }
+
+  function scheduleContrastCalibration() {
+    const samples = [];
+    let previousFrameTime = null;
+    let offset = false;
+    const originalX = pieces[0].position.x;
+    const measure = (frameTime) => {
+      if (document.hidden || activeDrag) {
+        previousFrameTime = null;
+        calibrationFrame = requestAnimationFrame(measure);
+        return;
+      }
+      if (previousFrameTime !== null) {
+        const interval = frameTime - previousFrameTime;
+        samples.push(interval);
+        if (interval > 80) {
+          pieces[0].position.x = originalX;
+          renderFilterLayer(pieces);
+          calibrationFrame = null;
+          setContrastQuality("none", false);
+          return;
+        }
+      }
+      previousFrameTime = frameTime;
+      offset = !offset;
+      pieces[0].position.x = originalX + (offset ? 0.25 : 0);
+      renderFilterLayer(pieces);
+      pieces[0].position.x = originalX;
+      if (samples.length < 6) {
+        calibrationFrame = requestAnimationFrame(measure);
+        return;
+      }
+      renderFilterLayer(pieces);
+      calibrationFrame = null;
+      const interval = percentile(samples, 0.75);
+      setContrastQuality(qualityForFrameInterval(interval), false);
     };
+    calibrationFrame = requestAnimationFrame(measure);
+  }
+
+  function recordDragCapability(frameTime) {
+    if (previousDragFrameTime !== null) {
+      const interval = frameTime - previousDragFrameTime;
+      if (interval <= 250) dragCapabilitySamples.push(interval);
+      else dragCapabilitySamples = [];
+    }
+    previousDragFrameTime = frameTime;
+    if (dragCapabilitySamples.length < 12) return;
+    const interval = percentile(dragCapabilitySamples, 0.75);
+    dragCapabilitySamples = [];
+    if (adaptationCooldown > 0) {
+      adaptationCooldown -= 1;
+      return;
+    }
+    const qualities = ["full", "drag-hidden", "targets-only", "none"];
+    const qualityIndex = qualities.indexOf(contrastQuality);
+    const downgradeThresholds = [21, 32, 45];
+    const upgradeThresholds = [null, 17, 24, 34];
+    let direction = null;
+    if (qualityIndex < qualities.length - 1
+      && interval > downgradeThresholds[qualityIndex]) {
+      direction = "down";
+    } else if (qualityIndex > 0
+      && interval < upgradeThresholds[qualityIndex]) {
+      direction = "up";
+    }
+    if (direction === null) {
+      adaptationDirection = null;
+      adaptationEvidence = 0;
+      return;
+    }
+    if (direction !== adaptationDirection) {
+      adaptationDirection = direction;
+      adaptationEvidence = 0;
+    }
+    adaptationEvidence += 1;
+    const requiredEvidence = direction === "up" ? 3 : 1;
+    if (adaptationEvidence >= requiredEvidence) {
+      const nextIndex = qualityIndex + (direction === "down" ? 1 : -1);
+      setContrastQuality(qualities[nextIndex]);
+      previousDragFrameTime = null;
+    }
   }
 
   function randomValue() {
-    return seededRandom ? seededRandom() : Math.random();
-  }
-
-  function createSeededRandom(seed) {
-    let state = 2166136261;
-    for (let index = 0; index < seed.length; index += 1) {
-      state ^= seed.charCodeAt(index);
-      state = Math.imul(state, 16777619);
-    }
-    return () => {
-      state += 0x6D2B79F5;
-      let value = state;
-      value = Math.imul(value ^ value >>> 15, value | 1);
-      value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-      return ((value ^ value >>> 14) >>> 0) / 4294967296;
-    };
+    return Math.random();
   }
 
   function resetPuzzle() {
-    if (randomSeed && !puzzleDefinition) {
-      randomIteration += 1;
-      seededRandom = createSeededRandom(`${randomSeed}:${randomIteration}`);
-    }
     resetPieces();
-  }
-
-  function reportProfileEvent(type, detail) {
-    window.LightDiscProfiler?.record(type, detail);
   }
 
   function refreshTargetInspector() {
@@ -1406,9 +1368,8 @@
   window.addEventListener("resize", updateBoardZoom);
   window.LightDiscGame = {
     applyPuzzleCode,
-    levelCode,
-    profileIdentity,
-    renderStats
+    levelCode
   };
   resetPieces();
+  scheduleContrastCalibration();
 })();
