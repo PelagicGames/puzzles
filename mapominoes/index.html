@@ -6,12 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Mapominoes</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20261014b">
 </head>
 <body>
   <main class="shell">
     <header class="site-header">
-      <a class="back-link" href="../index.html">&#8592; All puzzles</a>
+      <div class="header-navigation">
+        <a class="back-link" id="all-puzzles-link" href="../index.html">&#8592; All puzzles</a>
+        <button class="back-link header-menu-button" id="mapominoes-menu-button" type="button" hidden>&#8592; Menu</button>
+      </div>
       <div>
         <p class="eyebrow">A country-chain memory game</p>
         <h1>Mapominoes</h1>
@@ -142,6 +145,24 @@
         <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-labelledby="map-title map-description">
           <title id="map-title">Map of countries named in this round</title>
           <desc id="map-description">The route is numbered in turn order. Invalid moves are red and unused valid choices are green.</desc>
+          <defs>
+            <pattern id="disputed-land" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#365247"></rect>
+              <rect width="4" height="10" fill="#587266"></rect>
+            </pattern>
+            <pattern id="disputed-visited" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#e8c95a"></rect>
+              <rect width="4" height="10" fill="#fff0a1"></rect>
+            </pattern>
+            <pattern id="disputed-invalid" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#f26f5b"></rect>
+              <rect width="4" height="10" fill="#ffb0a4"></rect>
+            </pattern>
+            <pattern id="disputed-choice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#75d99b"></rect>
+              <rect width="4" height="10" fill="#b9f2ce"></rect>
+            </pattern>
+          </defs>
           <g id="map-countries"></g>
           <g id="map-routes"></g>
           <g id="map-markers"></g>
@@ -151,6 +172,7 @@
           <span><i class="visited-key"></i> Named</span>
           <span><i class="invalid-key"></i> Invalid move</span>
           <span><i class="choice-key"></i> Valid choice available</span>
+          <span><i class="disputed-key"></i> Disputed region included</span>
         </div>
       </div>
 
@@ -179,6 +201,6 @@
   <script src="./game-rules.js"></script>
   <script src="./assets/d3.min.js"></script>
   <script src="./assets/topojson-client.min.js"></script>
-  <script src="./game.js"></script>
+  <script src="./game.js?v=20261014c"></script>
 </body>
 </html>

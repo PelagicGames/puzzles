@@ -95,6 +95,13 @@ puzzles toggle each RGB channel independently: a channel present in an odd
 number of overlapping filters remains on, while a channel present in an even
 number switches off. Black is the identity colour.
 
+XOR is experimental. Unlike standard composition's linear channel-blocking
+mask stack, exact XOR rendering must distinguish odd- and even-parity regions
+for each channel. The required SVG masks and painted regions multiply as more
+filters overlap, so XOR can be substantially slower, particularly on mobile
+browsers. Contrast boundaries are disabled in XOR mode to avoid adding another
+large mask workload.
+
 - Red XOR red = black
 - Red XOR black = red
 - Red XOR yellow = green
@@ -249,6 +256,7 @@ Rotation marks follow the shape indicator and represent 60-degree steps. Squares
 
 - `index.html` - main menu
 - `tutorial.html` and `tutorial.js` - rules and visual references
+- `assets/tutorial/` - pre-rendered standard/XOR colour interactions and shape references
 - `random.html` and `lightdiscs.js` - interactive generated game
 - `random.js` - read-only Random code display and copy action
 - `design.html` and `design.js` - custom level-code editor and game

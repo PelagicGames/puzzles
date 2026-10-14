@@ -63,15 +63,15 @@ a {
 
 .game-mark {
   display: block;
-  width: clamp(108px, 18vw, 184px);
+  width: 100%;
   height: auto;
   filter: drop-shadow(0 0 28px rgba(216, 255, 104, 0.14));
 }
 
 .game-mark-ring {
   position: relative;
-  width: clamp(152px, 24vw, 232px);
-  height: clamp(152px, 24vw, 232px);
+  width: clamp(108px, 18vw, 184px);
+  height: clamp(108px, 18vw, 184px);
   display: grid;
   place-items: center;
   margin: 0 0 30px;
@@ -85,18 +85,12 @@ a {
 
 .completion-star {
   position: absolute;
-  top: 50%;
-  left: 50%;
   color: var(--light);
   font-size: clamp(0.85rem, 2vw, 1.2rem);
   line-height: 1;
   opacity: 0;
   text-shadow: 0 0 10px rgba(216, 255, 104, 0.65);
-  transform:
-    translate(-50%, -50%)
-    rotate(var(--star-angle))
-    translateY(clamp(-104px, -10vw, -64px))
-    rotate(var(--star-angle-inverse));
+  transform: translate(-50%, -50%);
 }
 
 .completion-star.is-earned {
@@ -1046,7 +1040,7 @@ body[data-combination="xor"] .fixed-disc {
     padding: 24px;
   }
 
-  .game-mark {
+  .game-mark-ring {
     margin-bottom: 24px;
   }
 

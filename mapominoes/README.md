@@ -32,7 +32,12 @@ At the end of a chain, an Equal Earth world map shows the route, invalid moves,
 and any legal unused choices. The map supports wheel, touch, and button zooming
 plus panning; route strokes and hop counters remain legible at every zoom
 level. Route lines use the relevant territory or exclave where the geographic
-data permits, with curated anchors for fixed terrestrial links.
+data permits, with curated anchors for fixed terrestrial links. Disputed and
+self-declared regions used by the border ontology are associated with the
+relevant selectable sovereign state and shown with striped shading.
+
+A persistent **Mapominoes menu** action is available during setup, active
+rounds, results, and final scores.
 
 ## Country data
 

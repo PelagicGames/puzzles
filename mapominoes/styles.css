@@ -71,6 +71,20 @@ footer a {
   text-transform: uppercase;
 }
 
+.header-navigation {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+}
+
+.header-menu-button {
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
 .eyebrow,
 .step-label,
 .field-label {
@@ -547,6 +561,22 @@ input:focus {
   fill: var(--choice);
 }
 
+.map-country.is-disputed {
+  fill: url(#disputed-land);
+}
+
+.map-country.is-disputed.is-visited {
+  fill: url(#disputed-visited);
+}
+
+.map-country.is-disputed.is-invalid {
+  fill: url(#disputed-invalid);
+}
+
+.map-country.is-disputed.is-choice {
+  fill: url(#disputed-choice);
+}
+
 .route-segment {
   fill: none;
   stroke: #fff4b8;
@@ -602,6 +632,15 @@ input:focus {
   width: 11px;
   height: 11px;
   border-radius: 50%;
+}
+
+.map-key .disputed-key {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: repeating-linear-gradient(
+    45deg,
+    var(--land) 0 3px,
+    #789084 3px 6px
+  );
 }
 
 .visited-key {

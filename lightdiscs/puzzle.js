@@ -27,7 +27,7 @@
   const difficultyNumber = difficultyLevels.findIndex(
     ({ code }) => code === level.code
   ) + 1;
-  const modeLabel = level.combination === "xor" ? "XOR " : "";
+  const modeLabel = level.combination === "xor" ? "Experimental XOR " : "";
   const displayTitle = `${modeLabel}${difficulty.label} puzzle ${difficultyNumber}`;
   document.title = `${displayTitle} | Light Discs`;
   document.querySelector("#puzzle-title").textContent = displayTitle;
@@ -57,6 +57,6 @@
   updateNextLink();
 
   const gameScript = document.createElement("script");
-  gameScript.src = "./lightdiscs.js?v=20261014b";
+  gameScript.src = "./lightdiscs.js?v=20261014c";
   document.body.append(gameScript);
 })();

@@ -578,7 +578,7 @@
       hideDraggedFilterLayers(piece);
     }
     activeDrag.composing = composing;
-    recordDragCapability(frameTime);
+    if (combination !== "xor") recordDragCapability(frameTime);
   }
 
   function pieceState(piece) {
@@ -1054,7 +1054,8 @@
         discRadius,
         {
           combination,
-          includeContrastOutlines: contrastQuality !== "none"
+          includeContrastOutlines: combination !== "xor"
+            && contrastQuality !== "none"
         }
       )}</g>`
       + "</svg>";
@@ -1064,8 +1065,8 @@
   function boardCompositionMarkup(layers) {
     return filterCompositionMarkup(layers, "board", discRadius, {
       combination,
-      includeContrastOutlines: contrastQuality === "full"
-        || contrastQuality === "drag-hidden"
+      includeContrastOutlines: combination !== "xor"
+        && (contrastQuality === "full" || contrastQuality === "drag-hidden")
     });
   }
 

@@ -43,6 +43,8 @@
   const mapRoutes = document.querySelector("#map-routes");
   const mapMarkers = document.querySelector("#map-markers");
   const resultMap = document.querySelector("#result-map");
+  const allPuzzlesLink = document.querySelector("#all-puzzles-link");
+  const menuButton = document.querySelector("#mapominoes-menu-button");
   let state = null;
   let selectedCode = null;
   let matches = [];
@@ -86,6 +88,15 @@
     gameScreen.hidden = screen !== "game";
     resultScreen.hidden = screen !== "result";
     finalScreen.hidden = screen !== "final";
+    allPuzzlesLink.hidden = screen !== "mode";
+    menuButton.hidden = screen === "mode";
+  }
+
+  function returnToMenu() {
+    state = null;
+    setupForm.reset();
+    clearCountrySelection();
+    setScreen("mode");
   }
 
   function startGame(playerCount, mode) {
@@ -458,6 +469,9 @@
 
   function polygonComponents(feature) {
     if (!feature) return [];
+    if (feature.type === "FeatureCollection") {
+      return feature.features.flatMap(polygonComponents);
+    }
     const { geometry } = feature;
     if (geometry.type === "Polygon") return [geometry.coordinates];
     if (geometry.type === "MultiPolygon") return geometry.coordinates;
@@ -566,6 +580,36 @@
         .filter((country) => country.numeric)
         .map((country) => [String(Number(country.numeric)), country])
     );
+    const featureOwnersByNumeric = new Map([
+      ["254", "FRA"],
+      ["292", "GBR"],
+      ["344", "CHN"],
+      ["383", "SRB"],
+      ["446", "CHN"],
+      ["732", "MAR"]
+    ]);
+    const featureOwnersByName = new Map([
+      ["Kosovo", "SRB"],
+      ["N. Cyprus", "CYP"],
+      ["Somaliland", "SOM"]
+    ]);
+    const disputedFeatureNames = new Set([
+      "Kosovo",
+      "N. Cyprus",
+      "Somaliland",
+      "W. Sahara"
+    ]);
+    const featureGroups = new Map();
+    const mainFeatureByCode = new Map();
+    const featureOwner = (feature) => {
+      const numeric = feature.id === undefined
+        ? null
+        : String(Number(feature.id));
+      return featureOwnersByName.get(feature.properties?.name)
+        || (numeric && featureOwnersByNumeric.get(numeric))
+        || (numeric && countryByNumeric.get(numeric)?.code)
+        || null;
+    };
     const featureByCode = new Map();
     const visitedCodes = new Set(state.path.map((entry) => entry.code));
     const invalidCodes = new Set(
@@ -580,18 +624,38 @@
       .data(mapData.features)
       .join("path")
       .attr("class", (feature) => {
-        const country = countryByNumeric.get(String(Number(feature.id)));
-        if (country) featureByCode.set(country.code, feature);
-        if (country && invalidCodes.has(country.code)) return "map-country is-invalid";
-        if (country && visitedCodes.has(country.code)) return "map-country is-visited";
-        if (country && choiceCodes.has(country.code)) return "map-country is-choice";
-        return "map-country";
+        const code = featureOwner(feature);
+        if (code) {
+          if (!featureGroups.has(code)) featureGroups.set(code, []);
+          featureGroups.get(code).push(feature);
+          const numeric = feature.id === undefined
+            ? null
+            : String(Number(feature.id));
+          if (numeric && countryByNumeric.get(numeric)?.code === code) {
+            mainFeatureByCode.set(code, feature);
+          }
+        }
+        const classes = ["map-country"];
+        if (disputedFeatureNames.has(feature.properties?.name)
+          || String(Number(feature.id)) === "732") {
+          classes.push("is-disputed");
+        }
+        if (code && invalidCodes.has(code)) classes.push("is-invalid");
+        else if (code && visitedCodes.has(code)) classes.push("is-visited");
+        else if (code && choiceCodes.has(code)) classes.push("is-choice");
+        return classes.join(" ");
       })
       .attr("d", pathGenerator);
+    featureGroups.forEach((features, code) => {
+      featureByCode.set(code, {
+        type: "FeatureCollection",
+        features
+      });
+    });
 
     function pointForCode(code) {
       const country = countriesByCode.get(code);
-      const feature = featureByCode.get(code);
+      const feature = mainFeatureByCode.get(code) || featureByCode.get(code);
       const point = feature ? pathGenerator.centroid(feature) : null;
       if (point?.every(Number.isFinite)) return point;
       return projection(country.coordinates);
@@ -688,6 +752,7 @@
   document.querySelector("#setup-back-button").addEventListener("click", () => {
     setScreen("mode");
   });
+  menuButton.addEventListener("click", returnToMenu);
 
   countrySearch.addEventListener("input", () => {
     selectedCode = null;
@@ -747,8 +812,6 @@
     startRound(state.lastResult.restartPlayer);
   });
   document.querySelector("#new-game-button").addEventListener("click", () => {
-    state = null;
-    setupForm.reset();
-    setScreen("mode");
+    returnToMenu();
   });
 })();

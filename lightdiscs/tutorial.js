@@ -1,8 +1,6 @@
 // Copyright (C) 2026 Pelagic Games
 
 (() => {
-  const namespace = "http://www.w3.org/2000/svg";
-  const { filterCompositionMarkup } = window.LightDiscRendering;
   const colours = [
     { name: "white", value: "#ffffff", mask: 7 },
     { name: "black", value: "#000000", mask: 0 },
@@ -29,7 +27,8 @@
   const xorTutorial = document.querySelector("#xor-tutorial");
   const xorColourReference = document.querySelector("#xor-colour-reference");
 
-  xorTutorial.hidden = !window.LightDiscProgress.xorUnlocked();
+  const xorUnlocked = window.LightDiscProgress.xorUnlocked();
+  xorTutorial.hidden = !xorUnlocked;
 
   colours.forEach((left, leftIndex) => {
     colours.slice(leftIndex).forEach((right, offset) => {
@@ -37,18 +36,14 @@
       colourReference.append(
         createColourCard(left, right, rightIndex, "standard")
       );
-      xorColourReference.append(
-        createColourCard(left, right, rightIndex, "xor")
-      );
+      if (xorUnlocked) {
+        xorColourReference.append(
+          createColourCard(left, right, rightIndex, "xor")
+        );
+      }
     });
   });
   shapes.forEach((shape) => shapeReference.append(createShapeCard(shape)));
-
-  function createSvgElement(tag, attributes = {}) {
-    const element = document.createElementNS(namespace, tag);
-    Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
-    return element;
-  }
 
   function createColourCard(left, right, index, combination) {
     const resultMask = combination === "xor"
@@ -58,89 +53,32 @@
     const operator = combination === "xor" ? "XOR" : "+";
     const card = document.createElement("article");
     card.className = "reference-card";
-    const svg = createSvgElement("svg", {
-      class: "colour-demo",
-      viewBox: "0 0 112 68",
-      role: "img",
-      "aria-label": `${left.name} ${operator} ${right.name} is ${result.name}`
-    });
-    const noShape = { name: "no shape", value: "none" };
-    svg.innerHTML = filterCompositionMarkup([
-      {
-        filter: { background: left, foreground: left, shape: noShape },
-        angle: 0,
-        x: 44,
-        y: 34
-      },
-      {
-        filter: { background: right, foreground: right, shape: noShape },
-        angle: 0,
-        x: 68,
-        y: 34
-      }
-    ], `tutorial-${combination}-${left.mask}-${right.mask}-${index}`, 28, {
-      combination
-    });
+    const image = document.createElement("img");
+    image.className = "colour-demo";
+    image.src = `./assets/tutorial/colour-${combination}-${left.mask}-${right.mask}.svg`;
+    image.alt = `${left.name} ${operator} ${right.name} is ${result.name}`;
+    image.width = 112;
+    image.height = 68;
     const equation = document.createElement("p");
     equation.className = "reference-equation";
     equation.textContent = `${left.name} ${operator} ${right.name} = ${result.name}`;
-    card.append(svg, equation);
+    card.append(image, equation);
     return card;
   }
 
   function createShapeCard(shape) {
     const card = document.createElement("article");
     card.className = "reference-card";
-    const svg = createSvgElement("svg", {
-      class: "shape-demo",
-      viewBox: "-42 -42 84 84",
-      role: "img",
-      "aria-label": shape.name
-    });
-    svg.append(createSvgElement("circle", {
-      class: "demo-disc",
-      r: 38,
-      fill: "#ffffff"
-    }));
-    createShapeElements(shape.value).forEach((element) => svg.append(element));
+    const image = document.createElement("img");
+    image.className = "shape-demo";
+    image.src = `./assets/tutorial/shape-${shape.value}.svg`;
+    image.alt = shape.name;
+    image.width = 96;
+    image.height = 96;
     const label = document.createElement("p");
     label.className = "reference-equation";
     label.textContent = shape.name;
-    card.append(svg, label);
+    card.append(image, label);
     return card;
-  }
-
-  function createShapeElements(shape) {
-    if (shape === "none") return [];
-    if (shape === "square") return [createSquare()];
-    if (shape === "square-star") return [0, 60, 120].map(createSquare);
-    if (shape === "triangle") return [createTriangle(false)];
-    if (shape === "triangle-star") return [createTriangle(false), createTriangle(true)];
-    if (shape === "large-disc") return [createSvgElement("circle", { r: 30, fill: "#000000" })];
-    if (shape === "small-disc") return [createSvgElement("circle", { r: 12, fill: "#000000" })];
-    return [createSvgElement("path", {
-      d: "M 30 0 A 30 30 0 1 0 -30 0 A 30 30 0 1 0 30 0 M 12 0 A 12 12 0 1 1 -12 0 A 12 12 0 1 1 12 0",
-      fill: "#000000",
-      "fill-rule": "evenodd"
-    })];
-  }
-
-  function createSquare(angle = 0) {
-    return createSvgElement("rect", {
-      x: -21,
-      y: -21,
-      width: 42,
-      height: 42,
-      fill: "#000000",
-      transform: `rotate(${angle})`
-    });
-  }
-
-  function createTriangle(reflected) {
-    const halfWidth = 28 * Math.sqrt(3) / 2;
-    const points = reflected
-      ? `0,28 ${-halfWidth},-14 ${halfWidth},-14`
-      : `0,-28 ${-halfWidth},14 ${halfWidth},14`;
-    return createSvgElement("polygon", { points, fill: "#000000" });
   }
 })();

@@ -2,11 +2,12 @@
 
 (() => {
   const levels = window.LightDiscLevels;
-  const { difficulties, isCompleted, xorUnlocked, xorUnlockCount } =
+  const { difficulties, isCompleted, xorUnlocked } =
     window.LightDiscProgress;
   const list = document.querySelector("#difficulty-list");
 
   ["standard", "xor"].forEach((combination) => {
+    if (combination === "xor" && !xorUnlocked()) return;
     if (combination === "xor") {
       const campaignHeading = document.createElement("header");
       campaignHeading.className = "campaign-heading";
@@ -14,21 +15,16 @@
       eyebrow.className = "eyebrow";
       eyebrow.textContent = "Alternate campaign";
       const heading = document.createElement("h2");
-      heading.textContent = "XOR puzzles";
+      heading.textContent = "XOR puzzles (experimental)";
       const description = document.createElement("p");
-      description.textContent = xorUnlocked()
-        ? "RGB channels toggle when filters overlap."
-        : `Complete ${xorUnlockCount} standard puzzles to unlock.`;
+      description.textContent =
+        "RGB channels toggle when filters overlap. This experimental mode may be slow, especially on mobile browsers.";
       campaignHeading.append(eyebrow, heading, description);
       list.append(campaignHeading);
     }
     difficulties.forEach(({ id, label }) => {
     const section = document.createElement("section");
     section.className = "difficulty-section";
-    section.classList.toggle(
-      "is-locked",
-      combination === "xor" && !xorUnlocked()
-    );
     section.setAttribute(
       "aria-labelledby",
       `difficulty-${combination}-${id}`
@@ -52,15 +48,6 @@
       list.append(section);
       return;
     }
-    if (combination === "xor" && !xorUnlocked()) {
-      const locked = document.createElement("p");
-      locked.className = "difficulty-empty";
-      locked.textContent = "Locked";
-      section.append(locked);
-      list.append(section);
-      return;
-    }
-
     const selectors = document.createElement("div");
     selectors.className = "puzzle-selectors";
     matchingLevels.forEach(({ level, index }, difficultyIndex) => {

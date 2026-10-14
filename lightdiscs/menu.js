@@ -16,8 +16,9 @@
       : campaignIndex < xorStars;
     star.className = "completion-star";
     star.classList.toggle("is-earned", visible);
-    star.style.setProperty("--star-angle", `${index * 36}deg`);
-    star.style.setProperty("--star-angle-inverse", `${index * -36}deg`);
+    const angle = index * Math.PI / 5;
+    star.style.left = `${50 + 50 * Math.sin(angle)}%`;
+    star.style.top = `${50 - 50 * Math.cos(angle)}%`;
     star.textContent = "\u2605";
     starRing.append(star);
   }
