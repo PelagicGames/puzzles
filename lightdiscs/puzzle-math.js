@@ -1,16 +1,17 @@
 // Copyright (C) 2026 Pelagic Games
 
 (() => {
-  function formationsMatch(left, right) {
-    return formationDifference(left, right) === 0;
+  function formationsMatch(left, right, combination = "standard") {
+    return formationDifference(left, right, combination) === 0;
   }
 
-  function formationDifference(left, right) {
+  function formationDifference(left, right, combination = "standard") {
     const keys = formationKeys([...left, ...right]);
     let difference = 0;
     forEachPossibleAssignment(keys, (assignment) => {
       difference += bitCount(
-        formationMask(left, assignment) ^ formationMask(right, assignment)
+        formationMask(left, assignment, combination)
+          ^ formationMask(right, assignment, combination)
       );
     });
     return difference;
@@ -31,11 +32,13 @@
     }
   }
 
-  function formationMask(formation, assignment) {
+  function formationMask(formation, assignment, combination = "standard") {
+    const identity = combination === "xor" ? 0 : 7;
     return formation.reduce((mask, { filter, angle }) => {
       const inside = shapeExpression(filter.shape.value, angle, assignment);
-      return mask & (inside ? filter.foreground.mask : filter.background.mask);
-    }, 7);
+      const filterMask = inside ? filter.foreground.mask : filter.background.mask;
+      return combination === "xor" ? mask ^ filterMask : mask & filterMask;
+    }, identity);
   }
 
   function shapeKeys(shape, angle) {

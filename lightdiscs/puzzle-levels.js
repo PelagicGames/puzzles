@@ -153,4 +153,7 @@
       code: "R: syc t'mk smc G: t'cw lcb dry B: t'gk nm t'gk T: lcb nk s'rk"
     }
   ];
+  window.LightDiscLevels.forEach((level) => {
+    level.combination = "standard";
+  });
 })();

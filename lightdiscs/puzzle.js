@@ -19,23 +19,28 @@
     ({ id }) => id === level.difficulty
   );
   const difficultyLevels = levels.filter(
-    ({ difficulty: candidate }) => candidate === level.difficulty
+    ({ difficulty: candidate, combination }) => (
+      candidate === level.difficulty
+      && combination === level.combination
+    )
   );
   const difficultyNumber = difficultyLevels.findIndex(
     ({ code }) => code === level.code
   ) + 1;
-  const displayTitle = `${difficulty.label} puzzle ${difficultyNumber}`;
+  const modeLabel = level.combination === "xor" ? "XOR " : "";
+  const displayTitle = `${modeLabel}${difficulty.label} puzzle ${difficultyNumber}`;
   document.title = `${displayTitle} | Light Discs`;
   document.querySelector("#puzzle-title").textContent = displayTitle;
   document.body.dataset.puzzleCode = level.code;
+  document.body.dataset.combination = level.combination;
   position.textContent = `${difficultyNumber} / ${difficultyLevels.length}`;
 
   function updateNextLink() {
-    if (!window.LightDiscProgress.isCompleted(level.code)) {
+    if (!window.LightDiscProgress.isCompleted(level.code, level)) {
       nextLink.hidden = true;
       return;
     }
-    const next = window.LightDiscProgress.nextUnsolved(levels, level.code);
+    const next = window.LightDiscProgress.nextUnsolved(levels, level);
     if (!next) {
       nextLink.hidden = true;
       return;
@@ -46,12 +51,12 @@
 
   document.addEventListener("lightdiscs:solved", (event) => {
     if (event.detail.code !== level.code) return;
-    window.LightDiscProgress.markCompleted(level.code);
+    window.LightDiscProgress.markCompleted(level.code, level);
     updateNextLink();
   });
   updateNextLink();
 
   const gameScript = document.createElement("script");
-  gameScript.src = "./lightdiscs.js?v=20261012i";
+  gameScript.src = "./lightdiscs.js?v=20261014b";
   document.body.append(gameScript);
 })();

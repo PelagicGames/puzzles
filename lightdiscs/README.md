@@ -6,8 +6,8 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 
 ## Pages
 
-- **Tutorial** documents every colour interaction, every available shape, the controls, and the success conditions.
-- **Puzzles** groups authored levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
+- **Tutorial** documents every colour interaction, every available shape, the controls, the success conditions, and XOR composition after that campaign is unlocked.
+- **Puzzles** groups standard and XOR levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
 
@@ -88,6 +88,23 @@ filter composition, matching, solution vectors, or solver logic.
 
 The game uses the SVG RGB-channel-mask renderer.
 
+### XOR puzzles
+
+Completing 15 standard puzzles unlocks a second 30-puzzle campaign. XOR
+puzzles toggle each RGB channel independently: a channel present in an odd
+number of overlapping filters remains on, while a channel present in an even
+number switches off. Black is the identity colour.
+
+- Red XOR red = black
+- Red XOR black = red
+- Red XOR yellow = green
+- Cyan XOR magenta = yellow
+
+Every authored XOR puzzle requires at least one target composition whose result
+differs from standard channel intersection. XOR completion is stored separately
+from standard completion, and the main menu awards one star for each completed
+difficulty band in either campaign, for ten possible stars.
+
 ## Targets and success
 
 Generated target states use one, two, or three snapped circles from each movable triangle. Possible distributions are:
@@ -103,8 +120,10 @@ Success requires all of the following:
 
 Moving a snapped triangle away immediately reverts from the success state.
 
-Completed authored puzzles are stored by their exact puzzle code rather than
-their displayed number to alow for new puzzles to be added without breaking the completed puzzle tracking. The puzzle menu shows a tick beside completed levels.
+Completed standard puzzles are stored by their exact puzzle code rather than
+their displayed number to allow new puzzles to be added without breaking the
+completed puzzle tracking. XOR keys include their combination mode so the two
+campaigns remain independent. The puzzle menu shows a tick beside completed levels.
 After a puzzle is solved, its page reveals a link to the next unsolved puzzle in
 difficulty order.
 

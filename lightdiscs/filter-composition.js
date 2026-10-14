@@ -21,6 +21,9 @@
     discRadius = 38,
     options = {}
   ) {
+    if (options.combination === "xor") {
+      return xorCompositionMarkup(layers, idPrefix, discRadius, options);
+    }
     const includeContrastOutlines = options.includeContrastOutlines !== false;
     const maskBounds = options.maskBounds || defaultMaskBounds;
     const channels = [
@@ -89,6 +92,247 @@
       : "";
     return `<defs>${masks.join("")}</defs><g style="isolation:isolate">`
       + `<g fill="#000">${discUnion}</g>${channelLayers}${contrastOutlines}</g>`;
+  }
+
+  function xorCompositionMarkup(layers, idPrefix, discRadius, options) {
+    const includeContrastOutlines = options.includeContrastOutlines !== false;
+    const discUnion = layers.map(
+      ({ x, y }, index) => `<circle data-filter-layer="${index}" cx="${x}" cy="${y}" r="${discRadius}"/>`
+    ).join("");
+    const channels = [
+      { bit: 4, name: "red" },
+      { bit: 2, name: "green" },
+      { bit: 1, name: "blue" }
+    ];
+    const outputColours = [
+      "#000000",
+      "#0000ff",
+      "#00ff00",
+      "#00ffff",
+      "#ff0000",
+      "#ff00ff",
+      "#ffff00",
+      "#ffffff"
+    ];
+    const definitions = [];
+    const output = [];
+    const contrastOutput = [];
+    overlappingLayerClusters(layers, discRadius).forEach(
+      (cluster, clusterIndex) => {
+        const clusterDiscs = cluster.map((layerIndex) => {
+          const { x, y } = layers[layerIndex];
+          return `<circle data-filter-layer="${layerIndex}" cx="${x}" cy="${y}" r="${discRadius}"/>`;
+        }).join("");
+        if (cluster.length === 1) {
+          const layerIndex = cluster[0];
+          const { filter, x, y, angle } = layers[layerIndex];
+          const shape = shapeMarkup(filter.shape.value);
+          output.push(
+            `<g data-filter-mask-layer="${layerIndex}" transform="translate(${x} ${y}) rotate(${angle})">`
+            + `<circle r="${discRadius}" fill="${filter.background.value}"/>`
+            + (shape ? `<g fill="${filter.foreground.value}">${shape}</g>` : "")
+            + "</g>"
+          );
+          if (includeContrastOutlines && needsContrastOutline(filter)) {
+            contrastOutput.push(
+              '<g data-contrast-boundaries="true" pointer-events="none">'
+              + `<g data-filter-outline-layer="${layerIndex}" transform="translate(${x} ${y}) rotate(${angle})" fill="none" stroke="${contrastOutlineColour(filter)}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${shape}</g>`
+              + "</g>"
+            );
+          }
+          return;
+        }
+        const parityMasks = channels.map((channel) => {
+          const masks = cluster.map((layerIndex) => {
+            const { filter, x, y, angle } = layers[layerIndex];
+            const shape = shapeMarkup(filter.shape.value);
+            const visibleId = `${idPrefix}-xor-${channel.name}-${clusterIndex}-${layerIndex}`;
+            const inverseId = `${visibleId}-inverse`;
+            const background = filter.background.mask & channel.bit
+              ? "#fff"
+              : "#000";
+            const foreground = filter.foreground.mask & channel.bit
+              ? "#fff"
+              : "#000";
+            definitions.push(
+              `<mask id="${visibleId}" maskUnits="userSpaceOnUse" ${maskBoundsMarkup(defaultMaskBounds)}>`
+              + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#000"/>`
+              + `<g data-filter-mask-layer="${layerIndex}" transform="translate(${x} ${y}) rotate(${angle})">`
+              + `<circle r="${discRadius}" fill="${background}"/>`
+              + (shape ? `<g fill="${foreground}">${shape}</g>` : "")
+              + "</g></mask>",
+              `<mask id="${inverseId}" maskUnits="userSpaceOnUse" ${maskBoundsMarkup(defaultMaskBounds)}>`
+              + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#fff"/>`
+              + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#000" mask="url(#${visibleId})"/>`
+              + "</mask>"
+            );
+            return { inverseId, visibleId };
+          });
+          const parityId = `${idPrefix}-xor-${channel.name}-${clusterIndex}-parity`;
+          const inverseParityId = `${parityId}-inverse`;
+          const oddRegions = [];
+          for (let bits = 1; bits < 2 ** cluster.length; bits += 1) {
+            if (bitCount(bits) % 2 === 0) continue;
+            let content = `<g fill="#fff">${clusterDiscs}</g>`;
+            masks.forEach(({ inverseId, visibleId }, index) => {
+              const maskId = bits & (1 << index) ? visibleId : inverseId;
+              content = `<g mask="url(#${maskId})">${content}</g>`;
+            });
+            oddRegions.push(content);
+          }
+          definitions.push(
+            `<mask id="${parityId}" maskUnits="userSpaceOnUse" ${maskBoundsMarkup(defaultMaskBounds)}>`
+            + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#000"/>`
+            + oddRegions.join("")
+            + "</mask>",
+            `<mask id="${inverseParityId}" maskUnits="userSpaceOnUse" ${maskBoundsMarkup(defaultMaskBounds)}>`
+            + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#fff"/>`
+            + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#000" mask="url(#${parityId})"/>`
+            + "</mask>"
+          );
+          return { inverseParityId, parityId };
+        });
+        for (let mask = 1; mask < outputColours.length; mask += 1) {
+          let content = `<g fill="${outputColours[mask]}">${clusterDiscs}</g>`;
+          parityMasks.forEach(({ inverseParityId, parityId }, index) => {
+            const maskId = mask & channels[index].bit
+              ? parityId
+              : inverseParityId;
+            content = `<g mask="url(#${maskId})">${content}</g>`;
+          });
+          output.push(content);
+        }
+        if (includeContrastOutlines) {
+          contrastOutput.push(xorContrastBoundaryMarkup(
+            cluster,
+            layers,
+            channels,
+            parityMasks,
+            `${idPrefix}-xor-${clusterIndex}`,
+            definitions
+          ));
+        }
+      }
+    );
+    return `<defs>${definitions.join("")}</defs><g style="isolation:isolate">`
+      + `<g fill="#000">${discUnion}</g>${output.join("")}${contrastOutput.join("")}</g>`;
+  }
+
+  function xorContrastBoundaryMarkup(
+    cluster,
+    layers,
+    channels,
+    parityMasks,
+    idPrefix,
+    definitions
+  ) {
+    const shapeBoundaryMaskIds = new Map();
+    const shapeBoundaryMaskId = (shape) => {
+      if (shapeBoundaryMaskIds.has(shape)) return shapeBoundaryMaskIds.get(shape);
+      const maskId = `${idPrefix}-contrast-shape-${shape}`;
+      const markup = shapeMarkup(shape);
+      definitions.push(
+        `<mask id="${maskId}" maskUnits="userSpaceOnUse" x="-100" y="-100" width="200" height="200">`
+        + `<g fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${markup}</g>`
+        + `<g fill="#000">${markup}</g>`
+        + "</mask>"
+      );
+      shapeBoundaryMaskIds.set(shape, maskId);
+      return maskId;
+    };
+    const outlineLayers = cluster.map((layerIndex) => {
+      const { filter, x, y, angle } = layers[layerIndex];
+      if (!needsContrastOutline(filter)) return null;
+      const boundaryMaskId = shapeBoundaryMaskId(filter.shape.value);
+      const exclusionMaskId = `${idPrefix}-contrast-exclusion-${layerIndex}`;
+      definitions.push(
+        `<mask id="${exclusionMaskId}" maskUnits="userSpaceOnUse" ${maskBoundsMarkup(defaultMaskBounds)}>`
+        + `<rect ${maskBoundsMarkup(defaultMaskBounds)} fill="#fff"/>`
+        + `<g data-filter-mask-layer="${layerIndex}" transform="translate(${x} ${y}) rotate(${angle})">`
+        + `<rect x="-100" y="-100" width="200" height="200" fill="#000" mask="url(#${boundaryMaskId})"/>`
+        + "</g></mask>"
+      );
+      return {
+        angle,
+        boundaryMaskId,
+        changedBit: filter.background.mask ^ filter.foreground.mask,
+        exclusionMaskId,
+        layerIndex,
+        x,
+        y
+      };
+    }).filter(Boolean);
+    const outlines = [];
+    outlineLayers.forEach((layer) => {
+      const changedIndex = channels.findIndex(
+        ({ bit }) => bit === layer.changedBit
+      );
+      const stableIndices = [0, 1, 2].filter(
+        (channelIndex) => channelIndex !== changedIndex
+      );
+      for (let stableMask = 0; stableMask < 4; stableMask += 1) {
+        let lowerMask = 0;
+        stableIndices.forEach((channelIndex, bitIndex) => {
+          if (stableMask & (1 << bitIndex)) {
+            lowerMask |= channels[channelIndex].bit;
+          }
+        });
+        const colour = contrastOutlineColour({
+          background: { mask: lowerMask },
+          foreground: { mask: lowerMask | layer.changedBit }
+        });
+        let content = `<g data-filter-outline-layer="${layer.layerIndex}" transform="translate(${layer.x} ${layer.y}) rotate(${layer.angle})"><rect x="-100" y="-100" width="200" height="200" fill="${colour}" mask="url(#${layer.boundaryMaskId})"/></g>`;
+        outlineLayers.forEach((other) => {
+          if (other.layerIndex !== layer.layerIndex
+            && other.changedBit === layer.changedBit) {
+            content = `<g mask="url(#${other.exclusionMaskId})">${content}</g>`;
+          }
+        });
+        stableIndices.forEach((channelIndex, bitIndex) => {
+          const parity = parityMasks[channelIndex];
+          const maskId = stableMask & (1 << bitIndex)
+            ? parity.parityId
+            : parity.inverseParityId;
+          content = `<g mask="url(#${maskId})">${content}</g>`;
+        });
+        outlines.push(content);
+      }
+    });
+    if (outlines.length === 0) return "";
+    return `<g data-contrast-boundaries="true" pointer-events="none">${outlines.join("")}</g>`;
+  }
+
+  function overlappingLayerClusters(layers, discRadius) {
+    const remaining = new Set(layers.map((_, index) => index));
+    const maximumDistanceSquared = (discRadius * 2) ** 2;
+    const clusters = [];
+    while (remaining.size) {
+      const cluster = [remaining.values().next().value];
+      remaining.delete(cluster[0]);
+      for (let index = 0; index < cluster.length; index += 1) {
+        const current = layers[cluster[index]];
+        [...remaining].forEach((candidateIndex) => {
+          const candidate = layers[candidateIndex];
+          const distanceSquared = (current.x - candidate.x) ** 2
+            + (current.y - candidate.y) ** 2;
+          if (distanceSquared >= maximumDistanceSquared) return;
+          cluster.push(candidateIndex);
+          remaining.delete(candidateIndex);
+        });
+      }
+      clusters.push(cluster);
+    }
+    return clusters;
+  }
+
+  function bitCount(value) {
+    let remaining = value;
+    let count = 0;
+    while (remaining) {
+      count += remaining & 1;
+      remaining >>= 1;
+    }
+    return count;
   }
 
   function maskBoundsMarkup(bounds) {

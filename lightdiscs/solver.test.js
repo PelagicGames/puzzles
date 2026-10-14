@@ -10,7 +10,8 @@ global.window = {};
   "puzzle-code.js",
   "puzzle-math.js",
   "solver.js",
-  "puzzle-levels.js"
+  "puzzle-levels.js",
+  "xor-puzzle-levels.js"
 ].forEach((file) => {
   vm.runInThisContext(
     fs.readFileSync(path.join(__dirname, file), "utf8"),
@@ -162,8 +163,8 @@ const authoredPuzzles = [
 ];
 
 assert.strictEqual(window.LightDiscSolver.poseTemplates.length, 39);
-assert.strictEqual(window.LightDiscLevels.length, 30);
-assert.strictEqual(new Set(window.LightDiscLevels.map(({ code }) => code)).size, 30);
+assert.strictEqual(window.LightDiscLevels.length, 60);
+assert.strictEqual(new Set(window.LightDiscLevels.map(({ code }) => code)).size, 60);
 const catalogCodes = new Set(window.LightDiscLevels.map(({ code }) => code));
 authoredPuzzles.forEach(({ code }) => assert.strictEqual(catalogCodes.has(code), true));
 const analyses = new Map();
@@ -216,7 +217,9 @@ authoredPuzzles.forEach(({
 
 window.LightDiscLevels.forEach((level, index) => {
   const analysis = analyses.get(level.code)
-    || window.LightDiscSolver.analyzePuzzle(level.code);
+    || window.LightDiscSolver.analyzePuzzle(level.code, {
+      combination: level.combination
+    });
   analyses.set(level.code, analysis);
   assert.strictEqual(analysis.solvable, true, `Catalog puzzle ${index + 1} should be solvable`);
   assert.strictEqual(
@@ -224,7 +227,48 @@ window.LightDiscLevels.forEach((level, index) => {
     level.difficulty,
     `Catalog puzzle ${index + 1} should match its difficulty band`
   );
+  if (level.combination === "xor") {
+    assert.ok(
+      analysis.minimumXorCombinations > 0,
+      `XOR puzzle ${index + 1} should require an XOR-specific combination`
+    );
+    assert.strictEqual(level.designPoseIds.length, 3);
+    assert.strictEqual(
+      window.LightDiscSolver.solutionDistance(
+        analysis.definition,
+        level.designPoseIds
+      ),
+      0,
+      `XOR puzzle ${index + 1} authored poses should solve the puzzle`
+    );
+    const designPoses = level.designPoseIds.map((poseId) => (
+      window.LightDiscSolver.poseTemplates.find(({ id }) => id === poseId)
+    ));
+    [0, 1, 2].forEach((targetIndex) => {
+      assert.ok(
+        designPoses.some(({ mapping }) => mapping.includes(targetIndex)),
+        `XOR puzzle ${index + 1} authored design should use target ${
+          targetIndex + 1
+        }`
+      );
+    });
+  }
 });
+
+const solid = (mask) => ({
+  background: { mask },
+  foreground: { mask },
+  shape: { value: "none" }
+});
+const xorMask = (...masks) => window.LightDiscMath.formationMask(
+  masks.map((mask) => ({ filter: solid(mask), angle: 0 })),
+  new Map(),
+  "xor"
+);
+assert.strictEqual(xorMask(4, 4), 0);
+assert.strictEqual(xorMask(4, 0), 4);
+assert.strictEqual(xorMask(4, 6), 2);
+assert.strictEqual(xorMask(3, 5), 6);
 
 const impossible = window.LightDiscSolver.analyzePuzzle(
   "R: nr nr nr G: nr nr nr B: nr nr nr T: nb nb nb"

@@ -49,6 +49,9 @@
     const definition = typeof codeOrDefinition === "string"
       ? window.LightDiscPuzzleCode.parsePuzzleCode(codeOrDefinition)
       : codeOrDefinition;
+    definition.combination = options.combination
+      || definition.combination
+      || "standard";
     const targetFormations = definition.targets.map(targetFormation);
     const diagnostics = [];
     const stats = {
@@ -145,9 +148,14 @@
       solutionCount: solutions.length,
       stats
     };
+    analysis.minimumXorCombinations = definition.combination === "xor"
+      ? Math.min(...solutions.map(({ xorCombinationCount }) => xorCombinationCount))
+      : 0;
     analysis.complexity = options.includeComplexity === false
       ? null
-      : calculateComplexity(analysis);
+      : definition.combination === "xor"
+        ? calculateXorComplexity(analysis)
+        : calculateComplexity(analysis);
     return analysis;
   }
 
@@ -288,7 +296,11 @@
             const filter = definition.pieces[pieceIndex][Number(discText)];
             return [{ filter, angle: Number(angleText) }];
           });
-          if (formationsMatch(formation, targetFormations[targetIndex])) {
+          if (formationsMatch(
+            formation,
+            targetFormations[targetIndex],
+            definition.combination
+          )) {
             ways.push(keys);
           }
         });
@@ -313,7 +325,8 @@
           key,
           formationsMatch(
             formationForTarget(definition, poseIds, targetIndex),
-            targets[targetIndex]
+            targets[targetIndex],
+            definition.combination
           )
         );
       }
@@ -460,29 +473,34 @@
     const targetDistance = targetFormations.reduce((total, target, targetIndex) => (
       total + targetCircleDistance(
         formationForTarget(definition, state.poseIds, targetIndex),
-        target
+        target,
+        definition.combination
       )
     ), 0);
     return targetDistance + (3 - state.snappedTriangleCount);
   }
 
-  function targetCircleDistance(current, target) {
-    if (formationsMatch(current, target)) return 0;
+  function targetCircleDistance(current, target, combination = "standard") {
+    if (formationsMatch(current, target, combination)) return 0;
     const keys = formationKeys([...current, ...target]);
     const outside = new Map(keys.map((key) => [key, false]));
     const inside = new Map(keys.map((key) => [key, true]));
     const backgroundDistance = bitCount(
-      formationMask(current, outside) ^ formationMask(target, outside)
+      formationMask(current, outside, combination)
+        ^ formationMask(target, outside, combination)
     );
     const foregroundDistance = bitCount(
-      formationMask(current, inside) ^ formationMask(target, inside)
+      formationMask(current, inside, combination)
+        ^ formationMask(target, inside, combination)
     );
     const currentKeys = new Set(formationKeys(current));
     const targetKeys = new Set(formationKeys(target));
     const shapeDistance = new Set([...currentKeys, ...targetKeys]).size
       - [...currentKeys].filter((key) => targetKeys.has(key)).length;
     const rotationDistance = orientationDistance(currentKeys, targetKeys);
-    const semanticDistance = Math.ceil(formationDifference(current, target) / 3);
+    const semanticDistance = Math.ceil(
+      formationDifference(current, target, combination) / 3
+    );
     return backgroundDistance
       + foregroundDistance
       + shapeDistance
@@ -585,8 +603,27 @@
       shorthand: solutionShorthand(definition, poseIds),
       vector: createStateVector(definition, poseIds),
       pathDistance: distance,
+      xorCombinationCount: definition.combination === "xor"
+        ? xorCombinationCount(definition, poseIds)
+        : 0,
       moves
     };
+  }
+
+  function xorCombinationCount(definition, poseIds) {
+    return [0, 1, 2].filter((targetIndex) => {
+      const formation = formationForTarget(definition, poseIds, targetIndex);
+      if (formation.length < 2) return false;
+      const keys = formationKeys(formation);
+      let differs = false;
+      forEachPossibleAssignment(keys, (assignment) => {
+        if (formationMask(formation, assignment, "xor")
+          !== formationMask(formation, assignment, "standard")) {
+          differs = true;
+        }
+      });
+      return differs;
+    }).length;
   }
 
   function buildPoseGraph() {
@@ -755,6 +792,7 @@
         maximumDetour: 0
       };
     }
+
     if (analysis.solutionCount > 1) {
       const easy = minimumSnappedCircles >= 5;
       return {
@@ -821,6 +859,27 @@
       resetPathDistance,
       nearTrapCount,
       maximumDetour
+    };
+  }
+
+  function calculateXorComplexity(analysis) {
+    const standardScale = calculateComplexity(analysis);
+    const xorBurden = Math.min(12, analysis.minimumXorCombinations * 4);
+    const score = Math.min(100, standardScale.score + xorBurden);
+    const label = score >= 95
+      ? "Very hard"
+      : score >= 85
+        ? "Hard"
+        : score >= 48
+          ? "Medium"
+          : score >= 25
+            ? "Easy"
+            : "Very easy";
+    return {
+      ...standardScale,
+      label,
+      score,
+      xorCombinationCount: analysis.minimumXorCombinations
     };
   }
 

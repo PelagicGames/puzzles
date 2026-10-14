@@ -10,6 +10,7 @@
   const countriesByCode = new Map(
     countries.map((country) => [country.code, country])
   );
+  const modePanel = document.querySelector("#mode-panel");
   const setupPanel = document.querySelector("#setup-panel");
   const setupForm = document.querySelector("#setup-form");
   const gameScreen = document.querySelector("#game-screen");
@@ -41,12 +42,17 @@
   const mapCountries = document.querySelector("#map-countries");
   const mapRoutes = document.querySelector("#map-routes");
   const mapMarkers = document.querySelector("#map-markers");
+  const resultMap = document.querySelector("#result-map");
   let state = null;
   let selectedCode = null;
   let matches = [];
   let activeMatchIndex = -1;
   let mapData = null;
   let mapLoadError = null;
+  let mapZoom = null;
+  let mapTransform = window.d3.zoomIdentity;
+  let routeOverlay = [];
+  let markerOverlay = [];
 
   fetch("./assets/countries-50m.json")
     .then((response) => {
@@ -66,6 +72,7 @@
     });
 
   function playerName(index) {
+    if (state.mode === "solo") return "You";
     return `Player ${index + 1}`;
   }
 
@@ -74,6 +81,7 @@
   }
 
   function setScreen(screen) {
+    modePanel.hidden = screen !== "mode";
     setupPanel.hidden = screen !== "setup";
     gameScreen.hidden = screen !== "game";
     resultScreen.hidden = screen !== "result";
@@ -96,7 +104,34 @@
     renderTurn();
   }
 
+  function startSolo() {
+    const startingCountry = countries[Math.floor(Math.random() * countries.length)];
+    state = {
+      currentPlayer: 0,
+      lastResult: null,
+      mode: "solo",
+      path: [{
+        challenged: false,
+        code: startingCountry.code,
+        player: 0,
+        reasons: [],
+        valid: true
+      }],
+      phase: "turn",
+      playerCount: 1,
+      round: 1,
+      scores: [0],
+      startPlayer: 0
+    };
+    setScreen("game");
+    renderTurn();
+  }
+
   function startRound(startPlayer) {
+    if (state.mode === "solo") {
+      startSolo();
+      return;
+    }
     state.currentPlayer = startPlayer;
     state.lastResult = null;
     state.path = [];
@@ -108,6 +143,8 @@
   }
 
   function renderScores() {
+    scoreboard.hidden = state.mode === "solo";
+    if (state.mode === "solo") return;
     scoreboard.replaceChildren();
     state.scores.forEach((score, index) => {
       const item = document.createElement("li");
@@ -122,21 +159,28 @@
   }
 
   function renderTurn() {
-    roundLabel.textContent = `Round ${state.round} · ${
-      state.mode === "challenge" ? "Challenge" : "Autocheck"
-    }`;
-    turnHeading.textContent = `${playerName(state.currentPlayer)}'s turn`;
+    const solo = state.mode === "solo";
+    roundLabel.textContent = solo
+      ? `Solo · ${state.path.length} ${state.path.length === 1 ? "country" : "countries"}`
+      : `Round ${state.round} · ${
+        state.mode === "challenge" ? "Challenge" : "Autocheck"
+      }`;
+    turnHeading.textContent = solo
+      ? "Build the longest chain"
+      : `${playerName(state.currentPlayer)}'s turn`;
     const previous = state.path.length
       ? countriesByCode.get(state.path[state.path.length - 1].code)
       : null;
     lastCountry.textContent = previous
       ? previous.name
       : "Choose the starting country";
-    const firstRoundRemaining = Math.max(
+    const firstRoundRemaining = solo ? 0 : Math.max(
       0,
       state.playerCount - state.path.length
     );
-    roundGuidance.textContent = firstRoundRemaining > 0
+    roundGuidance.textContent = solo
+      ? "Name an unused country connected to the previous one."
+      : firstRoundRemaining > 0
       ? `Keep a route open for ${firstRoundRemaining} more ${
         firstRoundRemaining === 1 ? "player" : "players"
       } in the first circuit.`
@@ -144,6 +188,7 @@
     entryPanel.hidden = state.phase !== "turn";
     challengePanel.hidden = state.phase !== "challenge";
     if (state.phase === "challenge") renderChallenge();
+    document.querySelector("#end-game-button").hidden = solo;
     renderScores();
     clearCountrySelection();
     if (state.phase === "turn") countrySearch.focus();
@@ -196,6 +241,15 @@
       }
       button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
+        event.stopPropagation();
+      });
+      button.addEventListener("pointerup", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
         chooseMatch(index);
       });
       item.append(button);
@@ -239,8 +293,14 @@
       reasons: validation.reasons,
       valid: validation.valid
     });
-    if (state.mode === "autocheck" && !validation.valid) {
-      endRound(player, validation.reasons.join(" "), previousPath);
+    if ((state.mode === "autocheck" || state.mode === "solo")
+      && !validation.valid) {
+      endRound({
+        awardPoint: state.mode !== "solo",
+        choicePath: previousPath,
+        loser: state.mode === "solo" ? null : player,
+        reason: validation.reasons.join(" ")
+      });
       return;
     }
     state.currentPlayer = nextPlayer(player);
@@ -259,42 +319,87 @@
     const challengedEntry = state.path[state.path.length - 1];
     challengedEntry.challenged = true;
     if (!challengedEntry.valid) {
-      endRound(
-        challengedEntry.player,
-        `The challenge succeeded. ${challengedEntry.reasons.join(" ")}`,
-        state.path.slice(0, -1)
-      );
+      endRound({
+        choicePath: state.path.slice(0, -1),
+        loser: challengedEntry.player,
+        reason: `The challenge succeeded. ${challengedEntry.reasons.join(" ")}`
+      });
       return;
     }
-    endRound(
-      state.currentPlayer,
-      `The challenge failed: ${countriesByCode.get(challengedEntry.code).name} was a valid choice.`,
-      state.path
-    );
+    endRound({
+      choicePath: state.path,
+      loser: state.currentPlayer,
+      reason: `The challenge failed: ${countriesByCode.get(challengedEntry.code).name} was a valid choice.`
+    });
   }
 
   function concede() {
-    endRound(
-      state.currentPlayer,
-      `${playerName(state.currentPlayer)} could not continue the chain.`,
-      state.path
-    );
+    const choices = validChoices(countries, state.path, state.playerCount);
+    if (choices.length === 0) {
+      endRound({
+        awardPoint: false,
+        choices,
+        choicePath: state.path,
+        loser: null,
+        noLegalMoves: true,
+        reason: state.mode === "solo"
+          ? "Excellent call: there were no legal countries left."
+          : "The chain ended because there were no legal countries left."
+      });
+      return;
+    }
+    endRound({
+      awardPoint: state.mode !== "solo",
+      choices,
+      choicePath: state.path,
+      loser: state.mode === "solo" ? null : state.currentPlayer,
+      reason: state.mode === "solo"
+        ? "The chain ended while legal countries were still available."
+        : `${playerName(state.currentPlayer)} could not continue the chain.`
+    });
   }
 
-  function endRound(loser, reason, choicePath) {
-    const choices = validChoices(countries, choicePath, state.playerCount);
-    state.scores[loser] += 1;
-    state.lastResult = { choices, loser, reason };
+  function endRound({
+    awardPoint = true,
+    choices = null,
+    choicePath,
+    loser,
+    noLegalMoves = false,
+    reason
+  }) {
+    const availableChoices = choices
+      || validChoices(countries, choicePath, state.playerCount);
+    if (awardPoint && loser !== null) state.scores[loser] += 1;
+    const restartPlayer = loser === null ? state.currentPlayer : loser;
+    state.lastResult = {
+      choices: availableChoices,
+      loser,
+      noLegalMoves,
+      reason,
+      restartPlayer
+    };
     state.phase = "result";
     setScreen("result");
-    resultHeading.textContent = `${playerName(loser)} loses round ${state.round}`;
+    if (state.mode === "solo") {
+      const legalLength = state.path.filter((entry) => entry.valid).length;
+      resultHeading.textContent = noLegalMoves
+        ? `Chain complete — ${legalLength} countries!`
+        : `Chain ended at ${legalLength} countries`;
+    } else if (noLegalMoves) {
+      resultHeading.textContent = `Round ${state.round} complete — no legal moves`;
+    } else {
+      resultHeading.textContent = `${playerName(loser)} loses round ${state.round}`;
+    }
     resultReason.textContent = reason;
-    choiceSummary.textContent = choices.length
-      ? `${choices.length} valid ${
-        choices.length === 1 ? "choice was" : "choices were"
-      } available: ${choices.map((country) => country.name).join(", ")}.`
+    choiceSummary.textContent = availableChoices.length
+      ? `${availableChoices.length} valid ${
+        availableChoices.length === 1 ? "choice was" : "choices were"
+      } available: ${availableChoices.map((country) => country.name).join(", ")}.`
       : "There were no valid unused bordering countries available.";
-    restartButton.textContent = `Play again — ${playerName(loser)} starts`;
+    restartButton.textContent = state.mode === "solo"
+      ? "Try another solo chain"
+      : `Play again — ${playerName(restartPlayer)} starts`;
+    document.querySelector("#result-end-game-button").hidden = state.mode === "solo";
     renderRouteList();
     renderMap();
   }
@@ -320,6 +425,120 @@
     });
   }
 
+  const manualConnectionCoordinates = {
+    "BHR|SAU": {
+      BHR: [50.45, 26.14],
+      SAU: [50.21, 26.62]
+    },
+    "CYP|GBR": {
+      CYP: [32.94, 34.62],
+      GBR: [32.81, 34.64]
+    },
+    "DNK|SWE": {
+      DNK: [12.64, 55.61],
+      SWE: [12.91, 55.58]
+    },
+    "ESP|GBR": {
+      ESP: [-5.35, 36.15],
+      GBR: [-5.34, 36.13]
+    },
+    "FRA|GBR": {
+      FRA: [1.57, 50.92],
+      GBR: [-1.31, 51.1]
+    },
+    "FRA|NLD": {
+      FRA: [-63.08, 18.08],
+      NLD: [-63.05, 18.04]
+    },
+    "MYS|SGP": {
+      MYS: [103.74, 1.46],
+      SGP: [103.77, 1.34]
+    }
+  };
+
+  function polygonComponents(feature) {
+    if (!feature) return [];
+    const { geometry } = feature;
+    if (geometry.type === "Polygon") return [geometry.coordinates];
+    if (geometry.type === "MultiPolygon") return geometry.coordinates;
+    return [];
+  }
+
+  function projectedVertices(component, projection) {
+    const vertices = component.flatMap((ring) => ring.map(projection));
+    const step = Math.max(1, Math.floor(vertices.length / 400));
+    return vertices.filter((_, index) => index % step === 0);
+  }
+
+  function componentCentroid(component, pathGenerator) {
+    return pathGenerator.centroid({
+      type: "Feature",
+      properties: {},
+      geometry: { type: "Polygon", coordinates: component }
+    });
+  }
+
+  function connectionPoints(
+    leftCode,
+    rightCode,
+    featureByCode,
+    projection,
+    pathGenerator,
+    pointForCode
+  ) {
+    const key = [leftCode, rightCode].sort().join("|");
+    const manual = manualConnectionCoordinates[key];
+    if (manual) {
+      return [
+        projection(manual[leftCode]),
+        projection(manual[rightCode])
+      ];
+    }
+    const leftComponents = polygonComponents(featureByCode.get(leftCode));
+    const rightComponents = polygonComponents(featureByCode.get(rightCode));
+    let closest = null;
+    leftComponents.forEach((leftComponent) => {
+      const leftVertices = projectedVertices(leftComponent, projection);
+      rightComponents.forEach((rightComponent) => {
+        const rightVertices = projectedVertices(rightComponent, projection);
+        let distance = Infinity;
+        leftVertices.forEach((left) => {
+          rightVertices.forEach((right) => {
+            const squared = (left[0] - right[0]) ** 2
+              + (left[1] - right[1]) ** 2;
+            if (squared < distance) distance = squared;
+          });
+        });
+        if (!closest || distance < closest.distance) {
+          closest = { distance, leftComponent, rightComponent };
+        }
+      });
+    });
+    if (!closest) return [pointForCode(leftCode), pointForCode(rightCode)];
+    return [
+      componentCentroid(closest.leftComponent, pathGenerator),
+      componentCentroid(closest.rightComponent, pathGenerator)
+    ];
+  }
+
+  function updateMapOverlay() {
+    routeOverlay.forEach(({ element, start, end }) => {
+      const transformedStart = mapTransform.apply(start);
+      const transformedEnd = mapTransform.apply(end);
+      element.setAttribute("x1", transformedStart[0]);
+      element.setAttribute("y1", transformedStart[1]);
+      element.setAttribute("x2", transformedEnd[0]);
+      element.setAttribute("y2", transformedEnd[1]);
+    });
+    markerOverlay.forEach(({ element, point }) => {
+      const transformed = mapTransform.apply(point);
+      element.setAttribute(
+        "transform",
+        `translate(${transformed[0]} ${transformed[1]})`
+      );
+    });
+  }
+
   function renderMap() {
     mapCountries.replaceChildren();
     mapRoutes.replaceChildren();
@@ -335,7 +554,9 @@
       mapError.hidden = false;
       return;
     }
-    const projection = window.d3.geoNaturalEarth1().fitExtent(
+    routeOverlay = [];
+    markerOverlay = [];
+    const projection = window.d3.geoEqualEarth().fitExtent(
       [[12, 12], [988, 500]],
       mapData
     );
@@ -377,8 +598,14 @@
     }
 
     state.path.slice(1).forEach((entry, index) => {
-      const start = pointForCode(state.path[index].code);
-      const end = pointForCode(entry.code);
+      const [start, end] = connectionPoints(
+        state.path[index].code,
+        entry.code,
+        featureByCode,
+        projection,
+        pathGenerator,
+        pointForCode
+      );
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", start[0]);
       line.setAttribute("y1", start[1]);
@@ -389,6 +616,7 @@
         `route-segment${entry.valid ? "" : " is-invalid"}`
       );
       mapRoutes.append(line);
+      routeOverlay.push({ element: line, start, end });
     });
 
     state.path.forEach((entry, index) => {
@@ -405,7 +633,22 @@
       number.textContent = String(index + 1);
       marker.append(circle, number);
       mapMarkers.append(marker);
+      markerOverlay.push({ element: marker, point });
     });
+    mapTransform = window.d3.zoomIdentity;
+    mapZoom = window.d3.zoom()
+      .scaleExtent([1, 14])
+      .extent([[0, 0], [1000, 520]])
+      .translateExtent([[0, 0], [1000, 520]])
+      .on("zoom", (event) => {
+        mapTransform = event.transform;
+        window.d3.select(mapCountries).attr("transform", mapTransform);
+        updateMapOverlay();
+      });
+    window.d3.select(resultMap)
+      .call(mapZoom)
+      .on("dblclick.zoom", null)
+      .call(mapZoom.transform, window.d3.zoomIdentity);
   }
 
   function showFinalScores() {
@@ -437,6 +680,13 @@
       return;
     }
     startGame(playerCount, String(formData.get("mode")));
+  });
+  document.querySelector("#solo-mode-button").addEventListener("click", startSolo);
+  document.querySelector("#local-mode-button").addEventListener("click", () => {
+    setScreen("setup");
+  });
+  document.querySelector("#setup-back-button").addEventListener("click", () => {
+    setScreen("mode");
   });
 
   countrySearch.addEventListener("input", () => {
@@ -480,12 +730,25 @@
   document.querySelector("#challenge-button").addEventListener("click", challengeMove);
   document.querySelector("#end-game-button").addEventListener("click", showFinalScores);
   document.querySelector("#result-end-game-button").addEventListener("click", showFinalScores);
+  document.querySelector("#map-zoom-in").addEventListener("click", () => {
+    if (mapZoom) window.d3.select(resultMap).transition().call(mapZoom.scaleBy, 1.7);
+  });
+  document.querySelector("#map-zoom-out").addEventListener("click", () => {
+    if (mapZoom) window.d3.select(resultMap).transition().call(mapZoom.scaleBy, 1 / 1.7);
+  });
+  document.querySelector("#map-reset").addEventListener("click", () => {
+    if (mapZoom) {
+      window.d3.select(resultMap)
+        .transition()
+        .call(mapZoom.transform, window.d3.zoomIdentity);
+    }
+  });
   restartButton.addEventListener("click", () => {
-    startRound(state.lastResult.loser);
+    startRound(state.lastResult.restartPlayer);
   });
   document.querySelector("#new-game-button").addEventListener("click", () => {
     state = null;
     setupForm.reset();
-    setScreen("setup");
+    setScreen("mode");
   });
 })();

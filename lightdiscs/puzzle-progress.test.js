@@ -16,7 +16,7 @@ global.window = {
     }
   }
 };
-["puzzle-levels.js", "puzzle-progress.js"].forEach((file) => {
+["puzzle-levels.js", "xor-puzzle-levels.js", "puzzle-progress.js"].forEach((file) => {
   vm.runInThisContext(
     fs.readFileSync(path.join(__dirname, file), "utf8"),
     { filename: file }
@@ -38,18 +38,27 @@ assert.deepStrictEqual(
     ...Array(6).fill("easy"),
     ...Array(6).fill("medium"),
     ...Array(6).fill("hard"),
+    ...Array(6).fill("very-hard"),
+    ...Array(6).fill("very-easy"),
+    ...Array(6).fill("easy"),
+    ...Array(6).fill("medium"),
+    ...Array(6).fill("hard"),
     ...Array(6).fill("very-hard")
   ]
 );
-progress.difficulties.forEach(({ id }) => {
+["standard", "xor"].forEach((combination) => progress.difficulties.forEach(({ id }) => {
   assert.deepStrictEqual(
-    levels.filter(({ difficulty }) => difficulty === id).map(({ title }) => title),
+    levels
+      .filter((level) => (
+        level.difficulty === id && level.combination === combination
+      ))
+      .map(({ title }) => title),
     ["Puzzle 1", "Puzzle 2", "Puzzle 3", "Puzzle 4", "Puzzle 5", "Puzzle 6"]
   );
-});
+}));
 
-progress.markCompleted(levels[0].code);
-assert.strictEqual(progress.isCompleted(levels[0].code), true);
+progress.markCompleted(levels[0].code, levels[0]);
+assert.strictEqual(progress.isCompleted(levels[0].code, levels[0]), true);
 assert.strictEqual(progress.isCompleted(levels[1].code), false);
 assert.deepStrictEqual(
   JSON.parse(values.get(progress.storageKey)),
@@ -62,7 +71,24 @@ progress.markCompleted(ordered[1].level.code);
 next = progress.nextUnsolved(levels, ordered.at(-1).level.code);
 assert.strictEqual(next.level.code, ordered[2].level.code);
 
-levels.forEach(({ code }) => progress.markCompleted(code));
-assert.strictEqual(progress.nextUnsolved(levels, levels[0].code), null);
+assert.strictEqual(progress.xorUnlocked(), false);
+levels
+  .filter(({ combination }) => combination === "standard")
+  .slice(0, progress.xorUnlockCount)
+  .forEach((level) => progress.markCompleted(level.code, level));
+assert.strictEqual(progress.xorUnlocked(), true);
+
+const firstXor = levels.find(({ combination }) => combination === "xor");
+progress.markCompleted(firstXor.code, firstXor);
+assert.strictEqual(progress.isCompleted(firstXor.code, firstXor), true);
+assert.strictEqual(
+  JSON.parse(values.get(progress.storageKey)).includes(`xor:${firstXor.code}`),
+  true
+);
+
+levels.forEach((level) => progress.markCompleted(level.code, level));
+assert.strictEqual(progress.nextUnsolved(levels, levels[0]), null);
+assert.strictEqual(progress.completedDifficultyCount(levels, "standard"), 5);
+assert.strictEqual(progress.completedDifficultyCount(levels, "xor"), 5);
 
 console.log("Light Disc progress tests passed.");

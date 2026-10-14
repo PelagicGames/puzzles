@@ -26,11 +26,20 @@
 
   const colourReference = document.querySelector("#colour-reference");
   const shapeReference = document.querySelector("#shape-reference");
+  const xorTutorial = document.querySelector("#xor-tutorial");
+  const xorColourReference = document.querySelector("#xor-colour-reference");
+
+  xorTutorial.hidden = !window.LightDiscProgress.xorUnlocked();
 
   colours.forEach((left, leftIndex) => {
     colours.slice(leftIndex).forEach((right, offset) => {
       const rightIndex = leftIndex + offset;
-      colourReference.append(createColourCard(left, right, rightIndex));
+      colourReference.append(
+        createColourCard(left, right, rightIndex, "standard")
+      );
+      xorColourReference.append(
+        createColourCard(left, right, rightIndex, "xor")
+      );
     });
   });
   shapes.forEach((shape) => shapeReference.append(createShapeCard(shape)));
@@ -41,16 +50,19 @@
     return element;
   }
 
-  function createColourCard(left, right, index) {
-    const resultMask = left.mask & right.mask;
+  function createColourCard(left, right, index, combination) {
+    const resultMask = combination === "xor"
+      ? left.mask ^ right.mask
+      : left.mask & right.mask;
     const result = colours.find((colour) => colour.mask === resultMask);
+    const operator = combination === "xor" ? "XOR" : "+";
     const card = document.createElement("article");
     card.className = "reference-card";
     const svg = createSvgElement("svg", {
       class: "colour-demo",
       viewBox: "0 0 112 68",
       role: "img",
-      "aria-label": `${left.name} and ${right.name} combine to ${result.name}`
+      "aria-label": `${left.name} ${operator} ${right.name} is ${result.name}`
     });
     const noShape = { name: "no shape", value: "none" };
     svg.innerHTML = filterCompositionMarkup([
@@ -66,10 +78,12 @@
         x: 68,
         y: 34
       }
-    ], `tutorial-${left.mask}-${right.mask}-${index}`, 28);
+    ], `tutorial-${combination}-${left.mask}-${right.mask}-${index}`, 28, {
+      combination
+    });
     const equation = document.createElement("p");
     equation.className = "reference-equation";
-    equation.textContent = `${left.name} + ${right.name} = ${result.name}`;
+    equation.textContent = `${left.name} ${operator} ${right.name} = ${result.name}`;
     card.append(svg, equation);
     return card;
   }

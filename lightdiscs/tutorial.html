@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101713">
   <title>Tutorial | Light Discs</title>
-  <link rel="stylesheet" href="./styles.css?v=20261012d">
+  <link rel="stylesheet" href="./styles.css?v=20261014b">
 </head>
 <body>
   <main class="page-shell content-page">
@@ -65,9 +65,20 @@
         <p class="section-copy">A shape may use a different filter colour from its surrounding disc. Squares and triangles fit inside the large disc; the small disc fits inside both.</p>
         <div class="reference-grid shape-reference-grid" id="shape-reference"></div>
       </section>
+
+      <section class="reference-section xor-tutorial" id="xor-tutorial" aria-labelledby="xor-heading" hidden>
+        <p class="section-number">04 / XOR puzzles</p>
+        <h2 id="xor-heading">Toggle colour channels</h2>
+        <p class="section-copy">In unlocked XOR puzzles, the colour combination rules follow the XOR logic for each RGB channel.</p>
+        <div class="reference-grid colour-reference-grid" id="xor-colour-reference"></div>
+        <p class="section-copy">Patterns, rotation, snapping, and matching work in the same way as standard puzzles. Only the way overlapping colours combine changes.</p>
+      </section>
     </div>
   </main>
-  <script src="./filter-composition.js?v=20261012b"></script>
-  <script src="./tutorial.js"></script>
+  <script src="./puzzle-levels.js"></script>
+  <script src="./xor-puzzle-levels.js"></script>
+  <script src="./puzzle-progress.js"></script>
+  <script src="./filter-composition.js?v=20261014c"></script>
+  <script src="./tutorial.js?v=20261014a"></script>
 </body>
 </html>

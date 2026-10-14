@@ -2,7 +2,9 @@
 
 # Mapominoes
 
-Mapominoes is a local multiplayer country-chain memory game for two to eight
+Mapominoes is a country-chain memory game with solo and local multiplayer
+modes. Solo play starts from a random country and challenges the player to
+build the longest possible chain. Local multiplayer supports two to eight
 players.
 
 ## Rules
@@ -22,7 +24,15 @@ border and repetition rules apply.
   the challenger lose.
 
 The losing player gains one point and starts the next round. Lower scores are
-better.
+better. If a player correctly identifies that no legal move remains, the round
+ends without awarding a point. An incorrect concession still awards a point.
+Solo play has no scores.
+
+At the end of a chain, an Equal Earth world map shows the route, invalid moves,
+and any legal unused choices. The map supports wheel, touch, and button zooming
+plus panning; route strokes and hop counters remain legible at every zoom
+level. Route lines use the relevant territory or exclave where the geographic
+data permits, with curated anchors for fixed terrestrial links.
 
 ## Country data
 

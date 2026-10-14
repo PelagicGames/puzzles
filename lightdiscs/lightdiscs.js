@@ -37,6 +37,7 @@
   let puzzleDefinition = document.body.dataset.puzzleCode
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
     : null;
+  const combination = document.body.dataset.combination || "standard";
   const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
   const boardHeight = 950;
@@ -739,7 +740,10 @@
         keys.map((key, index) => [key, Boolean(bits & (2 ** index))])
       );
       if (isPossibleAssignment(assignment)) {
-        assignments.push({ assignment, mask: formationMask(formation, assignment) });
+        assignments.push({
+          assignment,
+          mask: formationMask(formation, assignment, combination)
+        });
       }
     }
 
@@ -1048,7 +1052,10 @@
         layers,
         "preview",
         discRadius,
-        { includeContrastOutlines: contrastQuality !== "none" }
+        {
+          combination,
+          includeContrastOutlines: contrastQuality !== "none"
+        }
       )}</g>`
       + "</svg>";
     return `data:image/svg+xml,${encodeURIComponent(markup)}`;
@@ -1056,6 +1063,7 @@
 
   function boardCompositionMarkup(layers) {
     return filterCompositionMarkup(layers, "board", discRadius, {
+      combination,
       includeContrastOutlines: contrastQuality === "full"
         || contrastQuality === "drag-hidden"
     });
@@ -1081,10 +1089,13 @@
 
   function renderFilterLayer(poses) {
     const layers = filterLayersForPoses(poses);
-    const signature = `${contrastOutlinesOnBoard()}:` + layers.map(({ filter }) => (
+    const appearanceSignature = `${contrastOutlinesOnBoard()}:` + layers.map(({ filter }) => (
       `${filter.background.mask}:${filter.foreground.mask}:${filter.shape.value}`
     )).join("|");
     const geometry = layers.map(({ x, y, angle }) => `${x}:${y}:${angle}`);
+    const signature = combination === "xor"
+      ? `${appearanceSignature}:${xorOverlapSignature(layers)}`
+      : appearanceSignature;
     if (signature !== renderedFilterSignature) {
       filterRender.innerHTML = boardCompositionMarkup(layers);
       renderedFilterSignature = signature;
@@ -1126,6 +1137,21 @@
     renderedFilterGeometry = geometry;
   }
 
+  function xorOverlapSignature(layers) {
+    const overlappingPairs = [];
+    const maximumDistanceSquared = (discRadius * 2) ** 2;
+    layers.forEach((left, leftIndex) => {
+      layers.slice(leftIndex + 1).forEach((right, offset) => {
+        const distanceSquared = (left.x - right.x) ** 2
+          + (left.y - right.y) ** 2;
+        if (distanceSquared < maximumDistanceSquared) {
+          overlappingPairs.push(`${leftIndex}-${leftIndex + offset + 1}`);
+        }
+      });
+    });
+    return overlappingPairs.join(",");
+  }
+
   function updateSuccess() {
     renderFilterLayer(pieces);
     currentFormations = formationsForPoses(pieces);
@@ -1136,7 +1162,11 @@
       0
     );
     const targetMatches = currentFormations.map(
-      (formation, index) => formationsMatch(formation, targetFormations[index])
+      (formation, index) => formationsMatch(
+        formation,
+        targetFormations[index],
+        combination
+      )
     );
     const targetsMatch = targetMatches.every(Boolean);
     targetMatches.forEach((matches, index) => updateTargetStatus(index, matches));

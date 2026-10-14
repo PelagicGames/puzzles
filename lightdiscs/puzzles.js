@@ -2,22 +2,48 @@
 
 (() => {
   const levels = window.LightDiscLevels;
-  const { difficulties, isCompleted } = window.LightDiscProgress;
+  const { difficulties, isCompleted, xorUnlocked, xorUnlockCount } =
+    window.LightDiscProgress;
   const list = document.querySelector("#difficulty-list");
 
-  difficulties.forEach(({ id, label }) => {
+  ["standard", "xor"].forEach((combination) => {
+    if (combination === "xor") {
+      const campaignHeading = document.createElement("header");
+      campaignHeading.className = "campaign-heading";
+      const eyebrow = document.createElement("p");
+      eyebrow.className = "eyebrow";
+      eyebrow.textContent = "Alternate campaign";
+      const heading = document.createElement("h2");
+      heading.textContent = "XOR puzzles";
+      const description = document.createElement("p");
+      description.textContent = xorUnlocked()
+        ? "RGB channels toggle when filters overlap."
+        : `Complete ${xorUnlockCount} standard puzzles to unlock.`;
+      campaignHeading.append(eyebrow, heading, description);
+      list.append(campaignHeading);
+    }
+    difficulties.forEach(({ id, label }) => {
     const section = document.createElement("section");
     section.className = "difficulty-section";
-    section.setAttribute("aria-labelledby", `difficulty-${id}`);
+    section.classList.toggle(
+      "is-locked",
+      combination === "xor" && !xorUnlocked()
+    );
+    section.setAttribute(
+      "aria-labelledby",
+      `difficulty-${combination}-${id}`
+    );
 
     const heading = document.createElement("h2");
-    heading.id = `difficulty-${id}`;
+    heading.id = `difficulty-${combination}-${id}`;
     heading.textContent = label;
     section.append(heading);
 
     const matchingLevels = levels
       .map((level, index) => ({ level, index }))
-      .filter(({ level }) => level.difficulty === id);
+      .filter(({ level }) => (
+        level.difficulty === id && level.combination === combination
+      ));
     if (matchingLevels.length === 0) {
       const empty = document.createElement("p");
       empty.className = "difficulty-empty";
@@ -26,11 +52,19 @@
       list.append(section);
       return;
     }
+    if (combination === "xor" && !xorUnlocked()) {
+      const locked = document.createElement("p");
+      locked.className = "difficulty-empty";
+      locked.textContent = "Locked";
+      section.append(locked);
+      list.append(section);
+      return;
+    }
 
     const selectors = document.createElement("div");
     selectors.className = "puzzle-selectors";
     matchingLevels.forEach(({ level, index }, difficultyIndex) => {
-      const completed = isCompleted(level.code);
+      const completed = isCompleted(level.code, level);
       const link = document.createElement("a");
       link.className = "puzzle-selector";
       link.classList.toggle("is-completed", completed);
@@ -54,5 +88,6 @@
     });
     section.append(selectors);
     list.append(section);
+    });
   });
 })();

@@ -1,0 +1,110 @@
+/* Copyright (C) 2026 Pelagic Games */
+
+:root {
+  --bg-start: #fff7ed;
+  --bg-end: #ffedd5;
+  --card: #ffffff;
+  --text: #3a2e22;
+  --muted: #6a5a48;
+  --line: #d9cfc2;
+  --focus: #1877bd;
+  --shadow: 0 10px 30px rgba(120, 80, 40, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  display: grid;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+  place-items: center;
+  color: var(--text);
+  background:
+    radial-gradient(900px 500px at 10% 10%, rgba(255, 255, 255, 0.8), transparent 55%),
+    linear-gradient(135deg, var(--bg-start), var(--bg-end));
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+main {
+  width: min(32rem, 100%);
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.8rem, 10vw, 4.8rem);
+  letter-spacing: -0.035em;
+}
+
+.tagline {
+  margin: 0.45rem 0 2rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+nav {
+  display: grid;
+  gap: 0.75rem;
+}
+
+nav a {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 2.5rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  color: var(--text);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+nav a::after {
+  color: var(--muted);
+  content: "\2192";
+  font-size: 1.35rem;
+}
+
+nav a:hover {
+  border-color: #b9a995;
+  transform: translateY(-1px);
+}
+
+nav a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.link-icon {
+  color: var(--muted);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.light-disc-icon {
+  position: relative;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 25%, #ed3b4f 0 28%, transparent 30%),
+    radial-gradient(circle at 28% 66%, #36b96b 0 28%, transparent 30%),
+    radial-gradient(circle at 72% 66%, #397bea 0 28%, transparent 30%);
+}
