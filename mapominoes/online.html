@@ -1,0 +1,195 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13271f">
+  <title>Mapominoes Online</title>
+  <link rel="stylesheet" href="./online.css?v=20261015e">
+</head>
+<body>
+  <main class="shell">
+    <header class="site-header">
+      <div class="header-navigation">
+        <a class="back-link" href="./index.html">&#8592; Mapominoes</a>
+      </div>
+      <div>
+        <p class="eyebrow" id="online-mode-label">Host-authoritative online play</p>
+        <h1>Mapominoes</h1>
+        <p class="tagline">Private peer-to-peer games, connected with codes.</p>
+      </div>
+    </header>
+
+    <p class="connection-error" id="connection-error" role="alert" aria-live="assertive" hidden></p>
+
+    <section class="panel mode-panel" id="menu-screen" aria-labelledby="menu-title">
+      <div class="section-heading">
+        <p class="step-label">Online multiplayer</p>
+        <h2 id="menu-title">Host or join a game</h2>
+        <p class="muted">Connections use public STUN and no relay server. Some restrictive, corporate, or carrier networks cannot connect. Keep this tab open.</p>
+      </div>
+      <div class="top-level-modes">
+        <button class="mode-card" id="host-menu-button" type="button">
+          <strong>Host a game</strong>
+          <span>Choose the rules, invite each player, and run the game.</span>
+        </button>
+        <button class="mode-card" id="join-menu-button" type="button">
+          <strong>Join a game</strong>
+          <span>Exchange one invite and one answer code with the host.</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel setup-panel" id="host-screen" hidden aria-labelledby="host-title">
+      <button class="back-button menu-return" type="button">&#8592; Multiplayer menu</button>
+      <p class="step-label">Host</p>
+      <h2 id="host-title">Create a lobby</h2>
+      <form id="host-form">
+        <label class="field-label" for="host-name">Your name</label>
+        <input class="text-field" id="host-name" maxlength="40" required autocomplete="name">
+        <fieldset class="mode-picker">
+          <legend>Checking mode</legend>
+          <label><input type="radio" name="host-mode" value="autocheck" checked><span><strong>Autocheck</strong><small>Invalid choices end the round immediately.</small></span></label>
+          <label><input type="radio" name="host-mode" value="challenge"><span><strong>Challenge</strong><small>The next player decides whether to accept or challenge.</small></span></label>
+        </fieldset>
+        <label class="field-label" for="turn-seconds">Country timer</label>
+        <select class="text-field" id="turn-seconds">
+          <option value="5">5 seconds</option>
+          <option value="10">10 seconds</option>
+          <option value="15" selected>15 seconds</option>
+          <option value="30">30 seconds</option>
+          <option value="45">45 seconds</option>
+          <option value="60">60 seconds</option>
+        </select>
+        <button class="primary-button block-action" type="submit">Create lobby</button>
+      </form>
+    </section>
+
+    <section class="panel setup-panel" id="join-screen" hidden aria-labelledby="join-title">
+      <button class="back-button menu-return" type="button">&#8592; Multiplayer menu</button>
+      <p class="step-label">Join</p>
+      <h2 id="join-title">Connect to a host</h2>
+      <form id="join-form">
+        <label class="field-label" for="guest-name">Your name</label>
+        <input class="text-field" id="guest-name" maxlength="40" required autocomplete="name">
+        <label class="field-label field-gap" for="invite-input">Invite code from host</label>
+        <textarea class="code-field" id="invite-input" rows="5" required spellcheck="false"></textarea>
+        <button class="primary-button block-action" type="submit">Create answer code</button>
+      </form>
+      <div id="answer-area" hidden>
+        <label class="field-label field-gap" for="answer-output">Send this answer code to the host</label>
+        <textarea class="code-field" id="answer-output" rows="5" readonly spellcheck="false"></textarea>
+        <button class="quiet-button" id="copy-answer" type="button">Copy answer</button>
+        <p class="muted" id="join-status" role="status">Waiting for the host to accept the answer…</p>
+      </div>
+    </section>
+
+    <section class="panel lobby-screen" id="lobby-screen" hidden aria-labelledby="lobby-title">
+      <p class="step-label">Lobby</p>
+      <h2 id="lobby-title">Players</h2>
+      <ul class="player-list" id="lobby-players"></ul>
+      <div id="host-invite-tools" hidden>
+        <div class="button-row">
+          <button class="quiet-button" id="create-invite" type="button">Create player invite</button>
+          <button class="primary-button" id="start-game" type="button" disabled>Start game</button>
+        </div>
+        <div class="room-code-area" id="room-code-area" hidden>
+          <p class="field-label">Reusable room code</p>
+          <strong class="room-code" id="room-code"></strong>
+          <button class="quiet-button" id="copy-room-code" type="button">Copy room code</button>
+          <p class="muted">Other players can join with this same code. No answer code is needed.</p>
+        </div>
+        <div id="invite-area" hidden>
+          <label class="field-label field-gap" for="invite-output">Send this invite code to one player</label>
+          <p class="muted">Each player needs a fresh invite and returns their own answer code.</p>
+          <textarea class="code-field" id="invite-output" rows="5" readonly spellcheck="false"></textarea>
+          <button class="quiet-button" id="copy-invite" type="button">Copy invite</button>
+          <label class="field-label field-gap" for="answer-input">Paste that player's answer code</label>
+          <textarea class="code-field" id="answer-input" rows="5" spellcheck="false"></textarea>
+          <button class="primary-button" id="accept-answer" type="button">Accept answer</button>
+        </div>
+      </div>
+      <p class="muted" id="lobby-status" role="status"></p>
+    </section>
+
+    <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
+      <div class="game-toolbar">
+        <div class="truncate">
+          <p class="step-label" id="round-label"></p>
+          <h2 class="truncate" id="turn-heading"></h2>
+          <p class="activity truncate" id="activity-line"></p>
+        </div>
+        <div class="host-game-controls">
+          <div class="timer" id="timer" aria-live="off">0</div>
+          <button class="quiet-button danger-button" id="game-return-lobby" type="button" hidden>Return to lobby</button>
+          <button class="quiet-button danger-button" id="leave-game" type="button">Leave game</button>
+        </div>
+      </div>
+      <ol class="scoreboard" id="scoreboard" aria-label="Scores and upcoming order"></ol>
+      <div class="play-grid">
+        <section class="last-country-card">
+          <p class="field-label">Last country named</p>
+          <strong id="last-country"></strong>
+          <p class="muted" id="round-guidance"></p>
+          <p class="field-label field-gap">Upcoming order</p>
+          <ol class="upcoming-list" id="upcoming-list"></ol>
+        </section>
+        <section class="turn-card" id="entry-panel">
+          <form id="country-form" autocomplete="off">
+            <label class="field-label" for="country-search">Choose a country</label>
+            <div class="combobox">
+              <input id="country-search" type="search" role="combobox" aria-autocomplete="list" aria-controls="country-results" aria-expanded="false" placeholder="Start typing a country" required>
+              <ul id="country-results" role="listbox" hidden></ul>
+            </div>
+            <div class="selected-country" id="selected-country" hidden><span>Selected</span><strong id="selected-country-name"></strong></div>
+            <p class="form-message" id="form-message" role="status"></p>
+            <div class="button-row">
+              <button class="primary-button" id="confirm-country" type="submit" disabled>Confirm country</button>
+              <button class="quiet-button" id="concede-button" type="button">I can't name one</button>
+            </div>
+          </form>
+          <p class="waiting-copy" id="waiting-copy"></p>
+        </section>
+        <section class="turn-card challenge-card" id="challenge-panel" hidden>
+          <p class="field-label">Player decision</p>
+          <h3 id="challenge-heading"></h3>
+          <p id="challenge-copy"></p>
+          <div class="button-row" id="challenge-actions">
+            <button class="primary-button" id="accept-move" type="button">Accept and play</button>
+            <button class="challenge-button" id="challenge-move" type="button">Challenge</button>
+          </div>
+          <p class="waiting-copy" id="challenge-waiting"></p>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
+      <p class="step-label">Round over</p>
+      <h2 id="result-heading"></h2>
+      <p class="result-reason" id="result-reason"></p>
+      <p class="choice-summary" id="choice-summary"></p>
+      <div class="map-frame">
+        <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-label="Map of the round route">
+          <g id="map-countries"></g><g id="map-routes"></g><g id="map-markers"></g>
+        </svg>
+        <p class="map-error" id="map-error" hidden></p>
+      </div>
+      <ol class="route-list" id="route-list"></ol>
+      <div class="button-row result-actions" id="result-host-actions" hidden>
+        <button class="primary-button" id="restart-round" type="button">Play another round</button>
+        <button class="quiet-button" id="return-lobby" type="button">Open lobby</button>
+      </div>
+      <p class="muted" id="result-waiting">Waiting for the host…</p>
+    </section>
+
+    <footer>Peer connections are direct and encrypted. Country and map data stay local. <a href="./ATTRIBUTION.md">Data attribution</a></footer>
+  </main>
+  <script src="./countries.js"></script>
+  <script src="./game-rules.js"></script>
+  <script src="./assets/d3.min.js"></script>
+  <script src="./assets/topojson-client.min.js"></script>
+  <script src="./assets/countries-50m.js"></script>
+  <script src="./online.js?v=20261015e"></script>
+</body>
+</html>

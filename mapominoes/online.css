@@ -1,0 +1,190 @@
+@import url("./styles.css");
+
+/* Copyright (C) 2026 Pelagic Games */
+
+.muted,
+.activity,
+.waiting-copy {
+  color: var(--muted);
+}
+
+.connection-error {
+  max-width: 780px;
+  margin: 0 auto 18px;
+  padding: 14px 17px;
+  border: 1px solid var(--invalid);
+  border-radius: 12px;
+  color: #ffc1b7;
+  background: rgba(242, 111, 91, 0.1);
+}
+
+.text-field,
+.code-field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: #0b1812;
+  font: inherit;
+  outline: none;
+}
+
+.text-field {
+  min-height: 48px;
+  padding: 11px 13px;
+}
+
+.code-field {
+  padding: 12px;
+  resize: vertical;
+  font: 0.76rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.text-field:focus,
+.code-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(216, 242, 119, 0.13);
+}
+
+.field-gap {
+  margin-top: 24px;
+}
+
+.block-action {
+  margin-top: 26px;
+}
+
+.room-code-area {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-raised);
+}
+
+.room-code {
+  display: block;
+  margin: 8px 0 14px;
+  color: var(--accent);
+  font: 800 clamp(1.8rem, 7vw, 3rem)/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.14em;
+}
+
+.player-list,
+.upcoming-list {
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-list li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.host-transfer-button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+}
+
+.upcoming-list li {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.truncate,
+.scoreboard span,
+.route-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-toolbar > div:first-child {
+  min-width: 0;
+}
+
+.activity {
+  min-height: 1.55em;
+  margin: 4px 0 0;
+}
+
+.timer {
+  flex: 0 0 auto;
+  min-width: 72px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--accent);
+  background: var(--panel);
+  font-size: 2rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.timer.is-urgent {
+  border-color: var(--invalid);
+  color: #ffc1b7;
+}
+
+.host-game-controls {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-items: end;
+}
+
+.scoreboard li {
+  min-width: 0;
+  gap: 8px;
+}
+
+.scoreboard span {
+  display: block;
+}
+
+.waiting-copy {
+  margin-bottom: 0;
+}
+
+#result-map {
+  cursor: default;
+}
+
+.result-actions {
+  margin-top: 22px;
+}
+
+@media (max-width: 680px) {
+  .top-level-modes,
+  .play-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .site-header {
+    grid-template-columns: 1fr;
+  }
+
+  .game-toolbar {
+    align-items: start;
+  }
+}

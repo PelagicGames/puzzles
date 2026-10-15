@@ -1,0 +1,134 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13271f">
+  <title>Solo | Mapominoes</title>
+  <link rel="stylesheet" href="./styles.css?v=20261015a">
+</head>
+<body data-mapominoes-mode="solo">
+  <main class="shell">
+    <header class="site-header">
+      <a class="back-link" href="./index.html">&#8592; Menu</a>
+      <div>
+        <p class="eyebrow">Mapominoes</p>
+        <h1>Solo</h1>
+        <p class="tagline">Build the longest country chain you can.</p>
+      </div>
+    </header>
+
+    <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
+      <div class="game-toolbar">
+        <div>
+          <p class="step-label" id="round-label">Solo route</p>
+          <h2 id="turn-heading">Your turn</h2>
+        </div>
+        <button class="quiet-button danger-button" id="end-game-button" type="button">End route</button>
+      </div>
+      <ol class="scoreboard" id="scoreboard" aria-label="Player scores"></ol>
+      <div class="play-grid">
+        <section class="last-country-card" aria-labelledby="last-country-label">
+          <p class="field-label" id="last-country-label">Last country named</p>
+          <strong id="last-country"></strong>
+          <p id="round-guidance"></p>
+        </section>
+        <section class="turn-card" id="entry-panel">
+          <form id="country-form" autocomplete="off">
+            <label class="field-label" for="country-search">Choose a country</label>
+            <div class="combobox">
+              <input id="country-search" type="search" role="combobox" aria-autocomplete="list"
+                aria-controls="country-results" aria-expanded="false"
+                placeholder="Start typing a country or common name" required>
+              <ul id="country-results" role="listbox" hidden></ul>
+            </div>
+            <div class="selected-country" id="selected-country" hidden>
+              <span>Selected</span>
+              <strong id="selected-country-name"></strong>
+            </div>
+            <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+            <div class="button-row">
+              <button class="primary-button" id="confirm-country" type="submit" disabled>Confirm country</button>
+              <button class="quiet-button" id="concede-button" type="button">I can't name one</button>
+            </div>
+          </form>
+        </section>
+        <section class="turn-card challenge-card" id="challenge-panel" hidden>
+          <p class="field-label">Decision</p>
+          <h3 id="challenge-heading"></h3>
+          <p id="challenge-copy"></p>
+          <div class="button-row">
+            <button class="primary-button" id="accept-button" type="button">Accept and play</button>
+            <button class="challenge-button" id="challenge-button" type="button">Challenge</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
+      <p class="step-label">Route complete</p>
+      <h2 id="result-heading"></h2>
+      <p class="result-reason" id="result-reason"></p>
+      <p class="choice-summary" id="choice-summary"></p>
+      <div class="map-frame">
+        <div class="map-controls" aria-label="Map controls">
+          <button id="map-zoom-in" type="button" aria-label="Zoom map in">+</button>
+          <button id="map-zoom-out" type="button" aria-label="Zoom map out">&#8722;</button>
+          <button id="map-reset" type="button">Reset</button>
+        </div>
+        <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-labelledby="map-title map-description">
+          <title id="map-title">Map of countries named in this route</title>
+          <desc id="map-description">The route is numbered in order and unused valid choices are green.</desc>
+          <defs>
+            <pattern id="disputed-land" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#365247"></rect><rect width="4" height="10" fill="#587266"></rect>
+            </pattern>
+            <pattern id="disputed-visited" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#e8c95a"></rect><rect width="4" height="10" fill="#fff0a1"></rect>
+            </pattern>
+            <pattern id="disputed-invalid" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#f26f5b"></rect><rect width="4" height="10" fill="#ffb0a4"></rect>
+            </pattern>
+            <pattern id="disputed-choice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="10" height="10" fill="#75d99b"></rect><rect width="4" height="10" fill="#b9f2ce"></rect>
+            </pattern>
+          </defs>
+          <g id="map-countries"></g>
+          <g id="map-routes"></g>
+          <g id="map-markers"></g>
+        </svg>
+        <p class="map-error" id="map-error" role="alert" hidden></p>
+        <div class="map-key" aria-hidden="true">
+          <span><i class="visited-key"></i> Named</span>
+          <span><i class="choice-key"></i> Valid choice available</span>
+          <span><i class="disputed-key"></i> Disputed region included</span>
+        </div>
+      </div>
+      <ol class="route-list" id="route-list"></ol>
+      <div class="button-row result-actions">
+        <button class="primary-button" id="restart-button" type="button">Start another route</button>
+        <button class="quiet-button" id="result-end-game-button" type="button">End route</button>
+      </div>
+    </section>
+
+    <section class="panel final-screen" id="final-screen" hidden aria-labelledby="final-heading">
+      <p class="step-label">Complete</p>
+      <h2 id="final-heading">Solo route complete</h2>
+      <ol class="final-scores" id="final-scores"></ol>
+      <button class="primary-button" id="new-game-button" type="button">Start a new route</button>
+    </section>
+
+    <footer>
+      Country and map data are stored locally.
+      <a href="./ATTRIBUTION.md">Data attribution</a>
+    </footer>
+  </main>
+  <script src="./countries.js"></script>
+  <script src="./game-rules.js"></script>
+  <script src="./assets/d3.min.js"></script>
+  <script src="./assets/topojson-client.min.js"></script>
+  <script src="./assets/countries-50m.js"></script>
+  <script src="./game.js?v=20261015b"></script>
+</body>
+</html>

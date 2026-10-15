@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13271f">
+  <title>Multiplayer | Mapominoes</title>
+  <link rel="stylesheet" href="./styles.css?v=20261015a">
+</head>
+<body>
+  <main class="shell">
+    <header class="site-header">
+      <a class="back-link" href="./index.html">&#8592; Menu</a>
+      <div>
+        <p class="eyebrow">Mapominoes</p>
+        <h1>Multiplayer</h1>
+        <p class="tagline">Share one device or connect directly with remote players.</p>
+      </div>
+    </header>
+
+    <section class="panel mode-panel" aria-labelledby="mode-title">
+      <div class="section-heading">
+        <p class="step-label">Multiplayer</p>
+        <h2 id="mode-title">Choose where to play</h2>
+      </div>
+      <nav class="top-level-modes" aria-label="Multiplayer modes">
+        <a class="mode-card" href="./local.html">
+          <strong>Local</strong>
+          <span>Take turns on one device with automatic checks or player challenges.</span>
+        </a>
+        <a class="mode-card" href="./online.html">
+          <strong>Online · Manual codes</strong>
+          <span>Fully serverless WebRTC using a separate invite and answer exchange for each player.</span>
+        </a>
+      </nav>
+    </section>
+
+    <footer>
+      Online gameplay uses peer-to-peer DataChannels.
+      <a href="./ATTRIBUTION.md">Data attribution</a>
+    </footer>
+  </main>
+</body>
+</html>

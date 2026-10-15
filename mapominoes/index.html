@@ -6,15 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Mapominoes</title>
-  <link rel="stylesheet" href="./styles.css?v=20261014b">
+  <link rel="stylesheet" href="./styles.css?v=20261015a">
 </head>
 <body>
   <main class="shell">
     <header class="site-header">
-      <div class="header-navigation">
-        <a class="back-link" id="all-puzzles-link" href="../index.html">&#8592; All puzzles</a>
-        <button class="back-link header-menu-button" id="mapominoes-menu-button" type="button" hidden>&#8592; Menu</button>
-      </div>
+      <a class="back-link" href="../index.html">&#8592; All puzzles</a>
       <div>
         <p class="eyebrow">A country-chain memory game</p>
         <h1>Mapominoes</h1>
@@ -22,173 +19,21 @@
       </div>
     </header>
 
-    <section class="panel mode-panel" id="mode-panel" aria-labelledby="mode-title">
+    <section class="panel mode-panel" aria-labelledby="mode-title">
       <div class="section-heading">
-        <p class="step-label">New game</p>
+        <p class="step-label">Main menu</p>
         <h2 id="mode-title">Choose how to play</h2>
       </div>
-      <div class="top-level-modes">
-        <button class="mode-card" id="solo-mode-button" type="button">
+      <nav class="top-level-modes" aria-label="Game modes">
+        <a class="mode-card" href="./solo.html">
           <strong>Solo</strong>
           <span>Start from a random country and build the longest chain you can.</span>
-        </button>
-        <button class="mode-card" id="local-mode-button" type="button">
-          <strong>Local multiplayer</strong>
-          <span>Take turns on one device with automatic checks or player challenges.</span>
-        </button>
-      </div>
-    </section>
-
-    <section class="panel setup-panel" id="setup-panel" hidden aria-labelledby="setup-title">
-      <div class="section-heading">
-        <button class="back-button" id="setup-back-button" type="button">&#8592; Game modes</button>
-        <h2 id="setup-title">Gather your players</h2>
-      </div>
-      <form id="setup-form">
-        <label class="field-label" for="player-count">Number of players</label>
-        <div class="number-field">
-          <input id="player-count" name="player-count" type="number" min="2" max="8" value="2" required>
-          <span>2–8 players</span>
-        </div>
-
-        <fieldset class="mode-picker">
-          <legend>Checking mode</legend>
-          <label>
-            <input type="radio" name="mode" value="autocheck" checked>
-            <span>
-              <strong>Autocheck</strong>
-              <small>Invalid choices end the round immediately.</small>
-            </span>
-          </label>
-          <label>
-            <input type="radio" name="mode" value="challenge">
-            <span>
-              <strong>Challenge</strong>
-              <small>The next player must challenge an invalid choice.</small>
-            </span>
-          </label>
-        </fieldset>
-        <button class="primary-button" type="submit">Start game</button>
-      </form>
-    </section>
-
-    <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
-      <div class="game-toolbar">
-        <div>
-          <p class="step-label" id="round-label">Round 1</p>
-          <h2 id="turn-heading">Player 1's turn</h2>
-        </div>
-        <button class="quiet-button danger-button" id="end-game-button" type="button">End game</button>
-      </div>
-
-      <ol class="scoreboard" id="scoreboard" aria-label="Player scores"></ol>
-
-      <div class="play-grid">
-        <section class="last-country-card" aria-labelledby="last-country-label">
-          <p class="field-label" id="last-country-label">Last country named</p>
-          <strong id="last-country">Choose the starting country</strong>
-          <p id="round-guidance">Leave enough bordering countries for every player to play once.</p>
-        </section>
-
-        <section class="turn-card" id="entry-panel">
-          <form id="country-form" autocomplete="off">
-            <label class="field-label" for="country-search">Choose a country</label>
-            <div class="combobox">
-              <input
-                id="country-search"
-                type="search"
-                role="combobox"
-                aria-autocomplete="list"
-                aria-controls="country-results"
-                aria-expanded="false"
-                placeholder="Start typing a country or common name"
-                required
-              >
-              <ul id="country-results" role="listbox" hidden></ul>
-            </div>
-            <div class="selected-country" id="selected-country" hidden>
-              <span>Selected</span>
-              <strong id="selected-country-name"></strong>
-            </div>
-            <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
-            <div class="button-row">
-              <button class="primary-button" id="confirm-country" type="submit" disabled>Confirm country</button>
-              <button class="quiet-button" id="concede-button" type="button">I can't name one</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="turn-card challenge-card" id="challenge-panel" hidden>
-          <p class="field-label">Player decision</p>
-          <h3 id="challenge-heading">Accept or challenge?</h3>
-          <p id="challenge-copy"></p>
-          <div class="button-row">
-            <button class="primary-button" id="accept-button" type="button">Accept and play</button>
-            <button class="challenge-button" id="challenge-button" type="button">Challenge</button>
-          </div>
-        </section>
-      </div>
-    </section>
-
-    <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
-      <p class="step-label">Round over</p>
-      <h2 id="result-heading"></h2>
-      <p class="result-reason" id="result-reason"></p>
-      <p class="choice-summary" id="choice-summary"></p>
-
-      <div class="map-frame">
-        <div class="map-controls" aria-label="Map controls">
-          <button id="map-zoom-in" type="button" aria-label="Zoom map in">+</button>
-          <button id="map-zoom-out" type="button" aria-label="Zoom map out">&#8722;</button>
-          <button id="map-reset" type="button">Reset</button>
-        </div>
-        <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-labelledby="map-title map-description">
-          <title id="map-title">Map of countries named in this round</title>
-          <desc id="map-description">The route is numbered in turn order. Invalid moves are red and unused valid choices are green.</desc>
-          <defs>
-            <pattern id="disputed-land" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#365247"></rect>
-              <rect width="4" height="10" fill="#587266"></rect>
-            </pattern>
-            <pattern id="disputed-visited" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#e8c95a"></rect>
-              <rect width="4" height="10" fill="#fff0a1"></rect>
-            </pattern>
-            <pattern id="disputed-invalid" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#f26f5b"></rect>
-              <rect width="4" height="10" fill="#ffb0a4"></rect>
-            </pattern>
-            <pattern id="disputed-choice" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="10" height="10" fill="#75d99b"></rect>
-              <rect width="4" height="10" fill="#b9f2ce"></rect>
-            </pattern>
-          </defs>
-          <g id="map-countries"></g>
-          <g id="map-routes"></g>
-          <g id="map-markers"></g>
-        </svg>
-        <p class="map-error" id="map-error" role="alert" hidden></p>
-        <div class="map-key" aria-hidden="true">
-          <span><i class="visited-key"></i> Named</span>
-          <span><i class="invalid-key"></i> Invalid move</span>
-          <span><i class="choice-key"></i> Valid choice available</span>
-          <span><i class="disputed-key"></i> Disputed region included</span>
-        </div>
-      </div>
-
-      <ol class="route-list" id="route-list"></ol>
-      <div class="button-row result-actions">
-        <button class="primary-button" id="restart-button" type="button"></button>
-        <button class="quiet-button" id="result-end-game-button" type="button">End game</button>
-      </div>
-    </section>
-
-    <section class="panel final-screen" id="final-screen" hidden aria-labelledby="final-heading">
-      <p class="step-label">Game complete</p>
-      <h2 id="final-heading">Final scores</h2>
-      <p>Lower is better. A score of zero means no rounds lost.</p>
-      <ol class="final-scores" id="final-scores"></ol>
-      <button class="primary-button" id="new-game-button" type="button">Start a new game</button>
+        </a>
+        <a class="mode-card" href="./multiplayer.html">
+          <strong>Multiplayer</strong>
+          <span>Play locally on one device or connect directly to other players online.</span>
+        </a>
+      </nav>
     </section>
 
     <footer>
@@ -196,11 +41,5 @@
       <a href="./ATTRIBUTION.md">Data attribution</a>
     </footer>
   </main>
-
-  <script src="./countries.js"></script>
-  <script src="./game-rules.js"></script>
-  <script src="./assets/d3.min.js"></script>
-  <script src="./assets/topojson-client.min.js"></script>
-  <script src="./game.js?v=20261014c"></script>
 </body>
 </html>

@@ -167,6 +167,7 @@ h3 {
   background: var(--panel-raised);
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
 }
 
 .mode-card:hover,

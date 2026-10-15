@@ -1,6 +1,7 @@
 // Copyright (C) 2026 Pelagic Games
 
 (() => {
+  const pageMode = document.body.dataset.mapominoesMode || "local";
   const countries = window.MapominoesCountries;
   const {
     searchCountries,
@@ -56,22 +57,13 @@
   let routeOverlay = [];
   let markerOverlay = [];
 
-  fetch("./assets/countries-50m.json")
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`World map request failed with HTTP ${response.status}.`);
-      }
-      return response.json();
-    })
-    .then((topology) => {
-      mapData = window.topojson.feature(topology, topology.objects.countries);
-      if (state?.phase === "result") renderMap();
-    })
-    .catch((error) => {
-      mapLoadError = error;
-      console.error("Mapominoes could not load the world map.", error);
-      if (state?.phase === "result") renderMap();
-    });
+  if (window.MapominoesMapTopology) {
+    const topology = window.MapominoesMapTopology;
+    mapData = window.topojson.feature(topology, topology.objects.countries);
+  } else {
+    mapLoadError = new Error("The bundled world map data was not loaded.");
+    console.error("Mapominoes could not load the world map.", mapLoadError);
+  }
 
   function playerName(index) {
     if (state.mode === "solo") return "You";
@@ -83,18 +75,18 @@
   }
 
   function setScreen(screen) {
-    modePanel.hidden = screen !== "mode";
-    setupPanel.hidden = screen !== "setup";
+    if (modePanel) modePanel.hidden = screen !== "mode";
+    if (setupPanel) setupPanel.hidden = screen !== "setup";
     gameScreen.hidden = screen !== "game";
     resultScreen.hidden = screen !== "result";
     finalScreen.hidden = screen !== "final";
-    allPuzzlesLink.hidden = screen !== "mode";
-    menuButton.hidden = screen === "mode";
+    if (allPuzzlesLink) allPuzzlesLink.hidden = screen !== "mode";
+    if (menuButton) menuButton.hidden = screen === "mode";
   }
 
   function returnToMenu() {
     state = null;
-    setupForm.reset();
+    setupForm?.reset();
     clearCountrySelection();
     setScreen("mode");
   }
@@ -735,7 +727,7 @@
       });
   }
 
-  setupForm.addEventListener("submit", (event) => {
+  setupForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const formData = new FormData(setupForm);
     const playerCount = Number(formData.get("player-count"));
@@ -745,14 +737,14 @@
     }
     startGame(playerCount, String(formData.get("mode")));
   });
-  document.querySelector("#solo-mode-button").addEventListener("click", startSolo);
-  document.querySelector("#local-mode-button").addEventListener("click", () => {
+  document.querySelector("#solo-mode-button")?.addEventListener("click", startSolo);
+  document.querySelector("#local-mode-button")?.addEventListener("click", () => {
     setScreen("setup");
   });
-  document.querySelector("#setup-back-button").addEventListener("click", () => {
+  document.querySelector("#setup-back-button")?.addEventListener("click", () => {
     setScreen("mode");
   });
-  menuButton.addEventListener("click", returnToMenu);
+  menuButton?.addEventListener("click", returnToMenu);
 
   countrySearch.addEventListener("input", () => {
     selectedCode = null;
@@ -812,6 +804,14 @@
     startRound(state.lastResult.restartPlayer);
   });
   document.querySelector("#new-game-button").addEventListener("click", () => {
-    returnToMenu();
+    if (pageMode === "local") {
+      state = null;
+      setupForm.reset();
+      setScreen("setup");
+    } else {
+      returnToMenu();
+    }
   });
+  if (pageMode === "solo") startSolo();
+  else if (pageMode === "local") setScreen("setup");
 })();
