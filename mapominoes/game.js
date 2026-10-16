@@ -2,13 +2,14 @@
 
 (() => {
   const pageMode = document.body.dataset.mapominoesMode || "local";
-  const countries = window.MapominoesCountries;
+  const t = window.MapominoesMaps.text;
+  let countries = window.MapominoesCountries;
   const {
     searchCountries,
     validateMove,
     validChoices
   } = window.MapominoesRules;
-  const countriesByCode = new Map(
+  let countriesByCode = new Map(
     countries.map((country) => [country.code, country])
   );
   const modePanel = document.querySelector("#mode-panel");
@@ -39,31 +40,16 @@
   const routeList = document.querySelector("#route-list");
   const restartButton = document.querySelector("#restart-button");
   const finalScores = document.querySelector("#final-scores");
-  const mapError = document.querySelector("#map-error");
-  const mapCountries = document.querySelector("#map-countries");
-  const mapRoutes = document.querySelector("#map-routes");
-  const mapMarkers = document.querySelector("#map-markers");
-  const resultMap = document.querySelector("#result-map");
   const allPuzzlesLink = document.querySelector("#all-puzzles-link");
   const menuButton = document.querySelector("#mapominoes-menu-button");
   let state = null;
   let selectedCode = null;
   let matches = [];
   let activeMatchIndex = -1;
-  let mapData = null;
-  let mapLoadError = null;
-  let mapZoom = null;
-  let mapTransform = window.d3.zoomIdentity;
-  let routeOverlay = [];
-  let markerOverlay = [];
-
-  if (window.MapominoesMapTopology) {
-    const topology = window.MapominoesMapTopology;
-    mapData = window.topojson.feature(topology, topology.objects.countries);
-  } else {
-    mapLoadError = new Error("The bundled world map data was not loaded.");
-    console.error("Mapominoes could not load the world map.", mapLoadError);
-  }
+  let mapData = window.MapominoesMaps.get("world").mapData;
+  const mapPicker = window.MapominoesMaps.picker(setupForm);
+  const requestedMap = new URLSearchParams(location.search).get("map") || "world";
+  if (window.MapominoesMaps.catalog.some((map) => map.id === requestedMap)) mapPicker.value = requestedMap;
 
   function playerName(index) {
     if (state.mode === "solo") return "You";
@@ -164,7 +150,7 @@
   function renderTurn() {
     const solo = state.mode === "solo";
     roundLabel.textContent = solo
-      ? `Solo · ${state.path.length} ${state.path.length === 1 ? "country" : "countries"}`
+      ? t(`Solo · ${state.path.length} ${state.path.length === 1 ? "country" : "countries"}`)
       : `Round ${state.round} · ${
         state.mode === "challenge" ? "Challenge" : "Autocheck"
       }`;
@@ -176,18 +162,18 @@
       : null;
     lastCountry.textContent = previous
       ? previous.name
-      : "Choose the starting country";
+      : t("Choose the starting country");
     const firstRoundRemaining = solo ? 0 : Math.max(
       0,
       state.playerCount - state.path.length
     );
     roundGuidance.textContent = solo
-      ? "Name an unused country connected to the previous one."
+      ? t("Name an unused country connected to the previous one.")
       : firstRoundRemaining > 0
       ? `Keep a route open for ${firstRoundRemaining} more ${
         firstRoundRemaining === 1 ? "player" : "players"
       } in the first circuit.`
-      : "Choose a new neighbour and remember every country already named.";
+      : t("Choose a new neighbour and remember every country already named.");
     entryPanel.hidden = state.phase !== "turn";
     challengePanel.hidden = state.phase !== "challenge";
     if (state.phase === "challenge") renderChallenge();
@@ -201,7 +187,7 @@
     const entry = state.path[state.path.length - 1];
     const country = countriesByCode.get(entry.code);
     challengeHeading.textContent = `${playerName(state.currentPlayer)}, accept or challenge?`;
-    challengeCopy.textContent = `${playerName(entry.player)} named ${country.name}. Challenge if it was previously named, does not border the last country, or blocked the first circuit. A false challenge loses the round.`;
+    challengeCopy.textContent = `${playerName(entry.player)} named ${country.name}. ${t("Challenge if it was previously named, does not border the last country, or blocked the first circuit. A false challenge loses the round.")}`;
   }
 
   function clearCountrySelection() {
@@ -277,7 +263,7 @@
 
   function commitCountry() {
     if (!selectedCode) {
-      formMessage.textContent = "Select a country from the shortlist first.";
+      formMessage.textContent = t("Select a country from the shortlist first.");
       formMessage.classList.add("is-error");
       return;
     }
@@ -346,8 +332,8 @@
         loser: null,
         noLegalMoves: true,
         reason: state.mode === "solo"
-          ? "Excellent call: there were no legal countries left."
-          : "The chain ended because there were no legal countries left."
+          ? t("Excellent call: there were no legal countries left.")
+          : t("The chain ended because there were no legal countries left.")
       });
       return;
     }
@@ -357,7 +343,7 @@
       choicePath: state.path,
       loser: state.mode === "solo" ? null : state.currentPlayer,
       reason: state.mode === "solo"
-        ? "The chain ended while legal countries were still available."
+        ? t("The chain ended while legal countries were still available.")
         : `${playerName(state.currentPlayer)} could not continue the chain.`
     });
   }
@@ -386,8 +372,8 @@
     if (state.mode === "solo") {
       const legalLength = state.path.filter((entry) => entry.valid).length;
       resultHeading.textContent = noLegalMoves
-        ? `Chain complete — ${legalLength} countries!`
-        : `Chain ended at ${legalLength} countries`;
+        ? t(`Chain complete — ${legalLength} ${legalLength === 1 ? "country" : "countries"}!`)
+        : t(`Chain ended at ${legalLength} ${legalLength === 1 ? "country" : "countries"}`);
     } else if (noLegalMoves) {
       resultHeading.textContent = `Round ${state.round} complete — no legal moves`;
     } else {
@@ -398,7 +384,7 @@
       ? `${availableChoices.length} valid ${
         availableChoices.length === 1 ? "choice was" : "choices were"
       } available: ${availableChoices.map((country) => country.name).join(", ")}.`
-      : "There were no valid unused bordering countries available.";
+      : t("There were no valid unused bordering countries available.");
     restartButton.textContent = state.mode === "solo"
       ? "Try another solo chain"
       : `Play again — ${playerName(restartPlayer)} starts`;
@@ -428,283 +414,18 @@
     });
   }
 
-  const manualConnectionCoordinates = {
-    "BHR|SAU": {
-      BHR: [50.45, 26.14],
-      SAU: [50.21, 26.62]
-    },
-    "CYP|GBR": {
-      CYP: [32.94, 34.62],
-      GBR: [32.81, 34.64]
-    },
-    "DNK|SWE": {
-      DNK: [12.64, 55.61],
-      SWE: [12.91, 55.58]
-    },
-    "ESP|GBR": {
-      ESP: [-5.35, 36.15],
-      GBR: [-5.34, 36.13]
-    },
-    "FRA|GBR": {
-      FRA: [1.57, 50.92],
-      GBR: [-1.31, 51.1]
-    },
-    "FRA|NLD": {
-      FRA: [-63.08, 18.08],
-      NLD: [-63.05, 18.04]
-    },
-    "MYS|SGP": {
-      MYS: [103.74, 1.46],
-      SGP: [103.77, 1.34]
-    }
-  };
-
-  function polygonComponents(feature) {
-    if (!feature) return [];
-    if (feature.type === "FeatureCollection") {
-      return feature.features.flatMap(polygonComponents);
-    }
-    const { geometry } = feature;
-    if (geometry.type === "Polygon") return [geometry.coordinates];
-    if (geometry.type === "MultiPolygon") return geometry.coordinates;
-    return [];
-  }
-
-  function projectedVertices(component, projection) {
-    const vertices = component.flatMap((ring) => ring.map(projection));
-    const step = Math.max(1, Math.floor(vertices.length / 400));
-    return vertices.filter((_, index) => index % step === 0);
-  }
-
-  function componentCentroid(component, pathGenerator) {
-    return pathGenerator.centroid({
-      type: "Feature",
-      properties: {},
-      geometry: { type: "Polygon", coordinates: component }
-    });
-  }
-
-  function connectionPoints(
-    leftCode,
-    rightCode,
-    featureByCode,
-    projection,
-    pathGenerator,
-    pointForCode
-  ) {
-    const key = [leftCode, rightCode].sort().join("|");
-    const manual = manualConnectionCoordinates[key];
-    if (manual) {
-      return [
-        projection(manual[leftCode]),
-        projection(manual[rightCode])
-      ];
-    }
-    const leftComponents = polygonComponents(featureByCode.get(leftCode));
-    const rightComponents = polygonComponents(featureByCode.get(rightCode));
-    let closest = null;
-    leftComponents.forEach((leftComponent) => {
-      const leftVertices = projectedVertices(leftComponent, projection);
-      rightComponents.forEach((rightComponent) => {
-        const rightVertices = projectedVertices(rightComponent, projection);
-        let distance = Infinity;
-        leftVertices.forEach((left) => {
-          rightVertices.forEach((right) => {
-            const squared = (left[0] - right[0]) ** 2
-              + (left[1] - right[1]) ** 2;
-            if (squared < distance) distance = squared;
-          });
-        });
-        if (!closest || distance < closest.distance) {
-          closest = { distance, leftComponent, rightComponent };
-        }
-      });
-    });
-    if (!closest) return [pointForCode(leftCode), pointForCode(rightCode)];
-    return [
-      componentCentroid(closest.leftComponent, pathGenerator),
-      componentCentroid(closest.rightComponent, pathGenerator)
-    ];
-  }
-
-  function updateMapOverlay() {
-    routeOverlay.forEach(({ element, start, end }) => {
-      const transformedStart = mapTransform.apply(start);
-      const transformedEnd = mapTransform.apply(end);
-      element.setAttribute("x1", transformedStart[0]);
-      element.setAttribute("y1", transformedStart[1]);
-      element.setAttribute("x2", transformedEnd[0]);
-      element.setAttribute("y2", transformedEnd[1]);
-    });
-    markerOverlay.forEach(({ element, point }) => {
-      const transformed = mapTransform.apply(point);
-      element.setAttribute(
-        "transform",
-        `translate(${transformed[0]} ${transformed[1]})`
-      );
-    });
-  }
-
   function renderMap() {
-    mapCountries.replaceChildren();
-    mapRoutes.replaceChildren();
-    mapMarkers.replaceChildren();
-    mapError.hidden = true;
-    if (mapLoadError) {
-      mapError.textContent = `The world map could not be loaded: ${mapLoadError.message}`;
-      mapError.hidden = false;
-      return;
-    }
-    if (!mapData) {
-      mapError.textContent = "Loading world map\u2026";
-      mapError.hidden = false;
-      return;
-    }
-    routeOverlay = [];
-    markerOverlay = [];
-    const projection = window.d3.geoEqualEarth().fitExtent(
-      [[12, 12], [988, 500]],
-      mapData
-    );
-    const pathGenerator = window.d3.geoPath(projection);
-    const countryByNumeric = new Map(
-      countries
-        .filter((country) => country.numeric)
-        .map((country) => [String(Number(country.numeric)), country])
-    );
-    const featureOwnersByNumeric = new Map([
-      ["254", "FRA"],
-      ["292", "GBR"],
-      ["344", "CHN"],
-      ["383", "SRB"],
-      ["446", "CHN"],
-      ["732", "MAR"]
-    ]);
-    const featureOwnersByName = new Map([
-      ["Kosovo", "SRB"],
-      ["N. Cyprus", "CYP"],
-      ["Somaliland", "SOM"]
-    ]);
-    const disputedFeatureNames = new Set([
-      "Kosovo",
-      "N. Cyprus",
-      "Somaliland",
-      "W. Sahara"
-    ]);
-    const featureGroups = new Map();
-    const mainFeatureByCode = new Map();
-    const featureOwner = (feature) => {
-      const numeric = feature.id === undefined
-        ? null
-        : String(Number(feature.id));
-      return featureOwnersByName.get(feature.properties?.name)
-        || (numeric && featureOwnersByNumeric.get(numeric))
-        || (numeric && countryByNumeric.get(numeric)?.code)
-        || null;
-    };
-    const featureByCode = new Map();
-    const visitedCodes = new Set(state.path.map((entry) => entry.code));
-    const invalidCodes = new Set(
-      state.path.filter((entry) => !entry.valid).map((entry) => entry.code)
-    );
-    const choiceCodes = new Set(
-      state.lastResult.choices.map((country) => country.code)
-    );
-
-    window.d3.select(mapCountries)
-      .selectAll("path")
-      .data(mapData.features)
-      .join("path")
-      .attr("class", (feature) => {
-        const code = featureOwner(feature);
-        if (code) {
-          if (!featureGroups.has(code)) featureGroups.set(code, []);
-          featureGroups.get(code).push(feature);
-          const numeric = feature.id === undefined
-            ? null
-            : String(Number(feature.id));
-          if (numeric && countryByNumeric.get(numeric)?.code === code) {
-            mainFeatureByCode.set(code, feature);
-          }
-        }
-        const classes = ["map-country"];
-        if (disputedFeatureNames.has(feature.properties?.name)
-          || String(Number(feature.id)) === "732") {
-          classes.push("is-disputed");
-        }
-        if (code && invalidCodes.has(code)) classes.push("is-invalid");
-        else if (code && visitedCodes.has(code)) classes.push("is-visited");
-        else if (code && choiceCodes.has(code)) classes.push("is-choice");
-        return classes.join(" ");
-      })
-      .attr("d", pathGenerator);
-    featureGroups.forEach((features, code) => {
-      featureByCode.set(code, {
-        type: "FeatureCollection",
-        features
+    const error = document.querySelector("#map-error");
+    error.hidden = true;
+    try {
+      window.MapominoesRenderer.render({
+        countries, mapData, path: state.path, choices: state.lastResult.choices.map((country) => country.code)
       });
-    });
-
-    function pointForCode(code) {
-      const country = countriesByCode.get(code);
-      const feature = mainFeatureByCode.get(code) || featureByCode.get(code);
-      const point = feature ? pathGenerator.centroid(feature) : null;
-      if (point?.every(Number.isFinite)) return point;
-      return projection(country.coordinates);
+    } catch (cause) {
+      console.error("Mapominoes could not render the map.", cause);
+      error.textContent = `The map could not be displayed: ${cause.message}`;
+      error.hidden = false;
     }
-
-    state.path.slice(1).forEach((entry, index) => {
-      const [start, end] = connectionPoints(
-        state.path[index].code,
-        entry.code,
-        featureByCode,
-        projection,
-        pathGenerator,
-        pointForCode
-      );
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", start[0]);
-      line.setAttribute("y1", start[1]);
-      line.setAttribute("x2", end[0]);
-      line.setAttribute("y2", end[1]);
-      line.setAttribute(
-        "class",
-        `route-segment${entry.valid ? "" : " is-invalid"}`
-      );
-      mapRoutes.append(line);
-      routeOverlay.push({ element: line, start, end });
-    });
-
-    state.path.forEach((entry, index) => {
-      const point = pointForCode(entry.code);
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      marker.setAttribute(
-        "class",
-        `route-marker${entry.valid ? "" : " is-invalid"}`
-      );
-      marker.setAttribute("transform", `translate(${point[0]} ${point[1]})`);
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("r", "11");
-      const number = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      number.textContent = String(index + 1);
-      marker.append(circle, number);
-      mapMarkers.append(marker);
-      markerOverlay.push({ element: marker, point });
-    });
-    mapTransform = window.d3.zoomIdentity;
-    mapZoom = window.d3.zoom()
-      .scaleExtent([1, 14])
-      .extent([[0, 0], [1000, 520]])
-      .translateExtent([[0, 0], [1000, 520]])
-      .on("zoom", (event) => {
-        mapTransform = event.transform;
-        window.d3.select(mapCountries).attr("transform", mapTransform);
-        updateMapOverlay();
-      });
-    window.d3.select(resultMap)
-      .call(mapZoom)
-      .on("dblclick.zoom", null)
-      .call(mapZoom.transform, window.d3.zoomIdentity);
   }
 
   function showFinalScores() {
@@ -727,8 +448,34 @@
       });
   }
 
-  setupForm?.addEventListener("submit", (event) => {
+  setupForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const button = setupForm.querySelector("button[type='submit']");
+    const error = document.querySelector("#setup-error");
+    const id = mapPicker.value;
+    button.disabled = true;
+    mapPicker.disabled = true;
+    error.textContent = "";
+    try {
+      const data = await window.MapominoesMaps.load(id);
+      countries = data.countries;
+      countriesByCode = new Map(countries.map((country) => [country.code, country]));
+      mapData = data.mapData;
+      window.MapominoesMaps.selected = id;
+      window.MapominoesMaps.updateVocabulary(id);
+    } catch (cause) {
+      console.error("Could not load the selected map.", cause);
+      error.textContent = cause.message;
+      button.disabled = false;
+      mapPicker.disabled = false;
+      return;
+    }
+    button.disabled = false;
+    mapPicker.disabled = false;
+    if (pageMode === "solo") {
+      startSolo();
+      return;
+    }
     const formData = new FormData(setupForm);
     const playerCount = Number(formData.get("player-count"));
     if (!Number.isInteger(playerCount) || playerCount < 2 || playerCount > 8) {
@@ -787,24 +534,11 @@
   document.querySelector("#challenge-button").addEventListener("click", challengeMove);
   document.querySelector("#end-game-button").addEventListener("click", showFinalScores);
   document.querySelector("#result-end-game-button").addEventListener("click", showFinalScores);
-  document.querySelector("#map-zoom-in").addEventListener("click", () => {
-    if (mapZoom) window.d3.select(resultMap).transition().call(mapZoom.scaleBy, 1.7);
-  });
-  document.querySelector("#map-zoom-out").addEventListener("click", () => {
-    if (mapZoom) window.d3.select(resultMap).transition().call(mapZoom.scaleBy, 1 / 1.7);
-  });
-  document.querySelector("#map-reset").addEventListener("click", () => {
-    if (mapZoom) {
-      window.d3.select(resultMap)
-        .transition()
-        .call(mapZoom.transform, window.d3.zoomIdentity);
-    }
-  });
   restartButton.addEventListener("click", () => {
     startRound(state.lastResult.restartPlayer);
   });
   document.querySelector("#new-game-button").addEventListener("click", () => {
-    if (pageMode === "local") {
+    if (pageMode === "local" || pageMode === "solo") {
       state = null;
       setupForm.reset();
       setScreen("setup");
@@ -812,6 +546,5 @@
       returnToMenu();
     }
   });
-  if (pageMode === "solo") startSolo();
-  else if (pageMode === "local") setScreen("setup");
+  if (pageMode === "solo" || pageMode === "local") setScreen("setup");
 })();

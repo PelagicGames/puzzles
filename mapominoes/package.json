@@ -1,0 +1,16 @@
+{
+  "name": "mapominoes-data-tools",
+  "private": true,
+  "scripts": {
+    "generate:maps": "node generate-maps.mjs",
+    "test": "node --test game-rules.test.js maps.test.js online.test.js connection-codes.test.js"
+  },
+  "devDependencies": {
+    "mapshaper": "0.6.121"
+  },
+  "overrides": {
+    "adm-zip": "0.6.1",
+    "fflate": "0.8.3",
+    "splaytree": "3.1.2"
+  }
+}

@@ -3,9 +3,9 @@
 (() => {
   "use strict";
 
-  const countries = window.MapominoesCountries;
+  let countries = window.MapominoesCountries;
   const { searchCountries, validateMove, validChoices } = window.MapominoesRules;
-  const countriesByCode = new Map(countries.map((country) => [country.code, country]));
+  let countriesByCode = new Map(countries.map((country) => [country.code, country]));
   const allowedTimers = new Set([5, 10, 15, 30, 45, 60]);
   const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   const roomSignaling = new URLSearchParams(location.search).get("signaling") === "room";
@@ -47,18 +47,58 @@
   let closingConnections = false;
   let migration = null;
   let incomingMigration = null;
-  let mapData = null;
-  let mapLoadError = null;
+  let mapData = window.MapominoesMaps.get("world").mapData;
+  let snapshotSequence = 0;
+  let changingMap = false;
   const resumeTokens = new Map();
   const pendingRoomPeers = new Map();
   const retiredChannels = new WeakSet();
 
-  if (window.MapominoesMapTopology) {
-    const topology = window.MapominoesMapTopology;
-    mapData = window.topojson.feature(topology, topology.objects.countries);
-  } else {
-    mapLoadError = new Error("The bundled world map data was not loaded.");
+  const maps = window.MapominoesMaps;
+  const t = maps.text;
+  const hostMapPicker = maps.picker($("#host-form"));
+  const menuMapPicker = maps.picker($("#menu-screen"));
+  const lobbyMapPicker = maps.picker($("#lobby-screen"));
+  const requestedMap = new URLSearchParams(location.search).get("map") || "world";
+  if (maps.catalog.some((map) => map.id === requestedMap)) {
+    hostMapPicker.value = requestedMap;
+    menuMapPicker.value = requestedMap;
   }
+  menuMapPicker.addEventListener("change", () => { hostMapPicker.value = menuMapPicker.value; });
+
+  function activateMap(id) {
+    const data = maps.get(id);
+    if (!data) throw new Error(`Map ${id} has not loaded.`);
+    countries = data.countries;
+    countriesByCode = new Map(countries.map((country) => [country.code, country]));
+    mapData = data.mapData;
+    maps.selected = id;
+    maps.updateVocabulary(id);
+  }
+
+  lobbyMapPicker.addEventListener("change", async () => {
+    if (role !== "host" || state?.phase !== "lobby" || migration || changingMap) return;
+    const id = lobbyMapPicker.value;
+    const lobby = state;
+    changingMap = true;
+    renderLobby();
+    try {
+      await maps.load(id);
+      if (state !== lobby || role !== "host" || state.phase !== "lobby") return;
+      activateMap(id);
+      state.mapId = id;
+      state.path = [];
+      state.selections = {};
+      state.lastResult = null;
+      clearSelectionUi(false);
+      state.activity = `The host selected ${maps.catalog.find((map) => map.id === id).name}.`;
+    } catch (error) {
+      exposeError("Could not change the lobby map.", error);
+    } finally {
+      changingMap = false;
+      if (state === lobby) broadcastSnapshot();
+    }
+  });
 
   if (roomSignaling) {
     document.title = "Mapominoes Online · Room code";
@@ -101,70 +141,11 @@
     return `${prefix}-${values[0].toString(36)}${values[1].toString(36)}`;
   }
 
-  function bytesToBase64(bytes) {
-    let binary = "";
-    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-    return btoa(binary);
+  function encodeCode(value, version = 3) {
+    return window.MapominoesCodes.encode(value, { version });
   }
 
-  function base64ToBytes(value) {
-    const binary = atob(value);
-    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-  }
-
-  async function encodeCode(value) {
-    const compactValue = {
-      v: 2,
-      k: value.kind === "invite" ? "i" : "a",
-      i: value.inviteId,
-      d: value.description
-    };
-    const bytes = new TextEncoder().encode(JSON.stringify(compactValue));
-    if (typeof CompressionStream !== "function") return bytesToBase64(bytes);
-    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
-    const compressed = new Uint8Array(await new Response(stream).arrayBuffer());
-    return `M2.${bytesToBase64(compressed).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`;
-  }
-
-  async function decodeCode(text, expectedKind) {
-    if (typeof text !== "string" || text.length > 100000) {
-      throw new Error("The connection code is missing or too large.");
-    }
-    let value;
-    try {
-      const compactText = text.replace(/\s+/g, "");
-      if (compactText.startsWith("M2.")) {
-        if (typeof DecompressionStream !== "function") {
-          throw new Error("This browser cannot expand compressed connection codes.");
-        }
-        const encoded = compactText.slice(3).replace(/-/g, "+").replace(/_/g, "/");
-        const padded = encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "=");
-        const stream = new Blob([base64ToBytes(padded)]).stream()
-          .pipeThrough(new DecompressionStream("gzip"));
-        const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
-        if (bytes.length > 100000) throw new Error("The expanded connection code is too large.");
-        const compactValue = JSON.parse(new TextDecoder().decode(bytes));
-        value = {
-          version: compactValue.v,
-          kind: compactValue.k === "i" ? "invite" : compactValue.k === "a" ? "answer" : "",
-          inviteId: compactValue.i,
-          description: compactValue.d
-        };
-      } else {
-        const bytes = base64ToBytes(compactText);
-        value = JSON.parse(new TextDecoder().decode(bytes));
-      }
-    } catch {
-      throw new Error("That connection code is not valid.");
-    }
-    if (!value || ![1, 2].includes(value.version) || value.kind !== expectedKind
-      || typeof value.inviteId !== "string" || value.inviteId.length > 80
-      || !value.description || typeof value.description.sdp !== "string"
-      || !["offer", "answer"].includes(value.description.type)) {
-      throw new Error(`That is not a valid Mapominoes ${expectedKind} code.`);
-    }
-    return value;
-  }
+  const decodeCode = window.MapominoesCodes.decode;
 
   function waitForIce(connection) {
     if (connection.iceGatheringState === "complete") return Promise.resolve();
@@ -394,6 +375,7 @@
   }
 
   function returnToMenu() {
+    snapshotSequence += 1;
     closeConnections();
     role = null;
     myId = null;
@@ -411,6 +393,7 @@
   function initialLobby(mode, seconds) {
     return {
       version: 1,
+      mapId: maps.selected,
       phase: "lobby",
       mode,
       turnSeconds: seconds,
@@ -609,7 +592,7 @@
   }
 
   function startHostMigration(targetId) {
-    if (role !== "host" || state.phase !== "lobby" || migration) return;
+    if (role !== "host" || state.phase !== "lobby" || migration || changingMap) return;
     const target = state.players.find((player) => player.id === targetId);
     if (!target?.connected || target.left || target.id === myId) return;
     pendingInvite?.connection.close();
@@ -667,6 +650,7 @@
   }
 
   async function beginIncomingMigration(message) {
+    await maps.load(message.state?.mapId || "world");
     if (role !== "guest" || message.targetId !== myId || incomingMigration
       || !validSnapshot(message.state) || !Array.isArray(message.peerIds)
       || message.peerIds.some((id) => typeof id !== "string")) return;
@@ -787,7 +771,7 @@
       state: publicState()
     };
     peers.forEach(({ channel }) => safeSend(channel, commit));
-    applyMigrationCommit(commit);
+    applyMigrationCommit(commit).catch((error) => exposeError("Could not commit host transfer.", error));
   }
 
   function abortHostMigration(reason) {
@@ -805,8 +789,11 @@
     incomingMigration = null;
   }
 
-  function applyMigrationCommit(message) {
+  async function applyMigrationCommit(message) {
+    await maps.load(message.state?.mapId || "world");
     if (!validSnapshot(message.state) || message.state.hostId !== message.targetId) return;
+    snapshotSequence += 1;
+    activateMap(message.state.mapId || "world");
     const oldRole = role;
     const oldHostConnection = hostConnection;
     const oldHostChannel = hostChannel;
@@ -902,7 +889,7 @@
       await connection.setLocalDescription(await connection.createOffer());
       await waitForIce(connection);
       $("#invite-output").value = await encodeCode({
-        version: 2,
+        version: 3,
         kind: "invite",
         inviteId,
         description: connection.localDescription.toJSON()
@@ -969,11 +956,11 @@
       await hostConnection.setLocalDescription(await hostConnection.createAnswer());
       await waitForIce(hostConnection);
       $("#answer-output").value = await encodeCode({
-        version: 2,
+        version: 3,
         kind: "answer",
         inviteId: code.inviteId,
         description: hostConnection.localDescription.toJSON()
-      });
+      }, code.version);
       $("#answer-area").hidden = false;
       $("#join-status").textContent = "Send this answer to the host. Waiting for them to accept it…";
     } catch (error) {
@@ -1024,6 +1011,9 @@
   }
 
   function validSnapshot(snapshot) {
+    const data = maps.get(snapshot?.mapId || "world");
+    if (!data || !maps.catalog.some((map) => map.id === (snapshot?.mapId || "world"))) return false;
+    const snapshotCodes = new Set(data.countries.map((country) => country.code));
     if (!isPlainObject(snapshot) || snapshot.version !== 1
       || !["lobby", "turn", "challenge", "result"].includes(snapshot.phase)
       || !["autocheck", "challenge"].includes(snapshot.mode)
@@ -1033,7 +1023,7 @@
       || typeof snapshot.hostId !== "string"
       || !Number.isInteger(snapshot.authorityEpoch)
       || snapshot.authorityEpoch < 1
-      || snapshot.path.length > countries.length
+      || snapshot.path.length > data.countries.length + 1
       || !Number.isInteger(snapshot.roundPlayerCount)
       || snapshot.roundPlayerCount < 1
       || !Number.isInteger(snapshot.currentPlayer)
@@ -1049,7 +1039,7 @@
       && typeof player.roundEligible === "boolean"
       && typeof player.left === "boolean")
       && snapshot.path.every((entry) => isPlainObject(entry)
-        && countriesByCode.has(entry.code) && Number.isInteger(entry.player)
+        && snapshotCodes.has(entry.code) && Number.isInteger(entry.player)
         && entry.player >= 0 && entry.player < snapshot.players.length
         && typeof entry.valid === "boolean" && Array.isArray(entry.reasons)
         && entry.reasons.length < 10
@@ -1057,7 +1047,7 @@
       && (snapshot.phase !== "result"
         || (isPlainObject(snapshot.lastResult)
           && Array.isArray(snapshot.lastResult.choices)
-          && snapshot.lastResult.choices.every((code) => countriesByCode.has(code))
+          && snapshot.lastResult.choices.every((code) => snapshotCodes.has(code))
           && Number.isInteger(snapshot.lastResult.restartPlayer)
           && snapshot.lastResult.restartPlayer >= 0
           && snapshot.lastResult.restartPlayer < snapshot.players.length
@@ -1097,7 +1087,7 @@
       return;
     }
     if (message.type === "migration-commit") {
-      applyMigrationCommit(message);
+      applyMigrationCommit(message).catch((error) => exposeError("Could not commit host transfer.", error));
       return;
     }
     if (message.type === "migration-abort") {
@@ -1120,14 +1110,28 @@
       return;
     }
     if (message.type === "snapshot") {
-      if (!validSnapshot(message.state)) {
-        exposeError("The host sent an invalid game snapshot; it was ignored.");
-        return;
-      }
-      state = message.state;
-      render();
+      receiveSnapshot(message.state);
     } else if (message.type === "error" && typeof message.message === "string") {
       exposeError(message.message.slice(0, 300));
+    }
+  }
+
+  async function receiveSnapshot(snapshot) {
+    const sequence = ++snapshotSequence;
+    try {
+      if (!isPlainObject(snapshot)) throw new Error("Missing game snapshot.");
+      const id = snapshot.mapId || "world";
+      await maps.load(id);
+      if (sequence !== snapshotSequence) return;
+      if (!validSnapshot(snapshot)) throw new Error("The host sent an invalid game snapshot.");
+      if (state && snapshot.authorityEpoch < state.authorityEpoch) return;
+      const previousMap = state?.mapId || maps.selected;
+      activateMap(id);
+      state = snapshot;
+      if (previousMap !== id) clearSelectionUi(false);
+      render();
+    } catch (error) {
+      if (sequence === snapshotSequence) exposeError("Could not apply the host's game snapshot.", error);
     }
   }
 
@@ -1155,7 +1159,7 @@
         state.selections[playerId] = message.code;
         state.activity = message.code
           ? `${player.name} selected ${countriesByCode.get(message.code).name}.`
-          : `${player.name} is choosing a country.`;
+          : `${player.name} ${t("is choosing a country.")}`;
         broadcastSnapshot();
         break;
       case "submit":
@@ -1228,7 +1232,7 @@
   }
 
   function startGame() {
-    if (hostPlayerConnectedCount() < 2) return;
+    if (role !== "host" || state.phase !== "lobby" || changingMap || migration || hostPlayerConnectedCount() < 2) return;
     if (state.round === 0) state.players.forEach((player) => { player.score = 0; });
     const preferred = state.nextStarterId
       ? Math.max(0, state.players.findIndex((player) => player.id === state.nextStarterId))
@@ -1251,7 +1255,7 @@
     state.phase = "turn";
     state.lastResult = null;
     state.selections = {};
-    state.activity = `${currentPlayer().name} chooses the starting country.`;
+    state.activity = `${currentPlayer().name} ${t("chooses the starting country.")}`;
     beginDeadline();
     broadcastSnapshot();
   }
@@ -1330,8 +1334,8 @@
         loser: null,
         noLegalMoves: true,
         reason: timedOut
-          ? "Time expired, but there were no legal countries left."
-          : "The chain ended because there were no legal countries left."
+          ? t("Time expired, but there were no legal countries left.")
+          : t("The chain ended because there were no legal countries left.")
       });
       return;
     }
@@ -1340,7 +1344,7 @@
       choicePath: state.path,
       loser: state.currentPlayer,
       reason: timedOut
-        ? `${player.name} ran out of time without a selected country.`
+        ? `${player.name} ${t("ran out of time without a selected country.")}`
         : `${player.name} could not continue the chain.`
     });
   }
@@ -1393,6 +1397,8 @@
 
   function renderLobby() {
     showScreen("lobby");
+    if (!changingMap) lobbyMapPicker.value = state.mapId || "world";
+    lobbyMapPicker.disabled = role !== "host" || Boolean(migration) || changingMap;
     const list = $("#lobby-players");
     list.replaceChildren();
     state.players.forEach((player) => {
@@ -1405,7 +1411,7 @@
         transfer.type = "button";
         transfer.className = "quiet-button host-transfer-button";
         transfer.textContent = "Make host";
-        transfer.disabled = Boolean(migration);
+        transfer.disabled = Boolean(migration) || changingMap;
         transfer.addEventListener("click", () => startHostMigration(player.id));
         item.append(transfer);
       }
@@ -1416,7 +1422,7 @@
     $("#create-invite").hidden = roomSignaling;
     $("#room-code-area").hidden = !roomSignaling || role !== "host" || !roomCode;
     $("#create-invite").disabled = Boolean(migration);
-    $("#start-game").disabled = role !== "host" || hostPlayerConnectedCount() < 2 || Boolean(migration);
+    $("#start-game").disabled = role !== "host" || hostPlayerConnectedCount() < 2 || Boolean(migration) || changingMap;
     $("#lobby-status").textContent = role === "host"
       ? migration
         ? `Transferring hosting to ${state.players.find((player) => player.id === migration.targetId)?.name}…`
@@ -1471,11 +1477,11 @@
     $("#game-return-lobby").hidden = role !== "host";
     $("#leave-game").textContent = role === "host" ? "End hosted game" : "Leave game";
     const previous = state.path.length ? countriesByCode.get(state.path[state.path.length - 1].code) : null;
-    $("#last-country").textContent = previous?.name || "Choose the starting country";
+    $("#last-country").textContent = previous?.name || t("Choose the starting country");
     const remaining = Math.max(0, state.roundPlayerCount - state.path.length);
     $("#round-guidance").textContent = remaining
       ? `Keep a route open for ${remaining} more ${remaining === 1 ? "player" : "players"} in the first circuit.`
-      : "Choose a new neighbour and remember every country already named.";
+      : t("Choose a new neighbour and remember every country already named.");
     renderScores();
     renderUpcoming();
     $("#entry-panel").hidden = state.phase !== "turn";
@@ -1488,7 +1494,7 @@
   function renderEntry(mine) {
     $("#country-form").hidden = !mine;
     $("#waiting-copy").hidden = mine;
-    $("#waiting-copy").textContent = `Waiting for ${currentPlayer().name} to submit a country…`;
+    $("#waiting-copy").textContent = `Waiting for ${currentPlayer().name} ${t("to submit a country…")}`;
     if (!mine) {
       clearSelectionUi(false);
       return;
@@ -1508,7 +1514,7 @@
     const entry = state.path[state.path.length - 1];
     const country = countriesByCode.get(entry.code);
     $("#challenge-heading").textContent = `${currentPlayer().name}, accept or challenge?`;
-    $("#challenge-copy").textContent = `${playerName(entry.player)} named ${country.name}. Challenge if it was previously named, does not border the last country, or blocked the first circuit. A false challenge loses the round.`;
+    $("#challenge-copy").textContent = `${playerName(entry.player)} named ${country.name}. ${t("Challenge if it was previously named, does not border the last country, or blocked the first circuit. A false challenge loses the round.")}`;
     $("#challenge-actions").hidden = !mine;
     $("#challenge-waiting").hidden = mine;
     $("#challenge-waiting").textContent = `Waiting for ${currentPlayer().name}'s decision…`;
@@ -1596,7 +1602,7 @@
     const choiceNames = result.choices.map((code) => countriesByCode.get(code)?.name).filter(Boolean);
     $("#choice-summary").textContent = choiceNames.length
       ? `${choiceNames.length} valid ${choiceNames.length === 1 ? "choice was" : "choices were"} available: ${choiceNames.join(", ")}.`
-      : "There were no valid unused bordering countries available.";
+      : t("There were no valid unused bordering countries available.");
     const route = $("#route-list");
     route.replaceChildren();
     state.path.forEach((entry, index) => {
@@ -1624,63 +1630,17 @@
   }
 
   function renderResultMap() {
-    const error = $("#map-error");
-    $("#map-countries").replaceChildren();
-    $("#map-routes").replaceChildren();
-    $("#map-markers").replaceChildren();
-    if (mapLoadError) {
-      error.textContent = `The result map could not be loaded: ${mapLoadError.message}`;
-      error.hidden = false;
-      return;
-    }
-    if (!mapData) {
-      error.textContent = "Loading result map…";
-      error.hidden = false;
-      return;
-    }
+    const error = document.querySelector("#map-error");
     error.hidden = true;
-    const projection = window.d3.geoEqualEarth().fitExtent([[12, 12], [988, 508]], mapData);
-    const pathGenerator = window.d3.geoPath(projection);
-    const byNumeric = new Map(countries.filter((country) => country.numeric)
-      .map((country) => [String(Number(country.numeric)), country.code]));
-    const ownerOverrides = new Map([["254", "FRA"], ["292", "GBR"], ["344", "CHN"], ["383", "SRB"], ["446", "CHN"], ["732", "MAR"]]);
-    const visited = new Set(state.path.map((entry) => entry.code));
-    const invalid = new Set(state.path.filter((entry) => !entry.valid).map((entry) => entry.code));
-    const choices = new Set(state.lastResult.choices);
-    window.d3.select("#map-countries").selectAll("path").data(mapData.features).join("path")
-      .attr("class", (feature) => {
-        const numeric = String(Number(feature.id));
-        const code = ownerOverrides.get(numeric) || byNumeric.get(numeric);
-        if (invalid.has(code)) return "map-country is-invalid";
-        if (visited.has(code)) return "map-country is-visited";
-        if (choices.has(code)) return "map-country is-choice";
-        return "map-country";
-      })
-      .attr("d", pathGenerator);
-    const point = (code) => projection(countriesByCode.get(code).coordinates);
-    state.path.slice(1).forEach((entry, index) => {
-      const start = point(state.path[index].code);
-      const end = point(entry.code);
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", start[0]);
-      line.setAttribute("y1", start[1]);
-      line.setAttribute("x2", end[0]);
-      line.setAttribute("y2", end[1]);
-      line.setAttribute("class", `route-segment${entry.valid ? "" : " is-invalid"}`);
-      $("#map-routes").append(line);
-    });
-    state.path.forEach((entry, index) => {
-      const location = point(entry.code);
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      marker.setAttribute("class", `route-marker${entry.valid ? "" : " is-invalid"}`);
-      marker.setAttribute("transform", `translate(${location[0]} ${location[1]})`);
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("r", "11");
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      label.textContent = String(index + 1);
-      marker.append(circle, label);
-      $("#map-markers").append(marker);
-    });
+    try {
+      window.MapominoesRenderer.render({
+        countries, mapData, path: state.path, choices: state.lastResult.choices
+      });
+    } catch (cause) {
+      console.error("Mapominoes could not render the map.", cause);
+      error.textContent = `The map could not be displayed: ${cause.message}`;
+      error.hidden = false;
+    }
   }
 
   $("#host-menu-button").addEventListener("click", () => showScreen("host"));
@@ -1692,6 +1652,21 @@
     myName = cleanName($("#host-name").value);
     const seconds = Number($("#turn-seconds").value);
     if (!myName || !allowedTimers.has(seconds)) return;
+    const submit = $("#host-form button[type='submit']");
+    const id = hostMapPicker.value;
+    submit.disabled = true;
+    hostMapPicker.disabled = true;
+    try {
+      await maps.load(id);
+      if (screens.host.hidden) return;
+      activateMap(id);
+    } catch (error) {
+      exposeError("Could not load the selected map.", error);
+      return;
+    } finally {
+      submit.disabled = false;
+      hostMapPicker.disabled = false;
+    }
     closeConnections();
     role = "host";
     myId = randomId("host");
@@ -1750,7 +1725,7 @@
   $("#country-form").addEventListener("submit", (event) => {
     event.preventDefault();
     if (!selectedCode) {
-      $("#form-message").textContent = "Select a country from the shortlist first.";
+      $("#form-message").textContent = t("Select a country from the shortlist first.");
       return;
     }
     sendAction("submit", { code: selectedCode });

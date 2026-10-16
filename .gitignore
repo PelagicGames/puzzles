@@ -4,6 +4,7 @@
 Thumbs.db
 *.log
 .vscode/*
+mapominoes/node_modules/
 
 lightdiscs/puzzle-analysis.local.json
 lightdiscs/generate-*.local.js

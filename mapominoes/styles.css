@@ -456,6 +456,19 @@ input:focus {
   color: var(--muted);
 }
 
+.field-label > select {
+  display: block;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0.5rem 0 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid #587266;
+  border-radius: 0.5rem;
+  background: #13271f;
+  color: #fff;
+  font: inherit;
+}
+
 .selected-country {
   display: flex;
   gap: 8px;

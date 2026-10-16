@@ -87,18 +87,19 @@
   }
 
   function validateMove(countries, path, candidateCode, playerCount) {
+    const noun = countries[0]?.code.includes(":") ? "region" : "country";
     const countriesByCode = countryMap(countries);
     const candidate = countriesByCode.get(candidateCode);
-    if (!candidate) return { valid: false, reasons: ["Unknown country."] };
+    if (!candidate) return { valid: false, reasons: [`Unknown ${noun}.`] };
     const usedCodes = new Set(path.map((entry) => entry.code));
     const reasons = [];
     if (usedCodes.has(candidateCode)) {
-      reasons.push("That country has already been named.");
+      reasons.push(`That ${noun} has already been named.`);
     }
     if (path.length > 0) {
       const previous = countriesByCode.get(path[path.length - 1].code);
       if (!previous?.borders.includes(candidateCode)) {
-        reasons.push(`${candidate.name} does not share a permitted border with ${previous?.name || "the previous country"}.`);
+        reasons.push(`${candidate.name} does not share a permitted border with ${previous?.name || `the previous ${noun}`}.`);
       }
     }
     const firstRoundMovesRemaining = Math.max(
