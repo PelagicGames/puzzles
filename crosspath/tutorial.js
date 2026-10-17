@@ -158,8 +158,8 @@
     const tileSize = 3 * CELL;
     const width = 3 * tileSize + 2 * gap + PAD * 2;
     const tray = figure("figures-goal", {
-      caption: "Nine pieces, all different, each with some path on it.",
-      label: "Nine separate three-by-three pieces",
+      caption: "Nine tiles, all different, each with some path on it.",
+      label: "Nine separate three-by-three tiles",
       width,
       height: width
     });
@@ -175,7 +175,7 @@
     const margin = LEAD + 8;
     const solved = figure("figures-goal", {
       caption: "\u2026placed to make one path from edge to edge, through every path square.",
-      label: "The pieces placed on the board, with the path traced in blue",
+      label: "The tiles placed on the board, with the path traced in blue",
       ...size(9, 9, margin)
     });
     svgElement("rect", { class: "board-margin", x: 0, y: 0, width: 9 * CELL + margin * 2, height: 9 * CELL + margin * 2 }, solved.svg);
@@ -194,7 +194,7 @@
     const span = 2 * CELL + gap;
     const dims = { width: span + PAD * 2, height: span + PAD * 2 };
     [
-      ["A straight, across or up and down.", [0xa, 0x5]],
+      ["A straight, horizontal or vertical.", [0xa, 0x5]],
       ["A right-angled corner, turning any way.", [0x6, 0xc, 0x3, 0x9]],
       ["A crossroads, where two straights cross.", [0xf]]
     ].forEach(([caption, masks]) => {
@@ -216,13 +216,13 @@
 
   function pieceFigures() {
     let fig = figure("figures-pieces", {
-      caption: "One of your pieces: printed on lighter paper, ready to move. It is placed exactly as printed.",
+      caption: "A moveable tile: printed on a lighter background, ready to move. It is placed exactly as printed.",
       ...size(3, 3)
     });
     drawGrid(fig.svg, hex("06c af9 050"), { columns: 3 });
 
     fig = figure("figures-pieces", {
-      caption: "A fixed piece: printed in the board colour. It is already in place and cannot be moved.",
+      caption: "A fixed tile: printed in the board colour. It is already in place and cannot be moved.",
       ...size(3, 3)
     });
     drawGrid(fig.svg, WORKED_TILES[4], { columns: 3, fixed: true });
@@ -239,9 +239,9 @@
   }
 
   function joinFigures() {
-    joinFigure("valid", "The path leaves one piece and enters the next at the same point.", "000000 aaaaaa 000000");
-    joinFigure("invalid", "Unaligned: the path leaves the left piece on the top row, but the right piece continues on the middle row.", "aaa000 000aaa 000000");
-    joinFigure("invalid", "Unaligned: the path runs into the next piece where it has no path to continue it.", "000050 aaa050 000050");
+    joinFigure("valid", "The path leaves one tile and enters the next at the same point.", "000000 aaaaaa 000000");
+    joinFigure("invalid", "Unaligned: the path leaves the left tile on the top row, but the right tile continues on the middle row.", "aaa000 000aaa 000000");
+    joinFigure("invalid", "Unaligned: the path runs into the next tile where it has no path to continue it.", "000050 aaa050 000050");
     joinFigure("invalid", "Parallel paths: two path squares sit side by side without being joined.", "005500 005500 005500");
     joinFigure("valid", "Paths can run near each other with a gap between them.", "050500 050500 050500");
     joinFigure("valid", "Path squares only touch where the path turns from one into the other.", "000000 aaac00 000500");
@@ -273,7 +273,7 @@
 
     const crossing = "000500 000500 aaafaa 000500 000500";
     fig = board("invalid",
-      "Going straight on, the path leaves by an unmarked edge. There are four ends, and the up-and-down path is never travelled.",
+      "Going straight on, the path leaves by an unmarked edge. There are four ends, and the vertical path is never travelled.",
       crossing);
     let trace = traceSmall(fig.cells, fig.grid, start);
     markTraceFailures(fig.svg, fig.grid, fig.cells, trace, markers);
@@ -458,7 +458,7 @@
 
   function checkFigures() {
     boardFigure("Correct: the pen runs from one end to the other, through every path square.", "valid", [0, 1, 2, 3, 4, 5, 6, 7, 8]);
-    boardFigure("Wrong: two pieces in the top row are swapped. The pen stops at a broken join, and red marks show the extra ends and the squares it never reached.", "invalid", [2, 1, 0, 3, 4, 5, 6, 7, 8]);
+    boardFigure("Wrong: two tiles in the top row are swapped. The pen stops at a broken join, and red marks show the extra ends and the squares it never reached.", "invalid", [2, 1, 0, 3, 4, 5, 6, 7, 8]);
   }
 
   goalFigures();

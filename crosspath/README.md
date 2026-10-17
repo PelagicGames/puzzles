@@ -4,6 +4,9 @@
 
 Crosspath is a newspaper-style browser puzzle. Nine 3x3 path squares must be dragged into the nine 3x3 slots of a 9x9 board. Squares cannot be rotated or flipped. When they are all placed correctly, they form one unbroken path from one edge of the board to another.
 
+This is a unique puzzle idea I came up with, because I like newspaper puzzles, and I thought this would be a kind of game that might fit alongside some of those.
+I checked for any existing games with the same premise and found games with similarities, but nothing quite like this one.
+
 ## Pages
 
 - **Tutorial** explains the rules with small worked examples of allowed and disallowed placements.
