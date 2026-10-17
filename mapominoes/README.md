@@ -117,9 +117,16 @@ Two connection modes are available:
 - **Manual codes** has no server. The host creates a separate offer code for
   each joining player, that player returns an answer code, and the host applies
   it. Both invite and answer codes use the lossless M3 binary format, with
-  optional raw DEFLATE compression.
+  optional raw DEFLATE compression. To gather players faster, any connected
+  player can also create an invite while the lobby is open. The request goes
+  over their DataChannel to the host, which creates the offer and returns the
+  code. The inviting player passes the newcomer's answer back the same way, and
+  the newcomer then connects directly to the host. Each player can have one
+  relayed invite open at a time; it expires after ten minutes and is cancelled
+  when the game starts or hosting is transferred.
 - **Room code** uses the included lightweight signaling server. The host shares
-  one reusable six-character code. Each guest's unique WebRTC offer and the
+  one reusable six-character code, which every player in the lobby can also see
+  and pass on. Each guest's unique WebRTC offer and the
   host's answer are relayed automatically; gameplay does not pass through the
   server. This experimental mode is currently hidden from the menus and is
   available only through its direct URL.

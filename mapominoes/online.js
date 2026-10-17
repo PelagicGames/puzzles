@@ -26,7 +26,10 @@
   let myName = "";
   let hostConnection = null;
   let hostChannel = null;
-  let pendingInvite = null;
+  const pendingInvites = new Map();
+  let ownInviteId = null;
+  let proxyInvite = null;
+  const proxyInviteLifetimeMs = 10 * 60 * 1000;
   const peers = new Map();
   let state = null;
   let selectedCode = null;
@@ -357,8 +360,9 @@
     clearInterval(heartbeatInterval);
     clearInterval(peerSweepInterval);
     clearTimeout(signalPollTimer);
-    pendingInvite?.connection.close();
-    pendingInvite = null;
+    closeAllPendingInvites();
+    proxyInvite = null;
+    resetInviteUi();
     peers.forEach(({ channel, connection }) => {
       channel.close();
       connection.close();
@@ -497,15 +501,29 @@
         state.activity = `${name} joined the lobby.`;
       }
       safeSend(peer.channel, { type: "welcome", playerId: peer.id, resumeToken });
-      $("#invite-area").hidden = true;
-      $("#answer-input").value = "";
-      pendingInvite = null;
+      const joinedInvite = pendingInvites.get(peer.inviteId);
+      releasePendingInvite(peer.inviteId);
+      if (joinedInvite?.requesterId) {
+        safeSend(peers.get(joinedInvite.requesterId)?.channel, {
+          type: "invite-joined",
+          inviteId: joinedInvite.inviteId,
+          name
+        });
+      }
       pendingRoomPeers.delete(peer.inviteId);
       broadcastSnapshot();
       return;
     }
     if (message.type === "ping") {
       safeSend(peer.channel, { type: "pong", sentAt: message.sentAt });
+      return;
+    }
+    if (message.type === "invite-request") {
+      handleInviteRequest(peer, message);
+      return;
+    }
+    if (message.type === "invite-answer") {
+      handleProxyAnswer(peer, message);
       return;
     }
     if (message.type === "migration-relay") {
@@ -533,6 +551,9 @@
     player.connected = false;
     peer.channel.close();
     peer.connection.close();
+    pendingInvites.forEach((invite) => {
+      if (invite.requesterId === peer.id && !invite.answered) closePendingInvite(invite.inviteId);
+    });
     if (state.phase === "lobby" && (!roomSignaling || player.left)) {
       state.players = state.players.filter((candidate) => candidate.id !== peer.id);
       state.activity = `${player.name} left the lobby.`;
@@ -595,9 +616,7 @@
     if (role !== "host" || state.phase !== "lobby" || migration || changingMap) return;
     const target = state.players.find((player) => player.id === targetId);
     if (!target?.connected || target.left || target.id === myId) return;
-    pendingInvite?.connection.close();
-    pendingInvite = null;
-    $("#invite-area").hidden = true;
+    closeAllPendingInvites("Open invites were cancelled because hosting is being transferred. Create a fresh invite.");
     const migrationId = randomId("migration");
     const expected = new Set(state.players
       .filter((player) => player.connected && !player.left
@@ -793,6 +812,8 @@
     await maps.load(message.state?.mapId || "world");
     if (!validSnapshot(message.state) || message.state.hostId !== message.targetId) return;
     snapshotSequence += 1;
+    proxyInvite = null;
+    resetInviteUi();
     activateMap(message.state.mapId || "world");
     const oldRole = role;
     const oldHostConnection = hostConnection;
@@ -875,55 +896,238 @@
     }
   }
 
-  async function createInvite() {
-    clearError();
-    if (pendingInvite) pendingInvite.connection.close();
+  function resetInviteUi() {
+    $("#invite-area").hidden = true;
+    $("#invite-output").value = "";
+    $("#answer-input").value = "";
+    $("#accept-answer").disabled = false;
+    $("#invite-status").textContent = "";
+  }
+
+  function showInviteCode(code, status) {
+    $("#invite-output").value = code;
+    $("#answer-input").value = "";
+    $("#accept-answer").disabled = false;
+    $("#invite-area").hidden = false;
+    $("#invite-status").textContent = status;
+  }
+
+  // Forget an invite whose player has joined, leaving its connection open.
+  function releasePendingInvite(inviteId) {
+    const invite = pendingInvites.get(inviteId);
+    if (!invite) return null;
+    pendingInvites.delete(inviteId);
+    clearTimeout(invite.expiry);
+    if (inviteId === ownInviteId) {
+      ownInviteId = null;
+      resetInviteUi();
+    }
+    return invite;
+  }
+
+  function closePendingInvite(inviteId, reason = "") {
+    const invite = releasePendingInvite(inviteId);
+    if (!invite) return;
+    invite.connection.close();
+    if (invite.requesterId && reason) {
+      safeSend(peers.get(invite.requesterId)?.channel, { type: "invite-cancelled", inviteId, message: reason });
+    }
+  }
+
+  function closeAllPendingInvites(reason = "") {
+    [...pendingInvites.keys()].forEach((inviteId) => closePendingInvite(inviteId, reason));
+  }
+
+  async function createHostedInvite(requesterId) {
     const inviteId = randomId("invite");
     const connection = new RTCPeerConnection(rtcConfig);
     const channel = connection.createDataChannel("mapominoes", { ordered: true });
     setupHostChannel(connection, channel, inviteId);
-    pendingInvite = { connection, channel, inviteId };
-    $("#create-invite").disabled = true;
-    $("#lobby-status").textContent = "Gathering a direct connection invite…";
+    const invite = { connection, channel, inviteId, requesterId, answered: false, expiry: null };
+    if (requesterId) {
+      invite.expiry = window.setTimeout(() => {
+        closePendingInvite(inviteId, "Your invite expired before it was used. Create a fresh invite.");
+      }, proxyInviteLifetimeMs);
+    }
+    pendingInvites.set(inviteId, invite);
     try {
       await connection.setLocalDescription(await connection.createOffer());
       await waitForIce(connection);
-      $("#invite-output").value = await encodeCode({
+      if (pendingInvites.get(inviteId) !== invite) throw new Error("The invite was cancelled.");
+      const code = await encodeCode({
         version: 3,
         kind: "invite",
         inviteId,
         description: connection.localDescription.toJSON()
       });
-      $("#invite-area").hidden = false;
-      $("#lobby-status").textContent = "Send the invite, then paste that same player's answer.";
+      return { inviteId, code };
     } catch (error) {
-      connection.close();
-      pendingInvite = null;
+      closePendingInvite(inviteId);
+      throw error;
+    }
+  }
+
+  async function applyInviteAnswer(invite, code) {
+    if (code.inviteId !== invite.inviteId || code.description.type !== "answer") {
+      throw new Error("This answer belongs to a different invite.");
+    }
+    if (invite.answered) throw new Error("An answer was already accepted for this invite.");
+    invite.answered = true;
+    try {
+      await invite.connection.setRemoteDescription(code.description);
+    } catch (error) {
+      invite.answered = false;
+      throw error;
+    }
+  }
+
+  function invitesOpen() {
+    return state?.phase === "lobby" && !migration && !incomingMigration
+      && state.players.length < 12;
+  }
+
+  async function createInvite() {
+    clearError();
+    if (role === "guest") {
+      requestProxyInvite();
+      return;
+    }
+    if (role !== "host" || !invitesOpen()) return;
+    if (ownInviteId) closePendingInvite(ownInviteId);
+    $("#create-invite").disabled = true;
+    $("#invite-status").textContent = "Gathering a direct connection invite…";
+    try {
+      const { inviteId, code } = await createHostedInvite(null);
+      ownInviteId = inviteId;
+      showInviteCode(code, "Send the invite, then paste that same player's answer.");
+    } catch (error) {
+      $("#invite-status").textContent = "";
       exposeError("Could not create an invite.", error);
     } finally {
-      $("#create-invite").disabled = false;
+      render();
+    }
+  }
+
+  async function handleInviteRequest(peer, message) {
+    if (typeof message.requestId !== "string" || !message.requestId || message.requestId.length > 80) return;
+    const requestId = message.requestId;
+    const refuse = (text) => safeSend(peer.channel, { type: "invite-error", requestId, message: text });
+    if (!invitesOpen() || changingMap) {
+      refuse(state.players.length >= 12
+        ? "The lobby is full."
+        : "Invites can only be created while the lobby is open and hosting is not being transferred.");
+      return;
+    }
+    pendingInvites.forEach((invite) => {
+      if (invite.requesterId === peer.id) closePendingInvite(invite.inviteId);
+    });
+    try {
+      const { inviteId, code } = await createHostedInvite(peer.id);
+      if (peers.get(peer.id) !== peer) {
+        closePendingInvite(inviteId);
+        return;
+      }
+      safeSend(peer.channel, { type: "invite-code", requestId, inviteId, code });
+    } catch (error) {
+      refuse(`The host could not create an invite. ${error.message}`);
+    }
+  }
+
+  async function handleProxyAnswer(peer, message) {
+    const inviteId = typeof message.inviteId === "string" ? message.inviteId : "";
+    const invite = pendingInvites.get(inviteId);
+    const reply = (ok, text) => safeSend(peer.channel, { type: "invite-answer-result", inviteId, ok, message: text });
+    if (!invite || invite.requesterId !== peer.id) {
+      reply(false, "That invite is no longer active. Create a fresh invite.");
+      return;
+    }
+    try {
+      await applyInviteAnswer(invite, await decodeCode(message.code, "answer"));
+      reply(true, "The host accepted the answer. Waiting for the new player to connect…");
+    } catch (error) {
+      reply(false, `The host could not accept that answer. ${error.message}`);
+    }
+  }
+
+  function requestProxyInvite() {
+    if (role !== "guest" || !myId || !invitesOpen()) return;
+    proxyInvite = { requestId: randomId("request"), inviteId: null };
+    resetInviteUi();
+    if (!safeSend(hostChannel, { type: "invite-request", requestId: proxyInvite.requestId })) {
+      proxyInvite = null;
+      exposeError("Could not reach the host to request an invite.");
+      return;
+    }
+    $("#invite-status").textContent = "Asking the host for an invite…";
+    render();
+  }
+
+  function handleProxyInviteMessage(message) {
+    if (!proxyInvite) return;
+    if (message.type === "invite-code" || message.type === "invite-error") {
+      if (message.requestId !== proxyInvite.requestId || proxyInvite.inviteId) return;
+      if (message.type === "invite-code" && typeof message.inviteId === "string"
+        && typeof message.code === "string") {
+        proxyInvite.inviteId = message.inviteId;
+        showInviteCode(message.code, "Send the invite, then paste that same player's answer. It will be passed to the host.");
+      } else {
+        proxyInvite = null;
+        resetInviteUi();
+        exposeError(typeof message.message === "string" ? message.message.slice(0, 300) : "The host refused the invite request.");
+      }
+      render();
+      return;
+    }
+    if (message.inviteId !== proxyInvite.inviteId) return;
+    const text = typeof message.message === "string" ? message.message.slice(0, 300) : "";
+    if (message.type === "invite-answer-result") {
+      if (message.ok === true) {
+        $("#accept-answer").disabled = true;
+        $("#invite-status").textContent = text || "The host accepted the answer.";
+      } else {
+        $("#accept-answer").disabled = false;
+        $("#invite-status").textContent = "";
+        exposeError(text || "The host could not accept that answer.");
+      }
+      return;
+    }
+    if (message.type === "invite-joined" || message.type === "invite-cancelled") {
+      proxyInvite = null;
+      resetInviteUi();
+      $("#invite-status").textContent = message.type === "invite-joined"
+        ? `${cleanName(message.name) || "Your invited player"} joined the lobby.`
+        : text || "Your invite was cancelled.";
+      render();
     }
   }
 
   async function acceptAnswer() {
     clearError();
-    if (!pendingInvite) {
+    const invite = role === "host" ? pendingInvites.get(ownInviteId) : null;
+    const inviteId = role === "host" ? invite?.inviteId : proxyInvite?.inviteId;
+    if (!inviteId) {
       exposeError("Create a fresh invite before accepting an answer.");
       return;
     }
+    $("#accept-answer").disabled = true;
     try {
-      const code = await decodeCode($("#answer-input").value, "answer");
-      if (code.inviteId !== pendingInvite.inviteId
-        || code.description.type !== "answer") {
+      const value = $("#answer-input").value.trim();
+      const code = await decodeCode(value, "answer");
+      if (role === "host") {
+        await applyInviteAnswer(invite, code);
+        $("#invite-status").textContent = "Answer accepted. Waiting for the player's channel to open…";
+        return;
+      }
+      if (code.inviteId !== inviteId || code.description.type !== "answer") {
         throw new Error("This answer belongs to a different invite.");
       }
-      await pendingInvite.connection.setRemoteDescription(code.description);
-      $("#accept-answer").disabled = true;
-      $("#lobby-status").textContent = "Answer accepted. Waiting for the player's channel to open…";
+      if (!safeSend(hostChannel, { type: "invite-answer", inviteId, code: value })) {
+        throw new Error("The host connection is not open.");
+      }
+      $("#invite-status").textContent = "Passing the answer to the host…";
     } catch (error) {
-      exposeError("Could not accept that answer.", error);
-    } finally {
       $("#accept-answer").disabled = false;
+      exposeError("Could not accept that answer.", error);
     }
   }
 
@@ -1066,6 +1270,11 @@
       return;
     }
     if (message.type === "pong") return;
+    if (["invite-code", "invite-error", "invite-answer-result", "invite-joined", "invite-cancelled"]
+      .includes(message.type)) {
+      handleProxyInviteMessage(message);
+      return;
+    }
     if (message.type === "migration-prepare") {
       prepareIncomingMigration(message);
       return;
@@ -1238,7 +1447,9 @@
       ? Math.max(0, state.players.findIndex((player) => player.id === state.nextStarterId))
       : 0;
     const starter = connectedStarter(preferred);
-    if (starter !== null) startRound(starter);
+    if (starter === null) return;
+    closeAllPendingInvites("The game started, so your open invite was cancelled.");
+    startRound(starter);
   }
 
   function startRound(startPlayer) {
@@ -1418,10 +1629,13 @@
       item.title = player.name;
       list.append(item);
     });
-    $("#host-invite-tools").hidden = role !== "host";
+    $("#invite-tools").hidden = !role;
+    $("#start-game").hidden = role !== "host";
+    $("#invite-relay-note").hidden = role !== "guest" || roomSignaling;
     $("#create-invite").hidden = roomSignaling;
-    $("#room-code-area").hidden = !roomSignaling || role !== "host" || !roomCode;
-    $("#create-invite").disabled = Boolean(migration);
+    $("#room-code-area").hidden = !roomSignaling || !roomCode;
+    $("#create-invite").disabled = !invitesOpen() || changingMap
+      || (role === "guest" && (!myId || Boolean(proxyInvite && !proxyInvite.inviteId)));
     $("#start-game").disabled = role !== "host" || hostPlayerConnectedCount() < 2 || Boolean(migration) || changingMap;
     $("#lobby-status").textContent = role === "host"
       ? migration

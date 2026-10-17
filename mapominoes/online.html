@@ -89,11 +89,12 @@
       <p class="step-label">Lobby</p>
       <h2 id="lobby-title">Players</h2>
       <ul class="player-list" id="lobby-players"></ul>
-      <div id="host-invite-tools" hidden>
+      <div id="invite-tools" hidden>
         <div class="button-row">
           <button class="quiet-button" id="create-invite" type="button">Create player invite</button>
           <button class="primary-button" id="start-game" type="button" disabled>Start game</button>
         </div>
+        <p class="muted" id="invite-relay-note" hidden>Any player can invite others. Your invite and their answer are relayed through the host, and the new player connects directly to the host.</p>
         <div class="room-code-area" id="room-code-area" hidden>
           <p class="field-label">Reusable room code</p>
           <strong class="room-code" id="room-code"></strong>
@@ -109,6 +110,7 @@
           <textarea class="code-field" id="answer-input" rows="5" spellcheck="false"></textarea>
           <button class="primary-button" id="accept-answer" type="button">Accept answer</button>
         </div>
+        <p class="muted" id="invite-status" role="status"></p>
       </div>
       <p class="muted" id="lobby-status" role="status"></p>
     </section>
@@ -205,6 +207,6 @@
   <script src="./map-geometry.js"></script>
   <script src="./map-renderer.js"></script>
   <script src="./connection-codes.js?v=20261016b"></script>
-  <script src="./online.js?v=20261016e"></script>
+  <script src="./online.js?v=20261017a"></script>
 </body>
 </html>
