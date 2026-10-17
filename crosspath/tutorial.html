@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2ede1">
+  <title>Tutorial | Crosspath</title>
+  <link rel="stylesheet" href="./styles.css?v=20261016d">
+</head>
+<body>
+  <main class="paper">
+    <header class="masthead masthead-compact">
+      <div class="masthead-row">
+        <a class="back-link" href="./index.html" aria-label="Back to Crosspath menu">&#8592; Menu</a>
+        <span class="masthead-name">Crosspath</span>
+        <a class="back-link" href="./puzzles.html">Puzzles &#8594;</a>
+      </div>
+    </header>
+    <div class="puzzle-heading">
+      <p class="kicker">How to play</p>
+      <h1>The rules of the road</h1>
+      <p class="standfirst">Nine pieces, one board, one path. Here is everything you need to know, with a few examples of what is not allowed.</p>
+    </div>
+
+    <article class="article">
+      <section class="article-section" aria-labelledby="goal-heading">
+        <h2 id="goal-heading">1. The goal</h2>
+        <p>The board is nine squares by nine, divided into nine three-by-three spaces. You are given nine three-by-three pieces. Drag every piece into a space so that the path squares join up into a single path that starts at one edge of the board, visits every path square, and finishes at another point on the edge.</p>
+        <ul class="rule-list">
+          <li>Pieces cannot be rotated or flipped, only moved.</li>
+          <li>Pieces cannot overlap, so each space holds exactly one piece.</li>
+          <li>Every piece is different and every piece holds at least one path square.</li>
+          <li>Each puzzle has exactly one solution.</li>
+        </ul>
+        <div class="figure-row is-boards" id="figures-goal"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="squares-heading">
+        <h2 id="squares-heading">2. Path squares</h2>
+        <p>Each small square is either empty or holds a path element: a straight, a right-angled corner, or a crossroads. Paths only travel up, down, left and right, and never split or stop part-way across the board.</p>
+        <div class="figure-row" id="figures-squares"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="pieces-heading">
+        <h2 id="pieces-heading">3. The pieces</h2>
+        <p>Pieces cannot be turned or flipped: each one is placed exactly as printed. Some puzzles start with fixed pieces already on the board: these are printed in the same colour as the board and cannot be moved. Your pieces are slightly lighter.</p>
+        <div class="figure-row is-wide" id="figures-pieces"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="joins-heading">
+        <h2 id="joins-heading">4. Joining pieces</h2>
+        <p>Where a path reaches the side of a piece, the neighbouring piece must continue it. Paths may only sit next to each other when they are directly joined: no two path squares may touch side by side without connecting.</p>
+        <div class="figure-row is-wide" id="figures-joins"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="crossroads-heading">
+        <h2 id="crossroads-heading">5. Crossroads</h2>
+        <p>At a crossroads the path always goes straight on, never turning. A crossroads is therefore travelled twice: once across and once up or down. In these examples, the dots mark the two ends of the path.</p>
+        <div class="figure-row is-wide" id="figures-crossroads"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="ends-heading">
+        <h2 id="ends-heading">6. Two ends, one path</h2>
+        <p>The finished path touches the edge of the board exactly twice: once where it starts and once where it ends. Every other path square must lie on the route between them, so there can be no separate loops or stray pieces of path.</p>
+        <div class="figure-row is-wide" id="figures-ends"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="clues-heading">
+        <h2 id="clues-heading">7. Clues</h2>
+        <p>To make sure there is only one answer, a puzzle may fix some pieces in place, mark one or both ends of the path with a dot beside the board, or both. A marked end must be used.</p>
+        <div class="figure-row is-wide" id="figures-clues"></div>
+      </section>
+
+      <section class="article-section" aria-labelledby="check-heading">
+        <h2 id="check-heading">8. Checking your answer</h2>
+        <p>Once every piece is on the board, a pen traces the path from one end. If the arrangement is right, the pen runs all the way to the other end and the puzzle is stamped solved. If not, the pen stops where the route goes wrong and red marks show the problems: a cross at a broken join, a zig-zag where paths touch, red path squares that were never visited, and a ring around an end that was missed.</p>
+        <div class="figure-row is-boards" id="figures-check"></div>
+      </section>
+    </article>
+
+    <nav class="puzzle-navigation" aria-label="Tutorial navigation">
+      <a href="./index.html">&#8592; Menu</a>
+      <span></span>
+      <a href="./puzzles.html">Start a puzzle &#8594;</a>
+    </nav>
+  </main>
+  <script src="./crosspath-rules.js"></script>
+  <script src="./crosspath-render.js"></script>
+  <script src="./tutorial.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2ede1">
+  <title>Crosspath</title>
+  <link rel="stylesheet" href="./styles.css?v=20261016d">
+</head>
+<body>
+  <main class="paper">
+    <header class="masthead">
+      <div class="masthead-row">
+        <a class="back-link" href="../index.html" aria-label="Back to all puzzles">&#8592; All puzzles</a>
+        <span>Puzzle Section</span>
+        <span class="solved-tally" id="solved-tally"></span>
+      </div>
+      <h1 class="masthead-title">Crosspath</h1>
+      <p class="dateline">
+        <span>Place &middot; Connect &middot; Cross</span>
+        <span>A tile-and-path puzzle</span>
+      </p>
+    </header>
+
+    <div class="front-page">
+      <figure class="front-feature">
+        <img src="./assets/crosspath.svg" alt="A three-by-three tile with a path that loops through a crossroads" width="200" height="200">
+        <figcaption>Every piece holds part of the path. Where it crosses itself, it goes straight on.</figcaption>
+      </figure>
+
+      <section class="front-index" aria-labelledby="index-heading">
+        <p class="kicker">Today&rsquo;s puzzles</p>
+        <h2 id="index-heading">One path, nine pieces</h2>
+        <p class="lede">Slide nine three-by-three tiles into the board so that a single unbroken path enters at one edge, visits every path square, and leaves at another. The pieces cannot be turned, and only one arrangement works.</p>
+        <nav class="menu-links" aria-label="Main menu">
+          <a href="./tutorial.html">
+            <span class="menu-number" aria-hidden="true">01</span>
+            <span>Tutorial<span class="menu-description">The rules, with examples of what is not allowed</span></span>
+            <span class="menu-arrow" aria-hidden="true">&#8594;</span>
+          </a>
+          <a href="./puzzles.html">
+            <span class="menu-number" aria-hidden="true">02</span>
+            <span>Puzzles<span class="menu-description">From very easy to very hard</span></span>
+            <span class="menu-arrow" aria-hidden="true">&#8594;</span>
+          </a>
+        </nav>
+      </section>
+    </div>
+  </main>
+  <script src="./puzzle-levels.js"></script>
+  <script src="./puzzle-progress.js"></script>
+  <script src="./menu.js"></script>
+</body>
+</html>

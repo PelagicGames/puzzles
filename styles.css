@@ -98,6 +98,11 @@ nav a:focus-visible {
   line-height: 1;
 }
 
+.crosspath-icon {
+  width: 1.65rem;
+  height: 1.65rem;
+}
+
 .light-disc-icon {
   position: relative;
   width: 1.65rem;

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Copyright (C) 2026 Pelagic Games -->
+  <rect x="0" y="0" width="200" height="200" fill="#f2ede1"/>
+  <rect x="25" y="25" width="150" height="150" fill="#fcfaf4"/>
+  <path d="M75 25V175M125 25V175M25 75H175M25 125H175" fill="none" stroke="#c8bfac" stroke-width="1.2"/>
+  <path d="M8 100H100V50H150V100H100V192" fill="none" stroke="#1c1b18" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 100H100V50H150V100H100V192" fill="none" stroke="#1d4fa8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 7" opacity="0.9"/>
+  <rect x="25" y="25" width="150" height="150" fill="none" stroke="#1c1b18" stroke-width="5"/>
+  <circle cx="8" cy="100" r="7" fill="#1c1b18"/>
+  <circle cx="100" cy="192" r="7" fill="#1c1b18"/>
+</svg>

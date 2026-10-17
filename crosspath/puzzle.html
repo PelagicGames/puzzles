@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f2ede1">
+  <title>Puzzle | Crosspath</title>
+  <link rel="stylesheet" href="./styles.css?v=20261016d">
+</head>
+<body class="page-puzzle">
+  <main class="paper">
+    <header class="masthead masthead-compact">
+      <div class="masthead-row">
+        <a class="back-link" href="./puzzles.html" aria-label="Back to puzzle menu">&#8592; Puzzles</a>
+        <span class="masthead-name">Crosspath</span>
+        <span class="masthead-meta" id="puzzle-number"></span>
+      </div>
+    </header>
+
+    <div class="puzzle-heading">
+      <h1 id="puzzle-title">Puzzle</h1>
+      <p class="standfirst">Drag the pieces onto the board to make one path from edge to edge. Pieces cannot be rotated.</p>
+    </div>
+
+    <section class="puzzle-layout">
+      <div class="board-column">
+        <div class="board-wrap" id="board-wrap">
+          <svg class="board" id="board" role="group" aria-label="Crosspath board, nine spaces for three-by-three tiles"></svg>
+          <div class="solved-stamp" aria-hidden="true">Solved</div>
+        </div>
+        <ul class="legend" id="legend" aria-label="Key">
+          <li id="fixed-legend"><span class="legend-swatch is-fixed" aria-hidden="true"></span> Fixed tile</li>
+          <li id="movable-legend"><span class="legend-swatch is-movable" aria-hidden="true"></span> Movable tile</li>
+          <li id="marker-legend"><span class="legend-dot" aria-hidden="true"></span> Path end</li>
+        </ul>
+      </div>
+
+      <aside class="tray-panel" id="tray-panel" aria-labelledby="tray-heading">
+        <h2 id="tray-heading" class="column-heading">The pieces</h2>
+        <div class="tray" id="tray"></div>
+        <div class="status-box" aria-live="polite">
+          <p class="status" id="status" data-tone="neutral"></p>
+          <ul class="status-detail" id="status-detail" hidden></ul>
+        </div>
+        <div class="button-row">
+          <button class="action-button" id="return-button" type="button">Return selected</button>
+          <button class="action-button" id="reset-button" type="button">Reset</button>
+        </div>
+        <p class="small-print">Drag a piece, or tap it and then a space, to place it. Holding a dragged piece near the top or bottom of the screen scrolls the page. Drop a piece on another to swap them, or back on the tray to remove it. <a href="./tutorial.html">How to play</a></p>
+      </aside>
+    </section>
+
+    <nav class="puzzle-navigation" aria-label="Puzzle navigation">
+      <a href="./puzzles.html">&#8592; Puzzle menu</a>
+      <span id="puzzle-position"></span>
+      <a id="next-puzzle" href="./puzzle.html" hidden>Next unsolved &#8594;</a>
+    </nav>
+  </main>
+  <script src="./crosspath-rules.js"></script>
+  <script src="./crosspath-render.js"></script>
+  <script src="./puzzle-levels.js"></script>
+  <script src="./puzzle-progress.js"></script>
+  <script src="./puzzle.js?v=20261016d"></script>
+</body>
+</html>
