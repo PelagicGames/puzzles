@@ -1,15 +1,18 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Illustrated rules page; tutorial.js fills each figures-* container with worked SVG examples. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f2ede1">
   <title>Tutorial | Crosspath</title>
-  <link rel="stylesheet" href="./styles.css?v=20261016d">
+  <!-- Version queries refresh cached shared styling and tutorial diagrams together. -->
+  <link rel="stylesheet" href="./styles.css?v=20261018b">
 </head>
 <body>
   <main class="paper">
+    <!-- Persistent links return to the menu or lead directly to puzzle selection. -->
     <header class="masthead masthead-compact">
       <div class="masthead-row">
         <a class="back-link" href="./index.html" aria-label="Back to Crosspath menu">&#8592; Menu</a>
@@ -23,6 +26,7 @@
       <p class="standfirst">Nine tiles, one board, one path. Here is everything you need to know in order to play, with some helpful examples.</p>
     </div>
 
+    <!-- Static rule text remains readable while the script supplies labelled figures/captions. -->
     <article class="article">
       <section class="article-section" aria-labelledby="goal-heading">
         <h2 id="goal-heading">1. The goal</h2>
@@ -48,9 +52,10 @@
         <div class="figure-row is-wide" id="figures-pieces"></div>
       </section>
 
+      <!-- Join and crossroads examples contrast legal connections with distinct rule failures. -->
       <section class="article-section" aria-labelledby="joins-heading">
         <h2 id="joins-heading">4. Joining tiles</h2>
-        <p>Where a path reaches the side of a tile, the neighbouring tile must continue it. Paths may only sit next to each other when they are directly joined: no two path squares may touch side by side without connecting.</p>
+        <p>Where a path reaches the side of a tile, the neighbouring tile must continue it. Path squares may only be next to each other (sharing a side) when the path runs directly from one into the other. This applies to every kind of path square, not just parallel straights: two straights, a straight and a corner, or two corners.</p>
         <div class="figure-row is-wide" id="figures-joins"></div>
       </section>
 
@@ -60,6 +65,7 @@
         <div class="figure-row is-wide" id="figures-crossroads"></div>
       </section>
 
+      <!-- Whole-route requirements and clue constraints build on the local connection rules. -->
       <section class="article-section" aria-labelledby="ends-heading">
         <h2 id="ends-heading">6. Two ends, one path</h2>
         <p>The finished path touches the edge of the board exactly twice: once where it starts and once where it ends. Every other path square must lie on the route between them, so there can be no separate loops or stray path squares.</p>
@@ -72,9 +78,10 @@
         <div class="figure-row is-wide" id="figures-clues"></div>
       </section>
 
+      <!-- Full-board checks gain replay controls and first-visibility animation from tutorial.js. -->
       <section class="article-section" aria-labelledby="check-heading">
         <h2 id="check-heading">8. Checking your answer</h2>
-        <p>Once every tile is on the board, a pen traces the path from one end. If the arrangement is right, the pen runs all the way to the other end and the puzzle is stamped solved. If not, the pen stops where the route goes wrong and red marks show the problems: a cross at a broken join, a zig-zag where paths are adjacent without connecting, red path squares that were never visited, and a ring around an end that was missed.</p>
+        <p>Once every tile is on the board, a pen traces the path from one end. If the arrangement is right, the pen runs all the way to the other end and the puzzle is stamped solved. If not, the pen stops where the route goes wrong and red marks show the problems: a cross at a broken join, a zig-zag where path squares are next to each other without being directly connected, red path squares that were never visited, and a ring around an end that was missed.</p>
         <div class="figure-row is-boards" id="figures-check"></div>
       </section>
     </article>
@@ -85,8 +92,9 @@
       <a href="./puzzles.html">Start a puzzle &#8594;</a>
     </nav>
   </main>
+  <!-- Rules must precede rendering; both exports are required before tutorial.js builds figures. -->
   <script src="./crosspath-rules.js"></script>
   <script src="./crosspath-render.js"></script>
-  <script src="./tutorial.js"></script>
+  <script src="./tutorial.js?v=20261018b"></script>
 </body>
 </html>

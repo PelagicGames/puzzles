@@ -1,7 +1,20 @@
 /* Copyright (C) 2026 Pelagic Games */
+/*
+ * Shared presentation for the Light Discs menu, catalogue, tutorial and three
+ * board pages. Linked directly from HTML with version queries for cache busting;
+ * the legacy playground redirect does not load it. JavaScript supplies SVG nodes,
+ * CSS state classes, --piece-color and --page-zoom. No build step is required.
+ */
 
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700&display=swap");
 
+/*
+ * Theme tokens: ink/muted are primary/secondary text; surface/surface-raised are
+ * page/panel fills; line separates controls. light/light-soft are the main accent
+ * and its translucent wash; warm highlights secondary actions/errors. matched
+ * and unmatched colour target-state rings and their text/key equivalents.
+ * Dark colour-scheme also informs native controls and the help dialog.
+ */
 :root {
   color-scheme: dark;
   --ink: #f4f1e8;
@@ -42,6 +55,7 @@ a {
   color: inherit;
 }
 
+/* Entry-page shells, logo and campaign completion ring. */
 .menu-shell,
 .placeholder-shell {
   width: min(100%, 1120px);
@@ -77,6 +91,7 @@ a {
   margin: 0 0 30px;
 }
 
+/* Decorative star overlay must not intercept the menu/logo's pointer interactions. */
 .completion-stars {
   position: absolute;
   inset: 0;
@@ -93,6 +108,7 @@ a {
   transform: translate(-50%, -50%);
 }
 
+/* menu.js reveals one star per completed difficulty band in either campaign. */
 .completion-star.is-earned {
   opacity: 1;
 }
@@ -122,6 +138,7 @@ h1 {
   line-height: 1.65;
 }
 
+/* Menu focus gets the same visible accent as hover instead of the native outline. */
 .menu-links {
   border-top: 1px solid var(--line);
 }
@@ -182,6 +199,7 @@ h1 {
   margin-bottom: 32px;
 }
 
+/* Catalogue puzzle navigation is populated by puzzle.js after selecting a level. */
 .puzzle-navigation {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -213,6 +231,7 @@ h1 {
   text-align: center;
 }
 
+/* Campaign/difficulty groups and selectors created by puzzles.js. */
 .puzzle-menu-shell {
   padding-bottom: clamp(48px, 8vw, 96px);
 }
@@ -248,6 +267,7 @@ h1 {
   color: var(--muted);
 }
 
+/* Reserved locked-section appearance; the current menu omits locked XOR groups. */
 .difficulty-section.is-locked {
   opacity: 0.48;
 }
@@ -315,6 +335,7 @@ h1 {
   font: 700 0.8rem/1 sans-serif;
 }
 
+/* Completion is also conveyed by a tick and the link's accessible label. */
 .puzzle-selector.is-completed .puzzle-checkbox {
   border-color: var(--light);
   background: var(--light);
@@ -324,6 +345,7 @@ h1 {
   font: 500 0.84rem/1 "DM Mono", monospace;
 }
 
+/* Legacy placeholder layout remains available alongside the tutorial content styles. */
 .placeholder-content {
   margin: auto 0;
   padding-block: 56px;
@@ -342,6 +364,7 @@ h1 {
   font: 400 0.9rem/1.5 "DM Mono", monospace;
 }
 
+/* Tutorial instruction cards and asset-backed colour/shape reference grids. */
 .content-page {
   max-width: 1180px;
 }
@@ -475,6 +498,7 @@ h1 {
   text-transform: capitalize;
 }
 
+/* Shared interactive-page frame, guidance, action controls and live status. */
 .page-shell {
   width: min(100%, 1180px);
   min-height: 100vh;
@@ -535,10 +559,12 @@ h1 {
   text-transform: uppercase;
 }
 
+/* Keep the native hidden contract despite the component's own display rules. */
 .status-message[hidden] {
   display: none;
 }
 
+/* Design editor and random-code sharing panel use the same monospace code surface. */
 .design-header {
   align-items: end;
 }
@@ -602,6 +628,7 @@ h1 {
   box-shadow: 0 0 0 2px var(--light-soft);
 }
 
+/* design.js sets aria-invalid and marks diagnostic ranges; status text adds context. */
 .code-input[aria-invalid="true"] {
   border-color: var(--warm);
 }
@@ -648,10 +675,13 @@ h1 {
   font: 400 0.7rem/1.5 "DM Mono", monospace;
 }
 
+/* Copy and validation failures share a warning accent without changing layout. */
 .code-status.is-error {
   color: var(--warm);
 }
 
+/* Native dialog occupies the browser top layer; its backdrop dims the board.
+ * Internal scrolling keeps the close control/content usable on shorter viewports. */
 .code-help {
   width: min(92vw, 760px);
   max-height: min(86vh, 760px);
@@ -728,6 +758,8 @@ h1 {
   background: #0b100d;
 }
 
+/* The SVG surface can widen with browser zoom. Horizontal overflow stays within
+ * this scroller; JavaScript handles touch panning and re-centres after resizing. */
 .board-scroll {
   width: 100%;
   overflow-x: auto;
@@ -737,12 +769,14 @@ h1 {
 }
 
 .board-surface {
+  /* Set by lightdiscs.js relative to the initial device pixel ratio, never below 1. */
   --page-zoom: 1;
   position: relative;
   width: calc(100% * var(--page-zoom));
   aspect-ratio: 20 / 19;
 }
 
+/* Absolute SVG fills the aspect-ratio surface; SVG child order defines board stacking. */
 .interaction-board {
   position: absolute;
   inset: 0;
@@ -751,6 +785,8 @@ h1 {
   height: 100%;
 }
 
+/* Leave pinch zoom to the browser while single-pointer board gestures are handled
+ * in JavaScript. Selection is disabled so dragging never selects SVG labels. */
 .interaction-board {
   touch-action: pinch-zoom;
   user-select: none;
@@ -762,6 +798,7 @@ h1 {
   margin-top: clamp(16px, 3vh, 32px);
 }
 
+/* Live counts and the explicit matched/not-matched key complement ring colours. */
 .match-summary {
   display: flex;
   align-items: center;
@@ -802,6 +839,7 @@ h1 {
   color: var(--unmatched);
 }
 
+/* Fixed geometry forms the board backdrop; XOR starts from black instead of white. */
 .fixed-triangle {
   fill: #000;
   stroke: rgba(255, 255, 255, 0.18);
@@ -818,12 +856,16 @@ body[data-combination="xor"] .fixed-disc {
   stroke-width: 2;
 }
 
+/* Visual-only layers must not obscure the underlying draggable triangle hit areas
+ * or target controls. Their ordering is established by the page's SVG groups. */
 .fixed-discs-layer,
 .filter-render,
 .piece-disc-outlines {
   pointer-events: none;
 }
 
+/* At rest, the composition layer supplies colours and these groups supply edges.
+ * is-dragging temporarily reveals standalone discs when no filter overlap exists. */
 .piece-disc-outlines .piece-disc-set:not(.is-dragging) .piece-disc {
   fill: transparent !important;
 }
@@ -836,6 +878,8 @@ body[data-combination="xor"] .fixed-disc {
   stroke: none !important;
 }
 
+/* Board-wide drag state removes rotation controls; the drag-hidden quality tier
+ * additionally suppresses generated contrast aids while movement is active. */
 .interaction-board.is-dragging-piece .rotation-controls {
   display: none;
 }
@@ -845,6 +889,8 @@ body[data-combination="xor"] .fixed-disc {
   display: none;
 }
 
+/* Piece gestures disable native touch scrolling; empty-board touches still pan.
+ * --piece-color is written on each piece root by lightdiscs.js. */
 .piece-shape,
 .piece-triangle {
   cursor: grab;
@@ -873,6 +919,8 @@ body[data-combination="xor"] .fixed-disc {
   pointer-events: none;
 }
 
+/* Targets override visual-only hit behaviour with keyboard-focusable controls.
+ * The transparent hit circle remains clickable even where the image is empty. */
 .target-display {
   pointer-events: auto;
 }
@@ -900,6 +948,7 @@ body[data-combination="xor"] .fixed-disc {
   transition: stroke 140ms ease, stroke-width 140ms ease;
 }
 
+/* Symbolic matching updates these states and aria-labels; focus thickens the ring. */
 .target-pattern.is-matched .target-disc {
   stroke: var(--matched);
 }
@@ -913,6 +962,8 @@ body[data-combination="xor"] .fixed-disc {
   stroke-width: 4;
 }
 
+/* Comparison overlay sits above the SVG at z-index 5. Transient previews ignore
+ * pointer input to avoid stealing hover; is-pinned enables tap-to-dismiss instead. */
 .target-inspector {
   position: absolute;
   z-index: 5;
@@ -989,6 +1040,8 @@ body[data-combination="xor"] .fixed-disc {
   text-align: center;
 }
 
+/* Snapped pieces cannot rotate through these controls; logical handlers also guard
+ * this state. Focus-visible styling mirrors hover on the remaining free controls. */
 .rotation-controls {
   transition: opacity 160ms ease;
 }
@@ -1023,6 +1076,7 @@ body[data-combination="xor"] .fixed-disc {
   stroke: var(--light);
 }
 
+/* Entry-page reveal is decorative; reduced-motion rules below shorten it. */
 @keyframes enter {
   from {
     opacity: 0;
@@ -1034,6 +1088,7 @@ body[data-combination="xor"] .fixed-disc {
   }
 }
 
+/* Narrow phones reduce shell gutters without changing the board's SVG coordinates. */
 @media (max-width: 520px) {
   .menu-shell,
   .placeholder-shell {
@@ -1053,6 +1108,7 @@ body[data-combination="xor"] .fixed-disc {
   }
 }
 
+/* Stack guidance, summaries and multi-column reference/help content on small screens. */
 @media (max-width: 720px) {
   .page-header {
     display: block;
@@ -1087,6 +1143,8 @@ body[data-combination="xor"] .fixed-disc {
   }
 }
 
+/* Honour reduced motion globally, including pseudo-elements, while retaining final
+ * animation states and avoiding smooth scrolling or prolonged transitions. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Light Discs entry page: menu.js fills the completion ring from local progress.
+     Styles and selected scripts use ?v queries to invalidate browser caches. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -12,6 +14,7 @@
   <main class="menu-shell">
     <section class="game-menu" aria-labelledby="game-title">
       <a class="back-link menu-back-link" href="../index.html" aria-label="Back to all puzzles">&#8592; All puzzles</a>
+      <!-- The logo is static; menu.js appends decorative stars and updates their total label. -->
       <div class="game-mark-ring">
         <img class="game-mark" src="./assets/light-disc.svg" alt="Three patterned light-filter discs on a rounded triangle" width="184" height="184">
         <div class="completion-stars" id="completion-stars" aria-label="0 of 10 campaign stars earned"></div>
@@ -20,6 +23,7 @@
       <h1 id="game-title">Light Discs</h1>
       <p class="tagline">Rotate. Snap. Match.</p>
 
+      <!-- Primary routes to instructions, campaign selection, random play and code design. -->
       <nav class="menu-links" aria-label="Main menu">
         <a href="./tutorial.html">
           <span class="menu-number" aria-hidden="true">01</span>
@@ -44,6 +48,8 @@
       </nav>
     </section>
   </main>
+  <!-- Standard catalogue initialises the array; XOR appends to it. Progress must
+       precede menu.js, which reads both campaigns to populate completion-stars. -->
   <script src="./puzzle-levels.js"></script>
   <script src="./xor-puzzle-levels.js"></script>
   <script src="./puzzle-progress.js"></script>

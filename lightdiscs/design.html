@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Code-design page with an initial encoded layout. design.js validates edits
+     and applies filters without moving pieces. Asset ?v values invalidate caches. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -23,6 +25,8 @@
       </div>
     </header>
 
+    <!-- Contenteditable text supports diagnostic marks; design.js preserves plain-text
+         paste, formats tokens and reports invalid ranges through the live status. -->
     <section class="design-panel" aria-labelledby="design-code-label">
       <div class="design-panel-heading">
         <label id="design-code-label" for="puzzle-code-input">Level code</label>
@@ -44,6 +48,7 @@
       </div>
     </section>
 
+    <!-- Shared live board: lightdiscs.js fills counts, filters, targets and comparison images. -->
     <div class="interaction-stage">
       <div class="match-summary">
         <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
@@ -55,6 +60,8 @@
             <g aria-label="Fixed black triangle" transform="translate(500 440)">
               <path class="fixed-triangle triangle-path"></path>
             </g>
+            <!-- SVG order separates hit bodies, combined colours, disc edges and targets.
+                 These initially empty groups are populated by the shared board. -->
             <g id="pieces"></g>
             <g class="fixed-discs-layer">
               <g class="fixed-discs" transform="translate(500 440)"></g>
@@ -67,6 +74,7 @@
           </svg>
         </div>
       </div>
+      <!-- Target hover/focus previews can be pinned and dismissed by board listeners. -->
       <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
         <div class="target-inspector-header">
           <strong id="target-inspector-title">Target detail</strong>
@@ -87,6 +95,7 @@
     </div>
   </main>
 
+  <!-- Native modal reference opened/closed by design.js, separate from the board tooltip. -->
   <dialog class="code-help" id="code-help-dialog" aria-labelledby="code-help-title">
     <div class="code-help-header">
       <div>
@@ -111,6 +120,8 @@
     <p class="code-example"><strong>Example</strong><br><code>R: twr t'rw twr G: twg t'gw tkg B: twb t'bw xkb T: twr t'wk xkb</code></p>
   </dialog>
 
+  <!-- Rendering, geometry, parsing and maths load before the board. design.js
+       runs last because its editor uses both LightDiscPuzzleCode and LightDiscGame. -->
   <script src="./filter-composition.js?v=20261014c"></script>
   <script src="./game-geometry.js"></script>
   <script src="./puzzle-code.js"></script>

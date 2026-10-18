@@ -1,8 +1,15 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * SVG construction shared by puzzle and tutorial pages. Load after crosspath-rules.js.
+ * Publishes CrosspathRender; helpers create detached nodes unless given a parent.
+ * Geometry uses SVG units, not screen pixels.
+ */
+
 (() => {
   const SVG_NS = "http://www.w3.org/2000/svg";
   const { N, E, S, W, TILE } = window.CrosspathRules;
+  // Normalised edge midpoints indexed by the rules module's compass bits.
   const EDGE = {
     [N]: [0.5, 0],
     [E]: [1, 0.5],
@@ -10,6 +17,12 @@
     [W]: [0, 0.5]
   };
 
+  /**
+   * @param {string} name - SVG element name.
+   * @param {Object} [attributes={}] - Attributes to assign.
+   * @param {Element|null} [parent=null] - Optional node to append to.
+   * @returns {SVGElement} Newly created node.
+   */
   function svgElement(name, attributes = {}, parent = null) {
     const element = document.createElementNS(SVG_NS, name);
     Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
@@ -17,6 +30,13 @@
     return element;
   }
 
+  /**
+   * @param {number} mask - Cell direction mask.
+   * @param {number} x - Left coordinate.
+   * @param {number} y - Top coordinate.
+   * @param {number} size - Cell width and height.
+   * @returns {string} Centre-to-edge path commands, or an empty string.
+   */
   function cellPathData(mask, x, y, size) {
     if (!mask) return "";
     const centreX = x + size / 2;
@@ -28,6 +48,12 @@
   }
 
   // Draws a rectangular block of cells: background, faint cell rules and path ink.
+  /**
+   * @param {Element} parent - SVG container receiving the group.
+   * @param {Array<number|null>} cells - Row-major masks.
+   * @param {Object} [options={}] - Column count, origin, cell size and extra class.
+   * @returns {SVGGElement} Appended grid and ink group.
+   */
   function drawCells(parent, cells, { columns, x = 0, y = 0, cell = 40, className = "" } = {}) {
     const rows = Math.ceil(cells.length / columns);
     const group = svgElement("g", { class: `cell-block ${className}`.trim() }, parent);
@@ -49,6 +75,11 @@
   }
 
   // A standalone 3x3 tile drawing for the tray, drag ghost and tutorial.
+  /**
+   * @param {number[]} tile - Nine cell masks.
+   * @param {Object} [options={}] - Fixed styling and accessible label.
+   * @returns {SVGElement} Detached, labelled tile drawing.
+   */
   function tileSvg(tile, { fixed = false, label = "" } = {}) {
     const size = TILE * 40;
     const svg = svgElement("svg", {
@@ -63,15 +94,37 @@
     return svg;
   }
 
+  /**
+   * @param {number} row - Board row.
+   * @param {number} col - Board column.
+   * @param {number} bit - Edge direction bit.
+   * @param {number} cell - Cell size.
+   * @param {number} originX - Board left coordinate.
+   * @param {number} originY - Board top coordinate.
+   * @returns {number[]} Edge midpoint coordinates.
+   */
   function edgePoint(row, col, bit, cell, originX, originY) {
     return [originX + (col + EDGE[bit][0]) * cell, originY + (row + EDGE[bit][1]) * cell];
   }
 
+  /**
+   * @param {number} row - Board row.
+   * @param {number} col - Board column.
+   * @param {number} cell - Cell size.
+   * @param {number} originX - Board left coordinate.
+   * @param {number} originY - Board top coordinate.
+   * @returns {number[]} Cell centre coordinates.
+   */
   function centrePoint(row, col, cell, originX, originY) {
     return [originX + (col + 0.5) * cell, originY + (row + 0.5) * cell];
   }
 
   // Polyline through edge midpoints and cell centres for an analysed trace.
+  /**
+   * @param {Object|null} trace - Rules trace with steps and terminal event.
+   * @param {Object} geometry - Cell size, board origin and optional outward lead.
+   * @returns {number[][]} Ordered points, including leads at boundary ends.
+   */
   function tracePoints(trace, { cell, originX, originY, lead = 0 }) {
     if (!trace || !trace.steps.length) return [];
     const points = [];
@@ -92,10 +145,22 @@
     return points;
   }
 
+  /**
+   * @param {number[][]} points - Ordered coordinate pairs.
+   * @returns {string} SVG polyline path with two-decimal coordinates.
+   */
   function pointsToPath(points) {
     return points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`).join("");
   }
 
+  /**
+   * @param {Element} parent - Container receiving the mark.
+   * @param {number} x - Centre x coordinate.
+   * @param {number} y - Centre y coordinate.
+   * @param {number} size - Half-width and half-height.
+   * @param {string} [className="correction-mark"] - Styling class.
+   * @returns {SVGElement} Appended cross path.
+   */
   function crossMark(parent, x, y, size, className = "correction-mark") {
     return svgElement("path", {
       class: className,
@@ -103,6 +168,14 @@
     }, parent);
   }
 
+  /**
+   * @param {number} row - Boundary row.
+   * @param {number} col - Boundary column.
+   * @param {number} dir - Outward bit.
+   * @param {number} distance - Distance beyond the edge.
+   * @param {Object} geometry - Cell size and board origin.
+   * @returns {number[]} Point beyond the board boundary.
+   */
   function outwardPoint(row, col, dir, distance, { cell, originX, originY }) {
     const [x, y] = edgePoint(row, col, dir, cell, originX, originY);
     const [ex, ey] = EDGE[dir];
@@ -110,10 +183,20 @@
   }
 
   // Red correction marks for a failed analysis, in the order they should appear.
+  /**
+   * @param {Object} result - Rules analysis diagnostics.
+   * @param {Array<number|null>} board - Analysed board masks.
+   * @param {Object} geometry - Cell size, origin and lead length.
+   * @returns {SVGElement[]} Detached correction groups in animation order.
+   */
   function correctionElements(result, board, geometry) {
     const { cell, originX, originY, lead } = geometry;
     const rules = window.CrosspathRules;
     const marks = [];
+    /**
+     * @param {string} [className="correction"] - Group styling.
+     * @returns {SVGElement} Detached group also added to the output sequence.
+     */
     const group = (className = "correction") => {
       const element = svgElement("g", { class: className });
       marks.push(element);
@@ -141,6 +224,7 @@
           : `M${x - half} ${y}L${x - half / 3} ${y - 4}L${x + half / 3} ${y + 4}L${x + half} ${y}`
       }, group());
     });
+    // Merge unvisited axes per cell without colouring an already visited crossing axis.
     const unvisitedCells = new Map();
     result.unvisited.forEach((unit) => {
       const key = `${unit.row},${unit.col}`;
@@ -176,6 +260,12 @@
   }
 
   // Board-edge stub and dot marking a required path end.
+  /**
+   * @param {Element} parent - Container receiving the marker.
+   * @param {Object} marker - Side and zero-based boundary index.
+   * @param {Object} geometry - Cell size, origin and lead length.
+   * @returns {Object} Appended group and outer endpoint for related labels.
+   */
   function drawMarker(parent, marker, geometry) {
     const { row, col, dir } = window.CrosspathRules.markerCell(marker);
     const edge = edgePoint(row, col, dir, geometry.cell, geometry.originX, geometry.originY);

@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Rules and asset-backed filter/shape reference. tutorial.js populates grids
+     and unlocks XOR guidance from progress. Styles/controller ?v values bust caches. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -19,6 +21,7 @@
       <p class="page-help">Learn how filters, patterns, rotation, and snapping combine to form each target.</p>
     </header>
 
+    <!-- Static mechanics stay readable without scripting; reference cards are dynamic. -->
     <div class="content-stack">
       <section class="reference-section" aria-labelledby="mechanics-heading">
         <p class="section-number">01 / How to play</p>
@@ -52,6 +55,7 @@
         <p class="section-copy">A black or white edge is added around low-contrast shapes in targets and enlarged comparisons. This display aid does not affect filter combinations or matching, and is omitted from the live board to keep dragging responsive.</p>
       </section>
 
+      <!-- tutorial.js inserts unordered colour pairs using assets/tutorial SVGs. -->
       <section class="reference-section" aria-labelledby="colours-heading">
         <p class="section-number">02 / Colour reference</p>
         <h2 id="colours-heading">Every filter interaction</h2>
@@ -59,6 +63,7 @@
         <div class="reference-grid colour-reference-grid" id="colour-reference"></div>
       </section>
 
+      <!-- tutorial.js inserts one pre-rendered card per supported shape. -->
       <section class="reference-section" aria-labelledby="shapes-heading">
         <p class="section-number">03 / Pattern reference</p>
         <h2 id="shapes-heading">Every possible shape</h2>
@@ -66,6 +71,7 @@
         <div class="reference-grid shape-reference-grid" id="shape-reference"></div>
       </section>
 
+      <!-- Hidden until the standard-completion threshold is met; its grid is then filled. -->
       <section class="reference-section xor-tutorial" id="xor-tutorial" aria-labelledby="xor-heading" hidden>
         <p class="section-number">04 / Experimental XOR puzzles</p>
         <h2 id="xor-heading">Toggle colour channels</h2>
@@ -75,6 +81,7 @@
       </section>
     </div>
   </main>
+  <!-- Base catalogue before XOR append; progress must be available to tutorial.js. -->
   <script src="./puzzle-levels.js"></script>
   <script src="./xor-puzzle-levels.js"></script>
   <script src="./puzzle-progress.js"></script>

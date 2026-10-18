@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Catalogue play page. puzzle.js reads ?level, fills titles/body configuration
+     and navigation, then loads the board. Asset ?v queries invalidate cached releases. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -13,6 +15,7 @@
     <a class="back-link" href="./puzzles.html" aria-label="Back to puzzle menu">&#8592; Puzzles</a>
 
     <div id="puzzle-game">
+      <!-- puzzle.js supplies the title; lightdiscs.js updates live success and reset state. -->
       <header class="page-header">
         <div class="page-title">
           <p class="eyebrow">Light Discs</p>
@@ -25,6 +28,7 @@
         </div>
       </header>
 
+      <!-- Live counts, scrollable board and enlarged target/current comparison. -->
       <div class="interaction-stage">
         <div class="match-summary">
           <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
@@ -36,6 +40,8 @@
               <g aria-label="Fixed black triangle" transform="translate(500 440)">
                 <path class="fixed-triangle triangle-path"></path>
               </g>
+              <!-- lightdiscs.js populates these groups. Document order places combined
+                   filters over piece bodies, disc edges above filters and targets last. -->
               <g id="pieces"></g>
               <g class="fixed-discs-layer">
                 <g class="fixed-discs" transform="translate(500 440)"></g>
@@ -48,6 +54,7 @@
             </svg>
           </div>
         </div>
+        <!-- Board listeners reveal this on target hover/focus or pin it on activation. -->
         <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
           <div class="target-inspector-header">
             <strong id="target-inspector-title">Target detail</strong>
@@ -68,12 +75,16 @@
       </div>
     </div>
 
+    <!-- puzzle.js sets the position and reveals Next unsolved after stored completion. -->
     <nav class="puzzle-navigation" aria-label="Puzzle navigation">
       <a href="./puzzles.html">&#8592; Puzzle menu</a>
       <span id="puzzle-position"></span>
       <a id="next-puzzle" href="./puzzle.html" hidden>Next unsolved &#8594;</a>
     </nav>
   </main>
+  <!-- Rendering/geometry/parser/maths must exist before board initialisation.
+       The base catalogue precedes XOR's append; progress precedes puzzle.js.
+       puzzle.js injects versioned lightdiscs.js after setting the chosen code/mode. -->
   <script src="./filter-composition.js?v=20261014c"></script>
   <script src="./game-geometry.js"></script>
   <script src="./puzzle-code.js"></script>

@@ -1,11 +1,14 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Solo chain shell, sharing game.js with local play. The body mode selects a
+     random start and route-length results rather than multiplayer losses. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Solo | Mapominoes</title>
+  <!-- Version queries are deployment cache keys, not game settings. -->
   <link rel="stylesheet" href="./styles.css?v=20261015a">
 </head>
 <body data-mapominoes-mode="solo">
@@ -19,6 +22,7 @@
       </div>
     </header>
 
+    <!-- The controller inserts a map picker here and loads that dataset before play. -->
     <section class="panel setup-panel" id="setup-panel" aria-labelledby="setup-title">
       <h2 id="setup-title">Start a solo chain</h2>
       <form id="setup-form">
@@ -27,6 +31,7 @@
       </form>
     </section>
 
+    <!-- Shared turn IDs let game.js populate guidance, route length and entry controls. -->
     <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
       <div class="game-toolbar">
         <div>
@@ -45,6 +50,7 @@
         <section class="turn-card" id="entry-panel">
           <form id="country-form" autocomplete="off">
             <label class="field-label" for="country-search">Choose a country</label>
+            <!-- Script-populated listbox tracks keyboard/pointer choice and aria-expanded. -->
             <div class="combobox">
               <input id="country-search" type="search" role="combobox" aria-autocomplete="list"
                 aria-controls="country-results" aria-expanded="false"
@@ -62,6 +68,7 @@
             </div>
           </form>
         </section>
+        <!-- Shared controller hooks retained for local-mode compatibility; solo autochecks. -->
         <section class="turn-card challenge-card" id="challenge-panel" hidden>
           <p class="field-label">Decision</p>
           <h3 id="challenge-heading"></h3>
@@ -74,6 +81,7 @@
       </div>
     </section>
 
+    <!-- Results pair script-generated route text with a zoomable map and alternatives. -->
     <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
       <p class="step-label">Route complete</p>
       <h2 id="result-heading"></h2>
@@ -88,6 +96,7 @@
         <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-labelledby="map-title map-description">
           <title id="map-title">Map of countries named in this route</title>
           <desc id="map-description">The route is numbered in order and unused valid choices are green.</desc>
+          <!-- Pattern colours mirror shared CSS map states; hatching denotes disputes. -->
           <defs>
             <pattern id="disputed-land" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="10" height="10" fill="#365247"></rect><rect width="4" height="10" fill="#587266"></rect>
@@ -102,6 +111,7 @@
               <rect width="10" height="10" fill="#75d99b"></rect><rect width="4" height="10" fill="#b9f2ce"></rect>
             </pattern>
           </defs>
+          <!-- Filled by the renderer in land, route and numbered-marker stacking order. -->
           <g id="map-countries"></g>
           <g id="map-routes"></g>
           <g id="map-markers"></g>
@@ -120,6 +130,7 @@
       </div>
     </section>
 
+    <!-- Shared end-session screen; its score list and visibility belong to game.js. -->
     <section class="panel final-screen" id="final-screen" hidden aria-labelledby="final-heading">
       <p class="step-label">Complete</p>
       <h2 id="final-heading">Solo route complete</h2>
@@ -132,6 +143,9 @@
       <a href="./ATTRIBUTION.md">Data attribution</a>
     </footer>
   </main>
+  <!-- Ordered globals: world countries/rules, D3/TopoJSON/world geometry, catalogue
+       and map API, geometry/renderer helpers, then game.js. Versioned URLs keep
+       related deployed catalogue/API/controller files out of stale browser caches. -->
   <script src="./countries.js"></script>
   <script src="./game-rules.js"></script>
   <script src="./assets/d3.min.js"></script>

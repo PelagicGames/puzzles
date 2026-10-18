@@ -1,11 +1,14 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Main mode menu. map-menu.js inserts a map picker and carries its selection
+     into destination links; no gameplay state is created on this page. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Mapominoes</title>
+  <!-- Version queries invalidate cached shared assets when deployed together. -->
   <link rel="stylesheet" href="./styles.css?v=20261015a">
 </head>
 <body>
@@ -19,6 +22,7 @@
       </div>
     </header>
 
+    <!-- The picker is inserted before these links; labels remain native navigation. -->
     <section class="panel mode-panel" aria-labelledby="mode-title">
       <div class="section-heading">
         <p class="step-label">Main menu</p>
@@ -41,6 +45,8 @@
       <a href="./ATTRIBUTION.md">Data attribution</a>
     </footer>
   </main>
+  <!-- Catalogue precedes the map API, then menu wiring; map data is loaded on demand
+       by the chosen game page. The v queries are deployment cache keys. -->
   <script src="./map-catalog.js?v=20261016b"></script>
   <script src="./maps.js?v=20261016b"></script>
   <script src="./map-menu.js"></script>

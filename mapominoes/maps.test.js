@@ -1,8 +1,15 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Run with node maps.test.js, or through npm test.
+ * Reads existing bundled map assets and browser geometry/rules modules in a VM.
+ * Verifies graph integrity, search isolation and projected marker placement without
+ * generating or writing assets; output is assertions and a success summary.
+ */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 const context = vm.createContext({ window: {} });
+/** @param {string} file - Mapominoes-relative script; evaluates it in the shared VM. @returns {void} */
 function load(file) {
   vm.runInContext(fs.readFileSync(`${__dirname}/${file}`, "utf8"), context);
 }
@@ -21,6 +28,7 @@ const { window } = context;
 const { components, interiorPoint, distance } = window.MapominoesGeometry;
 const { routeLayout, featureOwner } = window.MapominoesRenderer;
 const world = window.MapominoesMaps.get("world");
+// France needs separate mainland and Saint Martin anchors for this cross-territory route.
 const projection = window.d3.geoEqualEarth().fitExtent([[12, 12], [988, 500]], world.mapData);
 const path = ["AND", "FRA", "NLD"].map((code) => ({ code, valid: true }));
 const layout = routeLayout(world.countries, world.mapData, path, projection);
@@ -38,6 +46,7 @@ assert(franceMarkers.some((marker) => window.d3.geoContains(
   projection.invert(marker.point))), "France's overseas counter must be in St-Martin");
 assert(franceMarkers.some((marker) => projection.invert(marker.point)[0] > -10),
   "France's other counter must be on the mainland");
+// Difficult concave and multi-part mainland shapes must not put counters in the sea.
 for (const code of ["HRV", "NOR", "GRC", "CHL", "VNM", "RUS", "IDN", "USA", "ZAF"]) {
   const markers = routeLayout(world.countries, world.mapData, [{ code, valid: true }], projection).markers;
   const owned = world.mapData.features.filter((feature) => featureOwner(feature, world.countries) === code);
@@ -45,7 +54,9 @@ for (const code of ["HRV", "NOR", "GRC", "CHL", "VNM", "RUS", "IDN", "USA", "ZAF
     window.d3.geoContains(feature, projection.invert(marker.point)))), `${code}: anchor outside concave mainland`);
 }
 
+/** @param {number[]} point - Planar test coordinate. @returns {number[]} Unchanged coordinate. */
 const identity = (point) => point;
+// Hand-built concave, holed and near-degenerate shapes exercise the interior solver.
 for (const polygon of [
   [[[0, 0], [6, 0], [6, 1], [1, 1], [1, 6], [0, 6], [0, 0]]],
   [[[0, 0], [10, 0], [10, 10], [0, 10], [0, 0]],
@@ -56,6 +67,7 @@ for (const polygon of [
     "Concave, holed, and narrow polygons need strictly interior anchors");
 }
 
+// Every shipped regional graph must agree with its catalogue, geometry and rules.
 assert.equal(window.MapominoesMapCatalog.length, 10);
 for (const map of window.MapominoesMapCatalog) {
   load(`assets/maps/${map.id}.js`);
@@ -88,6 +100,7 @@ for (const map of window.MapominoesMapCatalog) {
     assert(window.d3.geoContains(feature, p.invert(marker.point)), `${map.id}: counter outside region`);
   });
 }
+// Historic county identity and aliases must not regress to modern council boundaries.
 const uk = window.MapominoesMaps.get("uk");
 assert.equal(uk.countries.length, 92, "The UK map must contain historic counties, not council areas");
 assert.equal(new Set(uk.countries.map((country) => country.name)).size, 92);
@@ -99,6 +112,7 @@ for (const name of ["Gwynedd", "Greater London", "Greater Manchester", "Dundee",
 }
 assert.equal(window.MapominoesRules.searchCountries(uk.countries, "County Derry")[0].country.name, "Londonderry");
 assert.equal(window.MapominoesRules.searchCountries(uk.countries, "Kent")[0].country.name, "Kent");
+// Map switches isolate names and adapt rule vocabulary without changing world data.
 assert(!uk.countries.some((country) => country.name === "India"));
 assert(!world.countries.some((country) => country.name === "Kent"));
 assert.equal(window.MapominoesMaps.text("Choose a country"), "Choose a country");
@@ -108,6 +122,7 @@ const kent = uk.countries.find((country) => country.name === "Kent");
 assert.equal(window.MapominoesRules.validateMove(uk.countries,
   [{ code: kent.code }], kent.code, 1).reasons[0], "That region has already been named.");
 window.MapominoesMaps.selected = "world";
+// Disputed boundaries retain shading metadata; agreed fixed links remain legal moves.
 for (const name of ["Taiwan", "Tibet", "Hong Kong", "Macau"]) {
   assert(window.MapominoesMaps.get("china").mapData.features.some(
     (feature) => feature.properties.name.includes(name) && feature.properties.disputed), `${name} needs dispute shading`);

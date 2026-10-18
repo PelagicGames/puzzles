@@ -1,11 +1,14 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Shared-device multiplayer shell for game.js. The body mode selects local rules;
+     scripts own screen visibility, map choice, scores, entry and round results. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Local multiplayer | Mapominoes</title>
+  <!-- Version queries are deployment cache-busting keys; retain them with releases. -->
   <link rel="stylesheet" href="./styles.css?v=20261014b">
 </head>
 <body data-mapominoes-mode="local">
@@ -19,6 +22,7 @@
       </div>
     </header>
 
+    <!-- game.js inserts the map picker into setup-form and validates before starting. -->
     <section class="panel setup-panel" id="setup-panel" aria-labelledby="setup-title">
       <div class="section-heading">
         <p class="step-label">Local multiplayer</p>
@@ -53,6 +57,7 @@
       </form>
     </section>
 
+    <!-- Scores and turn copy are rebuilt from state; hidden screens are not interactive. -->
     <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
       <div class="game-toolbar">
         <div>
@@ -74,6 +79,7 @@
         <section class="turn-card" id="entry-panel">
           <form id="country-form" autocomplete="off">
             <label class="field-label" for="country-search">Choose a country</label>
+            <!-- Search populates this listbox; keyboard/pointer choice enables confirmation. -->
             <div class="combobox">
               <input
                 id="country-search"
@@ -99,6 +105,7 @@
           </form>
         </section>
 
+        <!-- Challenge mode pauses entry until the next player accepts or challenges. -->
         <section class="turn-card challenge-card" id="challenge-panel" hidden>
           <p class="field-label">Player decision</p>
           <h3 id="challenge-heading">Accept or challenge?</h3>
@@ -111,6 +118,7 @@
       </div>
     </section>
 
+    <!-- Completed rounds reveal legal alternatives, the route and renderer-owned SVG. -->
     <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
       <p class="step-label">Round over</p>
       <h2 id="result-heading"></h2>
@@ -126,6 +134,7 @@
         <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-labelledby="map-title map-description">
           <title id="map-title">Map of countries named in this round</title>
           <desc id="map-description">The route is numbered in turn order. Invalid moves are red and unused valid choices are green.</desc>
+          <!-- Hatch patterns distinguish dispute status while preserving move colours. -->
           <defs>
             <pattern id="disputed-land" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="10" height="10" fill="#365247"></rect>
@@ -144,6 +153,7 @@
               <rect width="4" height="10" fill="#b9f2ce"></rect>
             </pattern>
           </defs>
+          <!-- Renderer fills these layers in land, route, then numbered-counter order. -->
           <g id="map-countries"></g>
           <g id="map-routes"></g>
           <g id="map-markers"></g>
@@ -157,6 +167,7 @@
         </div>
       </div>
 
+      <!-- The text route repeats information that must not depend on map colour alone. -->
       <ol class="route-list" id="route-list"></ol>
       <div class="button-row result-actions">
         <button class="primary-button" id="restart-button" type="button"></button>
@@ -164,6 +175,7 @@
       </div>
     </section>
 
+    <!-- Ending a session replaces round controls with script-populated loss rankings. -->
     <section class="panel final-screen" id="final-screen" hidden aria-labelledby="final-heading">
       <p class="step-label">Game complete</p>
       <h2 id="final-heading">Final scores</h2>
@@ -178,6 +190,9 @@
     </footer>
   </main>
 
+  <!-- Ordered browser globals: country rules, geometry libraries/world topology,
+       catalogue/map loading, geometry helpers, renderer, then the game controller.
+       v query values invalidate cached catalogue/API/controller deployments. -->
   <script src="./countries.js"></script>
   <script src="./game-rules.js"></script>
   <script src="./assets/d3.min.js"></script>

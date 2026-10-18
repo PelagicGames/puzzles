@@ -2,6 +2,12 @@
 
 /* Copyright (C) 2026 Pelagic Games */
 
+/*
+ * Online-only overrides, importing the shared layout/theme above. online.js fills
+ * lobby/turn lists and toggles hidden and is-urgent; imported map status rules and
+ * SVG touch-action still apply. This stylesheet introduces no animation.
+ */
+/* Connection feedback and copyable manual SDP/room-code controls. */
 .muted,
 .activity,
 .waiting-copy {
@@ -19,6 +25,7 @@
 }
 
 .text-field,
+/* Long encoded codes wrap without widening the page; resizing stays vertical. */
 .code-field {
   width: 100%;
   border: 1px solid var(--line);
@@ -41,6 +48,7 @@
   overflow-wrap: anywhere;
 }
 
+/* Preserve a visible keyboard focus indication despite the base outline reset. */
 .text-field:focus,
 .code-field:focus {
   border-color: var(--accent);
@@ -55,6 +63,7 @@
   margin-top: 26px;
 }
 
+/* Reusable room codes replace manual invite controls in server-assisted mode. */
 .room-code-area {
   margin-top: 22px;
   padding: 18px;
@@ -71,6 +80,7 @@
   letter-spacing: 0.14em;
 }
 
+/* Script-populated lobby roster and circular upcoming-turn list. */
 .player-list,
 .upcoming-list {
   margin: 0 0 24px;
@@ -92,6 +102,7 @@
   white-space: nowrap;
 }
 
+/* A shrinking name must not push the host-transfer action outside its flex row. */
 .player-list li > span {
   min-width: 0;
   overflow: hidden;
@@ -110,6 +121,7 @@
   white-space: nowrap;
 }
 
+/* JS supplies title text for full names while these dense rows use ellipsis. */
 .truncate,
 .scoreboard span,
 .route-note {
@@ -123,11 +135,13 @@
   min-width: 0;
 }
 
+/* Reserve a line for host activity updates to prevent toolbar layout jumps. */
 .activity {
   min-height: 1.55em;
   margin: 4px 0 0;
 }
 
+/* Visual countdown follows the host deadline; is-urgent is applied at five seconds. */
 .timer {
   flex: 0 0 auto;
   min-width: 72px;
@@ -146,6 +160,7 @@
   color: #ffc1b7;
 }
 
+/* Host-only controls stay separate from the live turn heading/countdown. */
 .host-game-controls {
   display: grid;
   flex: 0 0 auto;
@@ -166,6 +181,7 @@
   margin-bottom: 0;
 }
 
+/* Online results use a neutral resting cursor; shared SVG gesture handling remains. */
 #result-map {
   cursor: default;
 }
@@ -174,6 +190,7 @@
   margin-top: 22px;
 }
 
+/* Tight online layouts collapse earlier-specific grids without altering game state. */
 @media (max-width: 680px) {
   .top-level-modes,
   .play-grid {

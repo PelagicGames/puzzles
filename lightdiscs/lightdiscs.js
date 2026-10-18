@@ -1,4 +1,12 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Interactive SVG board for random.html, design.html and catalogue puzzle.html.
+ * Requires filter-composition.js, game-geometry.js, puzzle-code.js and puzzle-math.js
+ * plus the board DOM; puzzle.js injects this file after configuring body data.
+ * Reads data-puzzle-code/data-combination, mutates SVG/UI and publishes
+ * LightDiscGame. Emits lightdiscs:solved with {code}; persistence is the page
+ * controller's responsibility. No CLI or direct file/storage writes.
+ */
 
 (() => {
   const svg = document.querySelector(".interaction-board");
@@ -38,6 +46,8 @@
     ? parsePuzzleCode(document.body.dataset.puzzleCode)
     : null;
   const combination = document.body.dataset.combination || "standard";
+  // Board coordinates remain fixed in SVG units; page zoom changes the CSS surface,
+  // while pointer positions are transformed back through the screen matrix.
   const initialPixelRatio = window.devicePixelRatio || 1;
   const boardWidth = 1000;
   const boardHeight = 950;
@@ -48,6 +58,7 @@
     { x: cornerRadius * Math.sqrt(3) / 2, y: cornerRadius / 2 }
   ];
   const fixedPosition = { x: 500, y: 440 };
+  // Smaller central target displays sit between the full-size fixed corner discs.
   const targetCornerRadius = 35;
   const targetCorners = [
     { x: 0, y: -targetCornerRadius },
@@ -68,12 +79,15 @@
   const triangleRadius = 28;
   const triangleHalfWidth = triangleRadius * Math.sqrt(3) / 2;
   const triangleBaseY = triangleRadius / 2;
+  // Snap detection uses centre distance. Squared overlap thresholds avoid repeated
+  // square roots during dragging; triangle padding reserves space for disc edges.
   const snapDistance = discRadius * 2;
   const filterOverlapCentreDistance = cornerRadius * 2 + discRadius * 2;
   const filterOverlapCentreDistanceSquared = filterOverlapCentreDistance ** 2;
   const filterOverlapDistanceSquared = (discRadius * 2) ** 2;
   const trianglePadding = discRadius + 5.5;
   const trianglePath = roundedTrianglePath(corners, discRadius + 4);
+  // Array indices equal RGB bitmasks (red=4, green=2, blue=1).
   const filterColors = [
     { name: "black", value: "#000000", mask: 0 },
     { name: "blue", value: "#0000ff", mask: 1 },
@@ -94,6 +108,7 @@
     { name: "small disc", value: "small-disc" },
     { name: "annulus", value: "annulus" }
   ];
+  // Compact-code alphabets must agree with puzzle-code.js and the offline tools.
   const colourCodes = ["k", "b", "g", "c", "r", "m", "y", "w"];
   const shapeCodes = {
     none: "n",
@@ -105,6 +120,7 @@
     "square-star": "v",
     "triangle-star": "x"
   };
+  // Random target designs use at least five total snaps; player solutions need not.
   const snapDistributions = [
     [1, 1, 3],
     [1, 2, 2],
@@ -120,21 +136,30 @@
     { name: "Green", color: "#35e86f", home: { x: 850, y: 160 } },
     { name: "Blue", color: "#4285ff", home: { x: 300, y: 790 } }
   ];
+  // Formations contain exact coincident {filter, angle} contributions for matching.
+  // Visuals include nearby overlapping discs as {filter, angle, x, y} for previews.
   let targetFormations = [];
   let targetVisuals = [];
   let currentFormations = [];
   let currentVisuals = [];
   let inspectedTargetIndex = null;
   let inspectorPinned = false;
+  // A drag snapshots pose, bounds, screen transform and stationary disc obstacles.
+  // A pan instead snapshots scroll offsets. Pointer IDs keep their streams separate.
   let activeDrag = null;
   let activePan = null;
   let dragUpdateFrame = null;
+  // Appearance signatures govern SVG rebuilds; geometry caches permit transform-only
+  // updates. Cached element lists may contain several nodes for each logical layer.
   let renderedFilterSignature = "";
   let renderedFilterGeometry = [];
   let filterLayerCircles = [];
   let filterLayerMasks = [];
   let filterLayerOutlines = [];
+  // Emit once per transition into solved, allowing a later unsolve/solve cycle.
   let reportedSolvedState = false;
+  // Quality states trade boundary aids for drag throughput; timing evidence and
+  // cooldown prevent rapid oscillation. XOR does not use this adaptive sampling.
   let contrastQuality = "targets-only";
   let dragCapabilitySamples = [];
   let previousDragFrameTime = null;
@@ -147,12 +172,23 @@
   addFixedDiscs();
   const targetDisplays = createTargetDisplays();
 
+  /**
+   * @param {string} tag - SVG element name.
+   * @param {Object} attributes - Attribute values to set on creation.
+   * @returns {SVGElement} Detached namespaced element.
+   */
   function createSvgElement(tag, attributes = {}) {
     const element = document.createElementNS(namespace, tag);
     Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
     return element;
   }
 
+  /**
+   * Offset edges outwards and join them with circular arcs about each vertex.
+   * @param {Object[]} vertices - Ordered local triangle corners.
+   * @param {number} radius - Outward rounding radius.
+   * @returns {string} Closed SVG path data.
+   */
   function roundedTrianglePath(vertices, radius) {
     const segments = vertices.map((vertex, index) => {
       const previous = vertices[(index + vertices.length - 1) % vertices.length];
@@ -179,6 +215,11 @@
     return commands.join(" ");
   }
 
+  /**
+   * @param {Object} start - Directed edge start.
+   * @param {Object} end - Directed edge end.
+   * @returns {Object} Unit left normal, outward for the board's vertex order.
+   */
   function outwardNormal(start, end) {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -186,6 +227,10 @@
     return { x: -dy / length, y: dx / length };
   }
 
+  /**
+   * Append full-size white reference discs to the fixed triangle layer.
+   * @returns {void}
+   */
   function addFixedDiscs() {
     const layer = document.querySelector(".fixed-discs");
     corners.forEach((corner) => {
@@ -198,6 +243,10 @@
     });
   }
 
+  /**
+   * Append keyboard-focusable target controls and register preview/pinning listeners.
+   * @returns {Object[]} Display records containing root, image and cached imageUrl.
+   */
   function createTargetDisplays() {
     return targetCorners.map((position, index) => {
       const root = createSvgElement("g", {
@@ -224,6 +273,8 @@
       });
       root.append(image, hitArea, outline);
       targetDiscsLayer.append(root);
+      // Hover/focus previews are transient; click or activation keys pin them.
+      // Escape dismisses, and propagation is stopped so pinning is not an outside click.
       root.addEventListener("pointerenter", () => showTargetInspector(index));
       root.addEventListener("pointerleave", () => {
         if (!inspectorPinned) hideTargetInspector();
@@ -256,6 +307,12 @@
     });
   }
 
+  /**
+   * Append separate hit-body, disc and rotation-control layers and attach input handlers.
+   * @param {Object} definition - Name, colour and home position.
+   * @param {number} index - Piece index used by controls and filter-layer ordering.
+   * @returns {Object} Mutable piece state and its SVG element references.
+   */
   function createPiece(definition, index) {
     const root = createSvgElement("g", {
       class: "piece",
@@ -283,6 +340,8 @@
     piecesLayer.append(root);
     pieceDiscsLayer.append(discs);
 
+    // position/angle/snapped are the live pose; discFilters are logical filters.
+    // Body and disc groups are separated so the combined filter SVG can sit between.
     const piece = {
       root,
       shape,
@@ -302,6 +361,11 @@
     return piece;
   }
 
+  /**
+   * @param {SVGElement} parent - Disc group to append into.
+   * @param {Object} corner - Local disc centre.
+   * @returns {Object} Appended root, background circle and pattern group references.
+   */
   function createPatternDisc(parent, corner) {
     const root = createSvgElement("g", {
       class: "piece-filter filter-disc",
@@ -317,6 +381,14 @@
     return { root, background, pattern };
   }
 
+  /**
+   * Build a focusable SVG control with click and Enter/Space activation.
+   * @param {number} pieceIndex - Controlled piece.
+   * @param {number} direction - Signed 60-degree step.
+   * @param {number} x - Local horizontal control offset.
+   * @param {string} label - Accessible action name.
+   * @returns {SVGElement} Detached rotation button.
+   */
   function createRotateButton(pieceIndex, direction, x, label) {
     const button = createSvgElement("g", {
       class: "rotate-button",
@@ -347,6 +419,13 @@
 
   const pieces = pieceDefinitions.map(createPiece);
 
+  /**
+   * Arrow keys move a free piece; a snapped piece first returns home. Shift enlarges
+   * the step. Invalid central overlap restores the prior pose; refreshes status.
+   * @param {KeyboardEvent} event - Keydown event, consumed for recognised arrows.
+   * @param {Object} piece - Mutable piece.
+   * @returns {void}
+   */
   function movePieceWithKeyboard(event, piece) {
     const step = event.shiftKey ? 20 : 8;
     const movement = {
@@ -368,6 +447,12 @@
     updateSuccess();
   }
 
+  /**
+   * Rotate only a free triangle, reverting unsafe placements and refreshing the UI.
+   * Uses the event's currentTarget or a button supplied as this for keyboard calls.
+   * @param {Event} [event] - Optional click event whose propagation is stopped.
+   * @returns {void}
+   */
   function rotatePiece(event) {
     event?.stopPropagation();
     const button = event?.currentTarget || this;
@@ -381,6 +466,13 @@
     updateSuccess();
   }
 
+  /**
+   * Capture a primary pointer and cache invariant geometry for cheap drag frames.
+   * Unsnaps the piece, hides its composited filters and switches drag display state.
+   * @param {PointerEvent} event - Pointer-down event.
+   * @param {Object} piece - Mutable dragged piece.
+   * @returns {void}
+   */
   function beginDrag(event, piece) {
     if (event.button !== 0) return;
     event.preventDefault();
@@ -416,6 +508,12 @@
     svg.setPointerCapture(event.pointerId);
   }
 
+  /**
+   * Capture touch gestures on empty board space for manual horizontal/page scrolling.
+   * Interactive pieces, rotation controls and targets retain their own gestures.
+   * @param {PointerEvent} event - Pointer-down event.
+   * @returns {void}
+   */
   function beginBoardPan(event) {
     if (event.pointerType !== "touch"
       || event.target.closest(".piece-shape, .rotate-button, .target-pattern")) return;
@@ -430,11 +528,21 @@
     svg.setPointerCapture(event.pointerId);
   }
 
+  /**
+   * @param {PointerEvent} event - Client-coordinate pointer sample.
+   * @param {DOMMatrix} inverseScreenMatrix - Cached inverse screen transform.
+   * @returns {DOMPoint} Pointer position in board coordinates.
+   */
   function svgPoint(event, inverseScreenMatrix = svg.getScreenCTM().inverse()) {
     const point = new DOMPoint(event.clientX, event.clientY);
     return point.matrixTransform(inverseScreenMatrix);
   }
 
+  /**
+   * @param {Object} point - Local x/y coordinate.
+   * @param {number} angle - Rotation in degrees.
+   * @returns {Object} Rotated coordinate about the origin.
+   */
   function rotatePoint(point, angle) {
     const radians = angle * Math.PI / 180;
     return {
@@ -443,6 +551,11 @@
     };
   }
 
+  /**
+   * @param {Object} pose - Position and angle.
+   * @param {Object} corner - Local corner.
+   * @returns {Object} World-space corner centre.
+   */
   function transformedCorner(pose, corner) {
     const rotated = rotatePoint(corner, pose.angle);
     return {
@@ -451,6 +564,10 @@
     };
   }
 
+  /**
+   * @param {Object} piece - Current piece pose.
+   * @returns {Object|null} Closest eligible movingCorner/target/distance record.
+   */
   function findSnap(piece) {
     let closest = null;
     corners.forEach((corner) => {
@@ -469,6 +586,13 @@
     return closest;
   }
 
+  /**
+   * Commit a matching drag: snap, accept a free position, bump safely, or restore.
+   * Also moves obscured free pieces, cancels queued rendering and updates success.
+   * Pointer cancellation follows the same placement policy as release.
+   * @param {PointerEvent} event - Release or cancellation event.
+   * @returns {void}
+   */
   function finishDrag(event) {
     if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     const { piece } = activeDrag;
@@ -498,11 +622,21 @@
     updateSuccess();
   }
 
+  /**
+   * Clear only the pan belonging to this pointer.
+   * @param {PointerEvent} event - Release or cancellation event.
+   * @returns {void}
+   */
   function finishBoardPan(event) {
     if (!activePan || event.pointerId !== activePan.pointerId) return;
     activePan = null;
   }
 
+  /**
+   * Synchronise body/disc transforms, control position and snapped CSS state.
+   * @param {Object} piece - Live piece state.
+   * @returns {void}
+   */
   function updatePiece(piece) {
     const transform = `translate(${piece.position.x} ${piece.position.y}) rotate(${piece.angle})`;
     piece.shape.setAttribute("transform", transform);
@@ -511,12 +645,23 @@
     piece.root.classList.toggle("is-snapped", piece.snapped);
   }
 
+  /**
+   * Update only body/disc transforms; rotation controls are hidden during dragging.
+   * @param {Object} piece - Dragged piece.
+   * @returns {void}
+   */
   function updateDraggedPiece(piece) {
     const transform = `translate(${piece.position.x} ${piece.position.y}) rotate(${piece.angle})`;
     piece.shape.setAttribute("transform", transform);
     piece.discs.setAttribute("transform", transform);
   }
 
+  /**
+   * Move a piece's composited nodes off-board and invalidate its cached geometry.
+   * Standalone disc groups then supply the inexpensive non-overlapping drag visual.
+   * @param {Object} piece - Piece whose three layer indices are contiguous.
+   * @returns {void}
+   */
   function hideDraggedFilterLayers(piece) {
     const firstLayer = piece.index * corners.length;
     const hiddenLayers = new Set(
@@ -545,6 +690,11 @@
     });
   }
 
+  /**
+   * Test cached stationary discs, rejecting distant triangle centres first.
+   * Requires an active drag; does not alter its cached obstacle geometry.
+   * @returns {boolean} Whether any dragged disc overlaps another piece's disc.
+   */
   function draggedPieceHasFilterOverlap() {
     const { piece, cornerOffsets, filterObstacles } = activeDrag;
     return filterObstacles.some((obstacle) => {
@@ -566,6 +716,12 @@
     });
   }
 
+  /**
+   * Switch between standalone and composited drag visuals as discs overlap.
+   * Samples standard-mode frame capability after updating SVG transforms.
+   * @param {number} frameTime - Animation-frame timestamp in milliseconds.
+   * @returns {void}
+   */
   function updateDragRendering(frameTime) {
     const { piece } = activeDrag;
     updateDraggedPiece(piece);
@@ -581,6 +737,10 @@
     if (combination !== "xor") recordDragCapability(frameTime);
   }
 
+  /**
+   * @param {Object} piece - Live piece.
+   * @returns {Object} Pose snapshot with a copied position.
+   */
   function pieceState(piece) {
     return {
       position: { ...piece.position },
@@ -589,12 +749,22 @@
     };
   }
 
+  /**
+   * Restore logical pose only; callers synchronise the SVG separately.
+   * @param {Object} piece - Mutable piece.
+   * @param {Object} state - Previously saved pose.
+   * @returns {void}
+   */
   function restorePieceState(piece, state) {
     piece.position = { ...state.position };
     piece.angle = state.angle;
     piece.snapped = state.snapped;
   }
 
+  /**
+   * @param {Object} piece - Candidate pose.
+   * @returns {boolean} Whether the padded pose avoids the fixed central triangle.
+   */
   function isSafeFreePlacement(piece) {
     return !trianglesOverlap(
       piece,
@@ -602,6 +772,11 @@
     );
   }
 
+  /**
+   * @param {Object} left - First pose.
+   * @param {Object} right - Second pose.
+   * @returns {boolean} Overlap including the board's disc-clearance padding.
+   */
   function trianglesOverlap(left, right) {
     return expandedTrianglesOverlap(
       left.position,
@@ -613,6 +788,13 @@
     );
   }
 
+  /**
+   * Sample a nearby bounded centre avoiding the fixed triangle and supplied pieces.
+   * Updates position only on success; leaves angle and snapped state to the caller.
+   * @param {Object} piece - Mutable candidate piece.
+   * @param {Object[]} avoidedPieces - Additional forbidden poses.
+   * @returns {boolean} Whether a sampled safe position was found.
+   */
   function bumpToSafeFreePlacement(piece, avoidedPieces = []) {
     const position = nearestValidPlacement(
       piece.position,
@@ -628,6 +810,12 @@
     return true;
   }
 
+  /**
+   * Bump free pieces hidden by a new snap, falling back home if no sample succeeds.
+   * Mutates affected positions and SVG transforms.
+   * @param {Object} snappedPiece - Newly snapped piece.
+   * @returns {void}
+   */
   function moveObscuredFreePieces(snappedPiece) {
     const snappedPieces = pieces.filter((piece) => piece.snapped);
     pieces.filter((piece) => !piece.snapped).forEach((piece) => {
@@ -639,6 +827,10 @@
     });
   }
 
+  /**
+   * @param {Object} piece - Piece with a rotation angle.
+   * @returns {Object} Centre bounds that keep every full disc inside the board.
+   */
   function piecePositionBounds(piece) {
     const rotatedCorners = corners.map((corner) => rotatePoint(corner, piece.angle));
     const minX = Math.min(...rotatedCorners.map((corner) => corner.x)) - discRadius;
@@ -653,6 +845,12 @@
     };
   }
 
+  /**
+   * Clamp the mutable centre without testing overlap.
+   * @param {Object} piece - Mutable piece.
+   * @param {Object} bounds - Allowed minX/maxX/minY/maxY centre extents.
+   * @returns {void}
+   */
   function constrainPiecePosition(piece, bounds = piecePositionBounds(piece)) {
     piece.position.x = Math.min(
       bounds.maxX,
@@ -664,6 +862,12 @@
     );
   }
 
+  /**
+   * End pointer activity, return pieces home and repopulate filters/targets.
+   * Encoded puzzles retain their definition; random mode creates new filters.
+   * Refreshes status/previews and schedules horizontal board centring.
+   * @returns {void}
+   */
   function resetPieces() {
     if (activeDrag && svg.hasPointerCapture(activeDrag.pointerId)) {
       svg.releasePointerCapture(activeDrag.pointerId);
@@ -699,6 +903,12 @@
     requestAnimationFrame(centerBoard);
   }
 
+  /**
+   * Replace filters/targets and body code while preserving every piece's pose.
+   * Invalid input throws before changing the current definition.
+   * @param {string} code - Complete level code.
+   * @returns {void}
+   */
   function applyPuzzleCode(code) {
     puzzleDefinition = parsePuzzleCode(code);
     document.body.dataset.puzzleCode = puzzleDefinition.code;
@@ -713,6 +923,9 @@
     updateSuccess();
   }
 
+  /**
+   * @returns {string} Loaded canonical code or an encoding of the current random design.
+   */
   function levelCode() {
     if (puzzleDefinition) return puzzleDefinition.code;
     const sections = pieces.map((piece, index) => (
@@ -722,6 +935,10 @@
     return sections.join(" ");
   }
 
+  /**
+   * @param {Object} filter - Filter with masks, shape and optional rotation.
+   * @returns {string} Compact component token with 60-degree rotation marks.
+   */
   function filterCode(filter) {
     const shapeCode = shapeCodes[filter.shape.value];
     const backgroundCode = colourCodes[filter.background.mask];
@@ -730,6 +947,12 @@
     return `${shapeCode}${rotationMarks}${backgroundCode}${colourCodes[filter.foreground.mask]}`;
   }
 
+  /**
+   * Try representable shapes against all accepted symbolic assignments. Each side
+   * of a candidate must have a single RGB result; no pixel sampling is involved.
+   * @param {Object[]} formation - Filter/angle contributions to encode.
+   * @returns {string} Equivalent component token, or "?" when none is representable.
+   */
   function formationCode(formation) {
     const keys = [...new Set(
       formation.flatMap(({ filter, angle }) => shapeKeys(filter.shape.value, angle))
@@ -782,7 +1005,14 @@
     return "?";
   }
 
+  /**
+   * @returns {Object[]} Ordered shape/rotation candidates supported by the code alphabet.
+   */
   function encodedShapeCandidates() {
+    /**
+     * @param {string} value - Shape value.
+     * @returns {Object|undefined} Shared shape descriptor.
+     */
     const shape = (value) => shapeTypes.find((candidate) => candidate.value === value);
     return [
       { shape: shape("none"), rotation: 0 },
@@ -799,10 +1029,18 @@
     ];
   }
 
+  /**
+   * Centre the board within its horizontal scroll viewport.
+   * @returns {void}
+   */
   function centerBoard() {
     boardScroll.scrollLeft = (boardScroll.scrollWidth - boardScroll.clientWidth) / 2;
   }
 
+  /**
+   * Set the CSS zoom compensation relative to initial pixel ratio, then re-centre.
+   * @returns {void}
+   */
   function updateBoardZoom() {
     const pixelRatio = window.devicePixelRatio || 1;
     const pageZoom = Math.max(1, pixelRatio / initialPixelRatio);
@@ -810,6 +1048,10 @@
     requestAnimationFrame(centerBoard);
   }
 
+  /**
+   * Choose colours with distinct masks and an unrotated shape, consuming randomness.
+   * @returns {Object} Background, foreground, shape and zero rotation.
+   */
   function randomFilter() {
     const background = randomItem(filterColors);
     const shape = randomItem(shapeTypes);
@@ -818,10 +1060,20 @@
     return { background, shape, foreground, rotation: 0 };
   }
 
+  /**
+   * @param {Array} items - Non-empty candidate collection.
+   * @returns {*} Uniformly selected element using randomValue.
+   */
   function randomItem(items) {
     return items[Math.floor(randomValue() * items.length)];
   }
 
+  /**
+   * Replace a standalone disc's pattern, colours, boundary aid and accessible label.
+   * @param {Object} disc - Root/background/pattern element references.
+   * @param {Object} filter - Logical filter.
+   * @returns {void}
+   */
   function renderPatternDisc(disc, filter) {
     disc.background.style.fill = filter.background.value;
     disc.pattern.replaceChildren();
@@ -840,6 +1092,10 @@
     disc.root.setAttribute("aria-label", description);
   }
 
+  /**
+   * @param {string} shape - Shape value; final fallback is an annulus.
+   * @returns {SVGElement[]} Detached local primitives for the requested shape.
+   */
   function createShapeElements(shape) {
     if (shape === "none") return [];
     if (shape === "square") return [createSquare()];
@@ -856,6 +1112,10 @@
     })];
   }
 
+  /**
+   * @param {number} angle - Local rotation in degrees.
+   * @returns {SVGElement} Detached square centred at the origin.
+   */
   function createSquare(angle = 0) {
     return createSvgElement("rect", {
       x: -squareHalfSize,
@@ -866,6 +1126,10 @@
     });
   }
 
+  /**
+   * @param {boolean} reflected - Whether the triangle points down rather than up.
+   * @returns {SVGElement} Detached equilateral shape polygon.
+   */
   function createTriangle(reflected) {
     const points = reflected
       ? `0,${triangleRadius} ${-triangleHalfWidth},${-triangleBaseY} ${triangleHalfWidth},${-triangleBaseY}`
@@ -873,6 +1137,11 @@
     return createSvgElement("polygon", { points });
   }
 
+  /**
+   * Construct target formations/visuals from randomly chosen solvable design poses.
+   * Updates target images but does not move the visible pieces.
+   * @returns {void}
+   */
   function randomizeTargets() {
     const snapCounts = shuffle([...randomItem(snapDistributions)]);
     const solutionPoses = pieces.map(
@@ -883,6 +1152,11 @@
     targetVisuals.forEach((visual, index) => renderTarget(targetDisplays[index], visual));
   }
 
+  /**
+   * Replace targets with single centred encoded filters and update their images.
+   * @param {Object[]} targets - Three decoded target filters.
+   * @returns {void}
+   */
   function setEncodedTargets(targets) {
     targetFormations = targets.map((filter) => [
       { filter, angle: filter.rotation || 0 }
@@ -893,6 +1167,12 @@
     targetVisuals.forEach((visual, index) => renderTarget(targetDisplays[index], visual));
   }
 
+  /**
+   * Enumerate corner alignments at six rotations, then select a pose of the requested size.
+   * @param {Object} piece - Piece referenced by the design pose.
+   * @param {number} requiredMatches - Desired coincident-corner count.
+   * @returns {Object} Random eligible pose for supported counts one through three.
+   */
   function randomPoseWithMatchCount(piece, requiredMatches) {
     const candidates = [];
     for (let angle = 0; angle < 360; angle += 60) {
@@ -906,6 +1186,11 @@
     return randomItem(candidates);
   }
 
+  /**
+   * Shuffle in place using Fisher-Yates, consuming randomValue samples.
+   * @param {Array} items - Mutable collection.
+   * @returns {Array} The same shuffled array.
+   */
   function shuffle(items) {
     for (let index = items.length - 1; index > 0; index -= 1) {
       const swapIndex = Math.floor(randomValue() * (index + 1));
@@ -914,6 +1199,13 @@
     return items;
   }
 
+  /**
+   * @param {Object} piece - Referenced piece.
+   * @param {number} movingIndex - Moving corner to align.
+   * @param {number} fixedIndex - Fixed corner to align with.
+   * @param {number} angle - Triangle rotation in degrees.
+   * @returns {Object} Piece, angle and translated centre; does not move the live piece.
+   */
   function poseForSnap(piece, movingIndex, fixedIndex, angle) {
     const movingCorner = rotatePoint(corners[movingIndex], angle);
     const fixedCorner = corners[fixedIndex];
@@ -927,6 +1219,10 @@
     };
   }
 
+  /**
+   * @param {Object} pose - Position and angle.
+   * @returns {number} Corner pairs coincident within half a board unit.
+   */
   function countFixedMatches(pose) {
     return corners.reduce((total, corner) => {
       const moving = transformedCorner(pose, corner);
@@ -939,6 +1235,11 @@
     }, 0);
   }
 
+  /**
+   * Collect only coincident discs; near overlaps affect visuals but not matching.
+   * @param {Object[]} poses - Live pieces or design poses referencing a piece.
+   * @returns {Object[][]} Filter/total-angle contributions per fixed corner.
+   */
   function formationsForPoses(poses) {
     return corners.map((fixedCorner) => {
       const target = {
@@ -960,6 +1261,11 @@
     });
   }
 
+  /**
+   * Include every disc intersecting each fixed disc, expressed in target-local units.
+   * @param {Object[]} poses - Live pieces or design poses referencing a piece.
+   * @returns {Object[][]} Filter/angle/x/y layers per fixed corner.
+   */
   function visualsForPoses(poses) {
     return corners.map((fixedCorner) => {
       const target = {
@@ -989,6 +1295,13 @@
     });
   }
 
+  /**
+   * @param {Object} filter - Logical filter.
+   * @param {number} x - Disc-relative horizontal position.
+   * @param {number} y - Disc-relative vertical position.
+   * @param {number} angle - Total filter rotation.
+   * @returns {number} Foreground/background RGB mask at the point.
+   */
   function filterMaskAt(filter, x, y, angle) {
     const local = rotatePoint({ x, y }, -angle);
     return shapeContains(filter.shape.value, local.x, local.y)
@@ -996,6 +1309,13 @@
       : filter.background.mask;
   }
 
+  /**
+   * Test local unrotated shape geometry; compound stars use polygon unions.
+   * @param {string} shape - Shape value; final fallback is an annulus.
+   * @param {number} x - Local horizontal coordinate.
+   * @param {number} y - Local vertical coordinate.
+   * @returns {boolean} Whether the shape includes the point.
+   */
   function shapeContains(shape, x, y) {
     if (shape === "none") return false;
     if (shape === "square") return insideSquare(x, y);
@@ -1016,10 +1336,22 @@
       && distanceSquared >= smallShapeRadius * smallShapeRadius;
   }
 
+  /**
+   * @param {number} x - Local horizontal coordinate.
+   * @param {number} y - Local vertical coordinate.
+   * @returns {boolean} Whether the point lies in the closed axis-aligned square.
+   */
   function insideSquare(x, y) {
     return Math.abs(x) <= squareHalfSize && Math.abs(y) <= squareHalfSize;
   }
 
+  /**
+   * Compare edge cross-product signs, including points on an edge.
+   * @param {number} x - Local horizontal coordinate.
+   * @param {number} y - Local vertical coordinate.
+   * @param {boolean} reflected - Whether to use the downward-pointing triangle.
+   * @returns {boolean} Closed-triangle containment.
+   */
   function insideTriangle(x, y, reflected) {
     const vertices = reflected
       ? [
@@ -1039,12 +1371,23 @@
     return signs.every((value) => value >= 0) || signs.every((value) => value <= 0);
   }
 
+  /**
+   * Encode and cache a target image URL, then update the displayed SVG image.
+   * @param {Object} display - Target image/cache record.
+   * @param {Object[]} visual - Target-local filter layers.
+   * @returns {void}
+   */
   function renderTarget(display, visual) {
     const imageUrl = visualDataUrl(visual);
     display.imageUrl = imageUrl;
     display.image.setAttribute("href", imageUrl);
   }
 
+  /**
+   * Clip a composed SVG to one disc; contrast aids follow preview quality/mode.
+   * @param {Object[]} layers - Target-local filter layers.
+   * @returns {string} URI-encoded SVG data URL.
+   */
   function visualDataUrl(layers) {
     const markup = `<svg xmlns="${namespace}" viewBox="${-discRadius} ${-discRadius} ${discRadius * 2} ${discRadius * 2}" shape-rendering="crispEdges">`
       + `<defs><clipPath id="disc"><circle r="${discRadius}"/></clipPath></defs>`
@@ -1062,6 +1405,10 @@
     return `data:image/svg+xml,${encodeURIComponent(markup)}`;
   }
 
+  /**
+   * @param {Object[]} layers - World-space filter layers.
+   * @returns {string} Board composition SVG with the active quality/mode options.
+   */
   function boardCompositionMarkup(layers) {
     return filterCompositionMarkup(layers, "board", discRadius, {
       combination,
@@ -1070,6 +1417,10 @@
     });
   }
 
+  /**
+   * @param {Object[]} poses - Live pieces or poses referencing a piece.
+   * @returns {Object[]} World-space filter layers ordered by piece then corner.
+   */
   function filterLayersForPoses(poses) {
     const layers = [];
     poses.forEach((pose) => {
@@ -1088,6 +1439,14 @@
     return layers;
   }
 
+  /**
+   * Rebuild definitions when appearance changes; otherwise update only changed
+   * layer centres/transforms. XOR overlap topology joins the signature because it
+   * determines cluster parity definitions, unlike ordinary intersection masks.
+   * Mutates SVG markup and all filter-render caches.
+   * @param {Object[]} poses - Poses to display.
+   * @returns {void}
+   */
   function renderFilterLayer(poses) {
     const layers = filterLayersForPoses(poses);
     const appearanceSignature = `${contrastOutlinesOnBoard()}:` + layers.map(({ filter }) => (
@@ -1138,6 +1497,10 @@
     renderedFilterGeometry = geometry;
   }
 
+  /**
+   * @param {Object[]} layers - World-space disc centres.
+   * @returns {string} Ordered intersecting-index pairs for topology invalidation.
+   */
   function xorOverlapSignature(layers) {
     const overlappingPairs = [];
     const maximumDistanceSquared = (discRadius * 2) ** 2;
@@ -1153,6 +1516,12 @@
     return overlappingPairs.join(",");
   }
 
+  /**
+   * Refresh composition, symbolic matching, accessible progress and open previews.
+   * Success requires every triangle snapped as well as all targets matching;
+   * dispatches lightdiscs:solved only on a transition into that state.
+   * @returns {void}
+   */
   function updateSuccess() {
     renderFilterLayer(pieces);
     currentFormations = formationsForPoses(pieces);
@@ -1185,6 +1554,12 @@
     }
   }
 
+  /**
+   * Update a target's state classes and accessible button label.
+   * @param {number} index - Target display index.
+   * @param {boolean} matches - Symbolic match result.
+   * @returns {void}
+   */
   function updateTargetStatus(index, matches) {
     const display = targetDisplays[index];
     display.root.classList.toggle("is-matched", matches);
@@ -1195,6 +1570,11 @@
     );
   }
 
+  /**
+   * Select a target, expose the inspector and refresh its current overlap visual.
+   * @param {number} index - Target index.
+   * @returns {void}
+   */
   function showTargetInspector(index) {
     inspectedTargetIndex = index;
     targetInspector.classList.toggle("is-pinned", inspectorPinned);
@@ -1203,6 +1583,10 @@
     refreshTargetInspector();
   }
 
+  /**
+   * Coalesce pointer samples into at most one queued animation-frame SVG update.
+   * @returns {void}
+   */
   function scheduleDragUpdate() {
     if (dragUpdateFrame !== null) return;
     dragUpdateFrame = requestAnimationFrame((frameTime) => {
@@ -1211,15 +1595,30 @@
     });
   }
 
+  /**
+   * @returns {boolean} Whether the adaptive drag-hidden board-outline tier is active.
+   */
   function contrastOutlinesOnBoard() {
     return contrastQuality === "drag-hidden";
   }
 
+  /**
+   * @param {number[]} values - Non-empty timing samples, not changed.
+   * @param {number} fraction - Quantile fraction from zero to one.
+   * @returns {number} Selected sorted sample without interpolation.
+   */
   function percentile(values, fraction) {
     const sorted = [...values].sort((left, right) => left - right);
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))];
   }
 
+  /**
+   * Switch quality, reset timing evidence and force SVG recomposition. Rebuild
+   * target/inspector images only if preview boundary visibility changes.
+   * @param {string} quality - drag-hidden, targets-only or none.
+   * @param {boolean} useCooldown - Whether to defer adaptation for two sample batches.
+   * @returns {void}
+   */
   function setContrastQuality(quality, useCooldown = true) {
     if (quality === contrastQuality) return;
     const previewsChanged = (contrastQuality === "none") !== (quality === "none");
@@ -1241,6 +1640,13 @@
     }
   }
 
+  /**
+   * Adapt quality using 12-sample upper-quartile frame intervals. Long pauses are
+   * discarded; upgrades require three agreeing batches, downgrades one, with
+   * different thresholds and cooldown to avoid quality oscillation.
+   * @param {number} frameTime - Animation-frame timestamp in milliseconds.
+   * @returns {void}
+   */
   function recordDragCapability(frameTime) {
     if (previousDragFrameTime !== null) {
       const interval = frameTime - previousDragFrameTime;
@@ -1285,14 +1691,25 @@
     }
   }
 
+  /**
+   * @returns {number} Pseudorandom sample in [0, 1) for random filter/pose selection.
+   */
   function randomValue() {
     return Math.random();
   }
 
+  /**
+   * Reset the board through the shared reset routine when the button is activated.
+   * @returns {void}
+   */
   function resetPuzzle() {
     resetPieces();
   }
 
+  /**
+   * Refresh the selected target's title, match state and enlarged image sources.
+   * @returns {void}
+   */
   function refreshTargetInspector() {
     if (inspectedTargetIndex === null) return;
     const display = targetDisplays[inspectedTargetIndex];
@@ -1305,6 +1722,10 @@
     currentPreview.src = visualDataUrl(currentVisuals[inspectedTargetIndex]);
   }
 
+  /**
+   * Clear selection/pinning and hide the comparison without changing board state.
+   * @returns {void}
+   */
   function hideTargetInspector() {
     inspectedTargetIndex = null;
     inspectorPinned = false;
@@ -1312,6 +1733,8 @@
     targetInspector.hidden = true;
   }
 
+  // Capture-phase outside dismissal runs before target click handling; target
+  // controls are exempt so the later click can toggle their pin state.
   resetButton.addEventListener("click", resetPuzzle);
   targetInspector.addEventListener("click", hideTargetInspector);
   document.addEventListener("pointerdown", (event) => {
@@ -1320,6 +1743,8 @@
       || (target instanceof Element && target.closest(".target-pattern"))) return;
     hideTargetInspector();
   }, true);
+  // Use the newest coalesced sample and cache coordinates, not intermediate frames.
+  // Empty-board touch drags instead scroll the board horizontally and page vertically.
   svg.addEventListener("pointermove", (event) => {
     if (activeDrag && event.pointerId === activeDrag.pointerId) {
       const coalescedEvents = event.getCoalescedEvents
@@ -1343,6 +1768,8 @@
       );
     }
   });
+  // Both release and cancellation finalise the active gesture; zoom/resize changes
+  // resynchronise the board's scroll surface after browser layout.
   svg.addEventListener("pointerdown", beginBoardPan);
   svg.addEventListener("pointerup", finishDrag);
   svg.addEventListener("pointerup", finishBoardPan);

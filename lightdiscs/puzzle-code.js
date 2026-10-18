@@ -1,6 +1,14 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Browser level-code formatter, validator and parser, also loaded through Node's
+ * VM by solver tests and offline tools. Publishes LightDiscPuzzleCode before the
+ * board, design controller or solver uses it; performs no DOM or file writes.
+ * Definitions contain three pieces of three filters and three target filters.
+ * Diagnostic start/end offsets refer to the formatted code, with an exclusive end.
+ */
 
 (() => {
+  // Code alphabet: colour records carry display data and red=4, green=2, blue=1.
   const colours = {
     w: { name: "white", value: "#ffffff", mask: 7 },
     r: { name: "red", value: "#ff0000", mask: 4 },
@@ -11,6 +19,7 @@
     m: { name: "magenta", value: "#ff00ff", mask: 5 },
     k: { name: "black", value: "#000000", mask: 0 }
   };
+  // Rotation limits count apostrophes, each representing 60 degrees.
   const shapes = {
     n: { name: "no shape", value: "none", rotations: 0 },
     s: { name: "square", value: "square", rotations: 2 },
@@ -24,6 +33,11 @@
   const sectionNames = ["R", "G", "B", "T"];
 
   class PuzzleCodeError extends Error {
+    /**
+     * Retain structured diagnostics while exposing their combined message.
+     * @param {Object[]} diagnostics - Formatted-code ranges and error messages.
+     * @returns {PuzzleCodeError} Error instance with a diagnostics property.
+     */
     constructor(diagnostics) {
       super(diagnostics.map(({ message }) => message).join(" "));
       this.name = "PuzzleCodeError";
@@ -31,6 +45,11 @@
     }
   }
 
+  /**
+   * Normalise spacing and compact tokens without rejecting incomplete input.
+   * @param {*} code - Value coerced to text, with falsy values treated as empty.
+   * @returns {string} Display code; malformed section ordering only gets spacing normalisation.
+   */
   function formatPuzzleCode(code) {
     const source = String(code || "").replace(/\u00a0/g, " ").trim();
     const sectionPattern = /([RGBT])\s*:?\s*/g;
@@ -50,6 +69,11 @@
     }).join(" ");
   }
 
+  /**
+   * Split a compact section by shape, rotation marks and expected colour count.
+   * @param {string} section - Component text without a section heading.
+   * @returns {string} Space-separated components, including incomplete tokens.
+   */
   function formatSection(section) {
     if (!section) return "";
     const explicitTokens = section.trim().split(/\s+/);
@@ -70,6 +94,11 @@
     return tokens.join(" ");
   }
 
+  /**
+   * Format and validate all sections, collecting component errors without throwing.
+   * @param {*} code - Source code to format.
+   * @returns {{code: string, diagnostics: Object[], definition: Object|null}} Parse result.
+   */
   function validatePuzzleCode(code) {
     const formattedCode = formatPuzzleCode(code);
     const sections = readSections(formattedCode);
@@ -123,6 +152,11 @@
     };
   }
 
+  /**
+   * Locate ordered section contents and token offsets in formatted input.
+   * @param {string} code - Formatted source.
+   * @returns {Object[]|null} Section records or null for invalid headings/order.
+   */
   function readSections(code) {
     const sectionPattern = /([RGBT]):\s*/g;
     const matches = [...code.matchAll(sectionPattern)];
@@ -145,6 +179,11 @@
     });
   }
 
+  /**
+   * Decode a single filter, throwing for unknown symbols or invalid lengths/rotations.
+   * @param {string} component - Shape, optional apostrophes and colour codes.
+   * @returns {Object} Background, foreground, shape and rotation in degrees.
+   */
   function parseComponent(component) {
     const shapeCode = component[0];
     const shape = shapes[shapeCode];
@@ -174,6 +213,12 @@
     };
   }
 
+  /**
+   * Look up a colour; throws when its code is absent or unknown.
+   * @param {string} component - Complete component token.
+   * @param {number} offset - Colour character index.
+   * @returns {Object} Shared colour record.
+   */
   function readColour(component, offset) {
     const code = component[offset];
     const colour = colours[code];
@@ -181,6 +226,11 @@
     return colour;
   }
 
+  /**
+   * Parse a complete definition or throw PuzzleCodeError with diagnostic ranges.
+   * @param {*} code - Source level code.
+   * @returns {Object} Validated definition containing canonical code, pieces and targets.
+   */
   function parsePuzzleCode(code) {
     const result = validatePuzzleCode(code);
     if (!result.definition) throw new PuzzleCodeError(result.diagnostics);

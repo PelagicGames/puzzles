@@ -1,5 +1,12 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Controller for puzzle.html: reads the level query, builds the board and tray,
+ * handles pointer/keyboard placement, traces checks and records completed codes.
+ * Load after rules, rendering, progress and level data. Invalid level indices
+ * redirect to the catalogue; only completion state is persisted.
+ */
+
 (() => {
   const rules = window.CrosspathRules;
   const render = window.CrosspathRender;
@@ -15,6 +22,7 @@
     return;
   }
 
+  // SVG geometry is independent of responsive screen size; the margin holds end markers.
   const CELL = 40;
   const TILE_SIZE = CELL * rules.TILE;
   const GRID = CELL * rules.SIZE;
@@ -33,9 +41,13 @@
   document.querySelector("#puzzle-position").textContent = `${bandNumber} / ${bandLevels.length}`;
 
   const puzzle = rules.parseCode(level.code);
+  // Fixed clues are indexed both ways; movable tile labels omit fixed tiles.
   const fixedTileSlot = new Map(puzzle.fixed.map(({ tile, slot }) => [tile, slot]));
   const fixedSlots = new Set(puzzle.fixed.map(({ slot }) => slot));
   const movableTiles = puzzle.tiles.map((_, index) => index).filter((index) => !fixedTileSlot.has(index));
+  /**
+   * @returns {Array<number|null>} Fresh slot-indexed placement containing only fixed clues.
+   */
   const startingPlacement = () => {
     const placement = new Array(9).fill(null);
     puzzle.fixed.forEach(({ tile, slot }) => {
@@ -44,6 +56,8 @@
     return placement;
   };
 
+  // Selection is a tile index. press owns capture, ghost and scroll-frame state;
+  // animation owns the check's frame and cancellable timers.
   let placement = startingPlacement();
   let selectedTile = null;
   let press = null;
@@ -55,6 +69,8 @@
   const detail = document.querySelector("#status-detail");
   const boardWrap = document.querySelector("#board-wrap");
   const nextLink = document.querySelector("#next-puzzle");
+  const solvedNextLink = document.querySelector("#solved-next-puzzle");
+  const correctionLegend = document.querySelector("#correction-legend");
   // The movable swatch only means something next to the fixed one.
   document.querySelector("#marker-legend").hidden = puzzle.markers.length === 0;
   document.querySelector("#fixed-legend").hidden = puzzle.fixed.length === 0;
@@ -78,6 +94,7 @@
       + `M${MARGIN - 6} ${offset}H${MARGIN}M${MARGIN + GRID} ${offset}H${MARGIN + GRID + 6}`;
   }).join("");
   svgElement("path", { class: "boundary-ticks", d: tickData }, board);
+  // SVG insertion order keeps rules above tiles and diagnostic overlays above interaction hints.
   const slotLayer = svgElement("g", { class: "slot-layer" }, board);
   const blockData = [1, 2].map((index) => {
     const offset = MARGIN + index * TILE_SIZE;
@@ -123,17 +140,29 @@
     ...render.drawMarker(markerLayer, marker, geometry)
   }));
 
+  /**
+   * @param {number} tile - Tile index.
+   * @returns {number|null} Occupied slot, or null when the tile is in the tray.
+   */
   function slotOfTile(tile) {
     const slot = placement.indexOf(tile);
     return slot < 0 ? null : slot;
   }
 
+  /**
+   * @param {number} tile - Movable tile index.
+   * @returns {string} Player-facing ordinal excluding fixed tiles.
+   */
   function tileLabel(tile) {
     return `Tile ${movableTiles.indexOf(tile) + 1}`;
   }
 
+  /**
+   * @returns {void} Rebuilds slot SVG contents, state classes and accessible labels.
+   */
   function renderSlots() {
     slotGroups.forEach((group, slot) => {
+      group.classList.remove("is-locked");
       group.replaceChildren();
       const tile = placement[slot];
       const fixed = fixedSlots.has(slot);
@@ -158,6 +187,9 @@
     });
   }
 
+  /**
+   * @returns {void} Rebuilds tray holes and available buttons, restoring surviving tile focus.
+   */
   function renderTray() {
     const focused = document.activeElement && document.activeElement.closest
       ? document.activeElement.closest(".tray-tile")
@@ -186,16 +218,28 @@
     }
   }
 
+  /**
+   * @returns {number} Number of movable tiles currently on the board.
+   */
   function placedCount() {
     return movableTiles.filter((tile) => slotOfTile(tile) !== null).length;
   }
 
+  /**
+   * @returns {void} Refreshes board, tray and selected-tile return availability.
+   */
   function renderAll() {
     renderSlots();
     renderTray();
     document.querySelector("#return-button").disabled = selectedTile === null || slotOfTile(selectedTile) === null;
   }
 
+  /**
+   * @param {string} text - Live status message.
+   * @param {string} [tone="neutral"] - Status styling state.
+   * @param {string[]} [lines=[]] - Supporting diagnostic lines.
+   * @returns {void} Replaces status text and detail list.
+   */
   function setStatus(text, tone = "neutral", lines = []) {
     status.textContent = text;
     status.dataset.tone = tone;
@@ -207,16 +251,27 @@
     detail.hidden = lines.length === 0;
   }
 
+  /**
+   * @returns {void} Cancels pending check work and clears trace, corrections and result UI.
+   */
   function cancelAnimation() {
     if (animation.frame !== null) window.cancelAnimationFrame(animation.frame);
     animation.timers.forEach((timer) => window.clearTimeout(timer));
     animation = { frame: null, timers: [] };
     traceLayer.replaceChildren();
     marksLayer.replaceChildren();
+    correctionLegend.hidden = true;
+    solvedNextLink.hidden = true;
     boardWrap.classList.remove("is-solved", "has-errors", "is-checking");
     markerElements.forEach(({ group }) => group.classList.remove("is-missing"));
   }
 
+  /**
+   * @param {number} tile - Movable tile index.
+   * @param {number|null} target - Destination slot, or null to return to the tray.
+   * @returns {boolean} Whether placement changed; swaps occupants when moving between
+   * slots, clears selection and refreshes/checks the board after a successful move.
+   */
   function moveTile(tile, target) {
     const from = slotOfTile(tile);
     if (target !== null && fixedSlots.has(target)) return false;
@@ -234,6 +289,9 @@
     return true;
   }
 
+  /**
+   * @returns {void} Clears stale results, redraws and automatically checks a full board.
+   */
   function afterChange() {
     cancelAnimation();
     renderAll();
@@ -245,6 +303,10 @@
     }
   }
 
+  /**
+   * @param {number} slot - Fixed slot to highlight.
+   * @returns {void} Restarts the locked animation and announces the fixed clue.
+   */
   function flashLocked(slot) {
     const group = slotGroups[slot];
     group.classList.remove("is-locked");
@@ -253,6 +315,10 @@
     setStatus("That tile is fixed in place.", "neutral");
   }
 
+  /**
+   * @param {number} tile - Tile whose selection is toggled.
+   * @returns {void} Updates selection, controls and placement guidance.
+   */
   function select(tile) {
     selectedTile = selectedTile === tile ? null : tile;
     renderAll();
@@ -263,6 +329,10 @@
     }
   }
 
+  /**
+   * @param {number} slot - Activated board slot.
+   * @returns {void} Selects its occupant, places the selection or highlights a fixed clue.
+   */
   function tapSlot(slot) {
     if (fixedSlots.has(slot)) {
       flashLocked(slot);
@@ -278,6 +348,11 @@
 
   // ---- Pointer dragging -------------------------------------------------
 
+  /**
+   * @param {number} clientX - Viewport x coordinate.
+   * @param {number} clientY - Viewport y coordinate.
+   * @returns {number|null} Slot under the point, excluding the surrounding SVG margin.
+   */
   function slotAtPoint(clientX, clientY) {
     const rect = board.getBoundingClientRect();
     const scale = VIEW / rect.width;
@@ -287,17 +362,31 @@
     return Math.floor(y / TILE_SIZE) * 3 + Math.floor(x / TILE_SIZE);
   }
 
+  /**
+   * @param {number} clientX - Viewport x coordinate.
+   * @param {number} clientY - Viewport y coordinate.
+   * @returns {boolean} Whether the point lies within the tray panel.
+   */
   function overTray(clientX, clientY) {
     const rect = document.querySelector("#tray-panel").getBoundingClientRect();
     return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
   }
 
+  /**
+   * @param {PointerEvent} event - Initial primary-button press.
+   * @param {Object} info - Source, tile and optional slot indices.
+   * @returns {void} Cleans up prior input, stores press state and captures the pointer.
+   */
   function beginPress(event, info) {
     if (event.button !== undefined && event.button !== 0) return;
-    press = { ...info, x: event.clientX, y: event.clientY, pointerId: event.pointerId, dragging: false, ghost: null, scrollFrame: null };
+    endDrag();
+    press = { ...info, x: event.clientX, y: event.clientY, pointerId: event.pointerId, captureTarget: event.currentTarget, dragging: false, ghost: null, scrollFrame: null };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
+  /**
+   * @returns {void} Creates a screen-sized ghost and marks the current press/source as dragging.
+   */
   function startDrag() {
     press.dragging = true;
     const size = board.getBoundingClientRect().width * (TILE_SIZE / VIEW);
@@ -316,6 +405,10 @@
     if (button) button.classList.add("is-drag-source");
   }
 
+  /**
+   * @param {PointerEvent} event - Current captured pointer position.
+   * @returns {void} Positions the ghost, refreshes the target and schedules edge scrolling.
+   */
   function updateDrag(event) {
     press.lastX = event.clientX;
     press.lastY = event.clientY;
@@ -325,6 +418,9 @@
     if (press.scrollFrame === null) press.scrollFrame = requestAnimationFrame(autoScroll);
   }
 
+  /**
+   * @returns {void} Positions or hides the SVG drop hint and marks fixed targets as blocked.
+   */
   function updateDropTarget() {
     const slot = slotAtPoint(press.lastX, press.lastY);
     if (slot === null) {
@@ -343,6 +439,10 @@
   const SCROLL_EDGE = 72;
   const SCROLL_MAX_SPEED = 18;
 
+  /**
+   * @returns {void} Scrolls near visible viewport edges and reschedules only while scrolling
+   * can continue; recomputes the target beneath the stationary pointer.
+   */
   function autoScroll() {
     if (!press || !press.dragging) return;
     press.scrollFrame = null;
@@ -363,14 +463,27 @@
     press.scrollFrame = requestAnimationFrame(autoScroll);
   }
 
+  /**
+   * @returns {void} Releases capture, cancels scrolling and removes transient drag UI safely.
+   */
   function endDrag() {
-    if (press && press.scrollFrame) cancelAnimationFrame(press.scrollFrame);
-    if (press && press.ghost) press.ghost.remove();
+    const current = press;
+    press = null;
+    if (current && current.scrollFrame !== null) cancelAnimationFrame(current.scrollFrame);
+    // Clear state before releasing capture: lostpointercapture can run cleanup again.
+    if (current && current.captureTarget.hasPointerCapture(current.pointerId)) {
+      current.captureTarget.releasePointerCapture(current.pointerId);
+    }
+    document.querySelectorAll(".drag-ghost").forEach((element) => element.remove());
     document.body.classList.remove("is-dragging");
     dropTarget.setAttribute("visibility", "hidden");
     document.querySelectorAll(".is-drag-source").forEach((element) => element.classList.remove("is-drag-source"));
   }
 
+  /**
+   * @param {PointerEvent} event - Pointer movement from a board or tray capture.
+   * @returns {void} Starts dragging after a six-pixel threshold and prevents drag scrolling.
+   */
   function handlePointerMove(event) {
     if (!press || event.pointerId !== press.pointerId) return;
     if (!press.dragging) {
@@ -382,11 +495,14 @@
     updateDrag(event);
   }
 
+  /**
+   * @param {PointerEvent} event - Released pointer.
+   * @returns {void} Ends capture, commits a drop or interprets an unmoved press as a tap.
+   */
   function handlePointerUp(event) {
     if (!press || event.pointerId !== press.pointerId) return;
     const current = press;
     endDrag();
-    press = null;
     if (current.dragging) {
       const slot = slotAtPoint(event.clientX, event.clientY);
       if (slot !== null) {
@@ -401,12 +517,17 @@
     else if (current.source === "board") tapSlot(current.slot);
   }
 
+  /**
+   * @param {PointerEvent} event - Cancelled or lost captured pointer.
+   * @returns {void} Discards matching transient drag state without placing a tile.
+   */
   function handlePointerCancel(event) {
     if (!press || event.pointerId !== press.pointerId) return;
     endDrag();
-    press = null;
   }
 
+  // Delegated input keeps handlers stable while slot/tray contents are rebuilt.
+  // Window and visibility fallbacks prevent capture or ghost state surviving interrupted input.
   board.addEventListener("pointerdown", (event) => {
     const slot = slotAtPoint(event.clientX, event.clientY);
     if (slot === null) return;
@@ -414,6 +535,11 @@
     const movable = tile !== null && !fixedSlots.has(slot);
     beginPress(event, { source: "board", slot, tile: movable ? tile : null });
   });
+  // SVG groups do not reliably honour touch-action; reserve active piece touches
+  // without preventing scrolling from empty or fixed board slots.
+  board.addEventListener("touchmove", (event) => {
+    if (press && press.tile !== null) event.preventDefault();
+  }, { passive: false });
   tray.addEventListener("pointerdown", (event) => {
     const button = event.target.closest(".tray-tile");
     if (!button) return;
@@ -424,6 +550,17 @@
     element.addEventListener("pointerup", handlePointerUp);
     element.addEventListener("pointercancel", handlePointerCancel);
     element.addEventListener("lostpointercapture", handlePointerCancel);
+  });
+  window.addEventListener("pointerup", handlePointerUp);
+  window.addEventListener("pointercancel", handlePointerCancel);
+  window.addEventListener("blur", endDrag);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) endDrag();
+  });
+  board.addEventListener("animationend", (event) => {
+    if (event.animationName === "locked-flash") {
+      event.target.closest(".slot").classList.remove("is-locked");
+    }
   });
 
   // Keyboard activation (pointer taps are handled on pointerup).
@@ -440,6 +577,7 @@
   document.querySelector("#return-button").addEventListener("click", () => {
     if (selectedTile !== null && slotOfTile(selectedTile) !== null) moveTile(selectedTile, null);
   });
+  // Keyboard focus uses a board-level SVG ring above the grid, not each slot's outline.
   board.addEventListener("focusin", (event) => {
     const group = event.target.closest(".slot");
     if (!group || !group.matches(":focus-visible")) return;
@@ -464,9 +602,13 @@
     }
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && selectedTile !== null) select(selectedTile);
+    if (event.key !== "Escape") return;
+    endDrag();
+    if (selectedTile !== null) select(selectedTile);
   });
+  // Reset discards the current arrangement but never clears recorded completion.
   document.querySelector("#reset-button").addEventListener("click", () => {
+    endDrag();
     placement = startingPlacement();
     selectedTile = null;
     afterChange();
@@ -474,6 +616,10 @@
 
   // ---- Checking and animation -------------------------------------------
 
+  /**
+   * @param {Object} result - Shared rule analysis.
+   * @returns {string[]} Player-facing diagnostics, deduplicating crossing axes by cell.
+   */
   function issueLines(result) {
     const lines = [];
     const exitCount = result.exits.length;
@@ -494,7 +640,7 @@
       lines.push("Some path elements do not line up across a tile edge.");
     }
     if (result.touching.length) {
-      lines.push("Paths run side by side without connecting.");
+      lines.push("Some path squares touch without joining.");
     }
     if (result.unvisited.length) {
       const count = new Set(result.unvisited.map(({ row, col }) => `${row},${col}`)).size;
@@ -503,6 +649,10 @@
     return lines;
   }
 
+  /**
+   * @param {Object} result - Failed board analysis.
+   * @returns {void} Adds staggered correction SVG, relevant legend entries and error status.
+   */
   function showCorrections(result) {
     boardWrap.classList.add("has-errors");
     const composed = rules.composeBoard(puzzle.tiles, placement);
@@ -511,6 +661,10 @@
       element.style.animationDelay = `${index * step}ms`;
       marksLayer.append(element);
     });
+    correctionLegend.querySelectorAll("[data-mark]").forEach((item) => {
+      item.hidden = !marksLayer.querySelector(item.dataset.mark);
+    });
+    correctionLegend.hidden = !marksLayer.childElementCount;
     result.missingMarkers.forEach((marker) => {
       const key = rules.formatMarker(marker);
       const element = markerElements.find(({ marker: other }) => rules.formatMarker(other) === key);
@@ -519,6 +673,10 @@
     setStatus("Not quite. The red marks show where the path goes wrong; move a tile to try again.", "error", issueLines(result));
   }
 
+  /**
+   * @param {Object} result - Solved analysis with a complete trace.
+   * @returns {void} Shows success, persists completion and refreshes onward navigation.
+   */
   function celebrate(result) {
     boardWrap.classList.add("is-solved");
     const wasCompleted = progress.isCompleted(level.code);
@@ -532,6 +690,11 @@
     updateNextLink();
   }
 
+  /**
+   * @param {Object} result - Analysis whose trace should be drawn.
+   * @param {Function} onDone - Called once drawing finishes or no drawable trace exists.
+   * @returns {void} Creates animated ink and nib, respecting reduced-motion preferences.
+   */
   function drawTrace(result, onDone) {
     const points = render.tracePoints(result.trace, { cell: CELL, originX: MARGIN, originY: MARGIN, lead: LEAD });
     if (points.length < 2) {
@@ -547,6 +710,10 @@
     pathElement.style.strokeDasharray = `${total} ${total}`;
     const duration = reducedMotion ? 0 : Math.min(5200, Math.max(1400, result.trace.steps.length * 75));
     const started = performance.now();
+    /**
+     * @param {number} now - Animation-frame timestamp.
+     * @returns {void} Advances ink and nib, reschedules or removes the nib and calls onDone.
+     */
     function frame(now) {
       const progressRatio = duration === 0 ? 1 : Math.min(1, (now - started) / duration);
       const drawn = total * progressRatio;
@@ -565,6 +732,9 @@
     animation.frame = window.requestAnimationFrame(frame);
   }
 
+  /**
+   * @returns {void} Analyses current placement and sequences trace drawing before result UI.
+   */
   function checkBoard() {
     const composed = rules.composeBoard(puzzle.tiles, placement);
     const result = rules.analyseBoard(composed, puzzle.markers);
@@ -577,18 +747,17 @@
     });
   }
 
+  /**
+   * @returns {void} Updates both next-unsolved links using persistent completion state.
+   */
   function updateNextLink() {
-    if (!progress.isCompleted(level.code)) {
-      nextLink.hidden = true;
-      return;
+    const next = progress.isCompleted(level.code) ? progress.nextUnsolved(levels, level.code) : null;
+    nextLink.hidden = !next;
+    solvedNextLink.hidden = !next || !boardWrap.classList.contains("is-solved");
+    if (next) {
+      nextLink.href = `./puzzle.html?level=${next.index + 1}`;
+      solvedNextLink.href = nextLink.href;
     }
-    const next = progress.nextUnsolved(levels, level.code);
-    if (!next) {
-      nextLink.hidden = true;
-      return;
-    }
-    nextLink.href = `./puzzle.html?level=${next.index + 1}`;
-    nextLink.hidden = false;
   }
 
   renderAll();

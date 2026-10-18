@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Standalone geometry/rendering regressions: node lightdiscs/game-geometry.test.js
+ * Reads geometry and composition scripts via Node's VM with a window shim.
+ * Assertions cover board clearances, safe placement and SVG boundary structure,
+ * not browser rasterisation. No file writes; failure throws, success logs.
+ */
 
 const assert = require("assert");
 const fs = require("fs");
@@ -26,6 +32,7 @@ const {
   needsContrastOutline
 } = window.LightDiscRendering;
 
+// Mirror live board dimensions so clearance assertions cover its actual layout.
 const cornerRadius = 105;
 const discRadius = 38;
 const targetRadius = 28;
@@ -49,6 +56,7 @@ const targetCorners = [
   }
 ];
 
+// Central target rings must remain separate from each other and the corner discs.
 assert(targetRadius <= discRadius);
 assert(minimumPairDistance(targetCorners) > (targetRadius + ringHalfWidth) * 2);
 targetCorners.forEach((target) => {
@@ -59,6 +67,7 @@ targetCorners.forEach((target) => {
   });
 });
 
+// Every reset home stays clear of free corners on all enumerated two-snap poses.
 const homes = [
   { x: 150, y: 160 },
   { x: 850, y: 160 },
@@ -73,6 +82,11 @@ homes.forEach((home) => {
 });
 
 const trianglePadding = discRadius + 5.5;
+/**
+ * @param {Object} position - Candidate triangle centre.
+ * @param {number} angle - Candidate rotation in degrees.
+ * @returns {boolean} Whether the padded candidate overlaps the fixed triangle.
+ */
 const overlapsFixed = (position, angle = 0) => expandedTrianglesOverlap(
   position,
   angle,
@@ -81,6 +95,7 @@ const overlapsFixed = (position, angle = 0) => expandedTrianglesOverlap(
   corners,
   trianglePadding
 );
+// Cover separated, near-edge and coincident poses, then a bounded nearby bump.
 assert(!overlapsFixed({ x: 150, y: 160 }));
 assert(!overlapsFixed({ x: 500, y: 700 }));
 assert(overlapsFixed({ x: 500, y: 650 }));
@@ -93,6 +108,7 @@ const bumped = nearestValidPlacement(
 assert(bumped);
 assert(!overlapsFixed(bumped));
 assert(distance(bumped, { x: 500, y: 650 }) <= 48);
+// A free pose can avoid the fixed triangle yet still be obscured by a snapped one.
 const snappedPose = { position: { x: 409.0673326, y: 597.5 }, angle: 0 };
 const obscuredFreePose = { position: { x: 150, y: 580 }, angle: 0 };
 assert(!overlapsFixed(obscuredFreePose.position));
@@ -105,6 +121,12 @@ assert(expandedTrianglesOverlap(
   trianglePadding
 ));
 
+/**
+ * @param {number} background - Background channel mask.
+ * @param {number} foreground - Foreground channel mask.
+ * @param {string} shape - Shape value.
+ * @returns {Object} Minimal filter for boundary-generation assertions.
+ */
 function filter(background, foreground, shape = "square") {
   return {
     background: { mask: background },
@@ -113,6 +135,7 @@ function filter(background, foreground, shape = "square") {
   };
 }
 
+// Only shaped one-channel differences qualify; mean luminance picks black/white.
 assert(needsContrastOutline(filter(7, 6)));
 assert(needsContrastOutline(filter(3, 2)));
 assert(needsContrastOutline(filter(4, 5)));
@@ -121,6 +144,7 @@ assert(!needsContrastOutline(filter(6, 6)));
 assert(!needsContrastOutline(filter(7, 6, "none")));
 assert.strictEqual(contrastOutlineColour(filter(7, 6)), "#000000");
 assert.strictEqual(contrastOutlineColour(filter(0, 1)), "#ffffff");
+// Rotated union boundaries share shape definitions and avoid morphology filters.
 const unionOutlineMarkup = filterCompositionMarkup([
   { filter: filter(7, 6, "triangle"), x: 0, y: 0, angle: 0 },
   { filter: filter(7, 6, "triangle"), x: 0, y: 0, angle: 60 }
@@ -136,6 +160,7 @@ assert.strictEqual(
 assert(unionOutlineMarkup.includes('stroke-width="3"'));
 assert(unionOutlineMarkup.includes("outline-test-contrast-shape-triangle"));
 assert(!unionOutlineMarkup.includes("<feMorphology"));
+// Blocking layers and opposing transitions must mask out inappropriate outlines.
 const blockedOutlineMarkup = filterCompositionMarkup([
   { filter: filter(1, 3, "triangle-star"), x: 0, y: 0, angle: 0 },
   { filter: filter(5, 4, "triangle"), x: 0, y: 0, angle: 0 }
@@ -151,6 +176,7 @@ assert(cancelledOutlineMarkup.includes(
 assert(cancelledOutlineMarkup.includes(
   'mask="url(#cancelled-outline-contrast-exclusion-0)"'
 ));
+// Disabling aids removes boundary groups and auxiliary visible-channel masks.
 const boardMarkup = filterCompositionMarkup([
   { filter: filter(7, 6, "triangle"), x: 100, y: 200, angle: 0 }
 ], "board-test", discRadius, { includeContrastOutlines: false });

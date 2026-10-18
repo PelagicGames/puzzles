@@ -1,5 +1,12 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Run node mapominoes/signaling-server.js from the repository, optionally with PORT.
+ * Uses Node built-ins only. Serves repository files and an in-memory room/SDP API
+ * for online.html?signaling=room; gameplay stays on browser DataChannels.
+ * Reads HTTP bodies, URL tokens and static files; writes HTTP responses and console
+ * diagnostics. Rooms and bearer tokens are ephemeral and never written to disk.
+ */
 "use strict";
 
 const crypto = require("node:crypto");
@@ -9,6 +16,8 @@ const path = require("node:path");
 
 const port = Number(process.env.PORT) || 8765;
 const repositoryRoot = path.resolve(__dirname, "..");
+// Room code -> host token, timestamps, sequenced events and peer-ID keyed handshakes.
+// Idle rooms expire after six hours; request bodies are bounded before JSON parsing.
 const rooms = new Map();
 const roomLifetimeMs = 6 * 60 * 60 * 1000;
 const bodyLimit = 64 * 1024;
@@ -22,10 +31,12 @@ const mimeTypes = new Map([
   [".svg", "image/svg+xml"]
 ]);
 
+/** @param {number} bytes - Random byte count. @returns {string} URL-safe opaque bearer token. */
 function randomToken(bytes = 24) {
   return crypto.randomBytes(bytes).toString("base64url");
 }
 
+/** @returns {string} Unused six-character room code without ambiguous I/O/0/1 characters. */
 function randomRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -35,6 +46,10 @@ function randomRoomCode() {
   return code;
 }
 
+/** Send an uncached JSON response with a byte-accurate content length.
+ * @param {http.ServerResponse} response - HTTP output.
+ * @param {number} status - Status code. @param {*} value - JSON payload. @returns {void}
+ */
 function sendJson(response, status, value) {
   const body = JSON.stringify(value);
   response.writeHead(status, {
@@ -45,10 +60,15 @@ function sendJson(response, status, value) {
   response.end(body);
 }
 
+/** Consume a bounded JSON body; oversize input destroys the request.
+ * @param {http.IncomingMessage} request - HTTP input.
+ * @returns {Promise<Object>} Parsed body, or an empty object for no body.
+ */
 function readJson(request) {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks = [];
+    // Retain chunks only within the cap; end parses once and error propagates rejection.
     request.on("data", (chunk) => {
       size += chunk.length;
       if (size > bodyLimit) {
@@ -69,11 +89,17 @@ function readJson(request) {
   });
 }
 
+/** @param {*} value - Untrusted RTC description.
+ * @param {string} type - Required offer/answer type. @returns {boolean|undefined|null} Validation result.
+ */
 function validDescription(value, type) {
   return value && value.type === type && typeof value.sdp === "string"
     && value.sdp.length > 0 && value.sdp.length <= 50000;
 }
 
+/** @param {string} code - Normalised room code.
+ * @returns {Object|null} Live room, refreshing its idle timestamp or deleting expired state.
+ */
 function findRoom(code) {
   const room = rooms.get(code);
   if (!room || Date.now() - room.updatedAt > roomLifetimeMs) {
@@ -84,12 +110,23 @@ function findRoom(code) {
   return room;
 }
 
+/** Append a host-poll event, retaining only the newest 200 records.
+ * @param {Object} room - Mutable room.
+ * @param {Object} event - Offer/cancel fields; assigned a monotonic sequence. @returns {void}
+ */
 function addEvent(room, event) {
   room.sequence += 1;
   room.events.push({ sequence: room.sequence, ...event });
   if (room.events.length > 200) room.events.splice(0, room.events.length - 200);
 }
 
+/** Route room creation, host event polling and guest offer/answer exchange.
+ * Tokens travel in JSON writes or query reads; SDP is {type, sdp}. Room creation
+ * returns {code, hostToken}; registration returns {peerId, guestToken}.
+ * @param {http.IncomingMessage} request - API input.
+ * @param {http.ServerResponse} response - API output.
+ * @param {URL} url - Parsed path/query. @returns {Promise<void>}
+ */
 async function handleSignal(request, response, url) {
   const parts = url.pathname.split("/").filter(Boolean);
   if (request.method === "POST" && url.pathname === "/signal/rooms") {
@@ -119,6 +156,7 @@ async function handleSignal(request, response, url) {
     return;
   }
 
+  // Host polling resumes after a sequence cursor; an empty batch still advances it.
   if (request.method === "GET" && parts[3] === "events") {
     if (url.searchParams.get("token") !== room.hostToken) {
       sendJson(response, 403, { error: "Invalid host token." });
@@ -132,6 +170,7 @@ async function handleSignal(request, response, url) {
     return;
   }
 
+  // Registration reserves a bounded pending handshake, not a gameplay player slot.
   if (request.method === "POST" && parts.length === 4 && parts[3] === "peers") {
     if (room.peers.size >= 24) {
       sendJson(response, 429, { error: "This room has too many pending connections." });
@@ -183,6 +222,7 @@ async function handleSignal(request, response, url) {
     return;
   }
 
+  // Retrieving an available answer consumes the pending record; null means retry.
   if (request.method === "GET" && parts[5] === "answer") {
     if (url.searchParams.get("token") !== peer.guestToken) {
       sendJson(response, 403, { error: "Invalid guest token." });
@@ -213,6 +253,10 @@ async function handleSignal(request, response, url) {
   sendJson(response, 404, { error: "Signaling endpoint not found." });
 }
 
+/** Stream repository files after rejecting private files and server paths.
+ * @param {http.ServerResponse} response - HTTP output.
+ * @param {URL} url - Requested static path. @returns {void} Completes asynchronously via fs callbacks.
+ */
 function serveStatic(response, url) {
   const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const segments = requestedPath.split("/").filter(Boolean);
@@ -225,6 +269,7 @@ function serveStatic(response, url) {
     response.end("Forbidden");
     return;
   }
+  // Resolve before containment checks, including encoded traversal decoded above.
   const filePath = path.resolve(repositoryRoot, `.${requestedPath}`);
   if (filePath !== repositoryRoot && !filePath.startsWith(`${repositoryRoot}${path.sep}`)) {
     response.writeHead(403);
@@ -246,6 +291,7 @@ function serveStatic(response, url) {
   });
 }
 
+// API requests and static pages share an origin; errors cannot rewrite sent headers.
 const server = http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
@@ -261,6 +307,8 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
+// Opportunistic lookups also expire rooms; this sweep removes otherwise idle entries.
+// unref lets this maintenance timer avoid keeping a stopped server process alive.
 const cleanup = setInterval(() => {
   const cutoff = Date.now() - roomLifetimeMs;
   rooms.forEach((room, code) => {

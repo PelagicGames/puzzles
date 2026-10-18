@@ -1,4 +1,11 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Offline report CLI: node lightdiscs/generate-puzzle-analysis.js
+ * Reads parser, maths, solver and both catalogue scripts beside this file using
+ * Node's VM and a window shim. Analyses every level and overwrites
+ * lightdiscs/puzzle-analysis.local.json with counts, metrics, examples and diagnostics.
+ * Logs the output path; it neither rewrites catalogues nor runs in browser pages.
+ */
 
 const fs = require("fs");
 const path = require("path");
@@ -18,6 +25,8 @@ global.window = {};
   );
 });
 
+// designPoseIds describe an authored construction, whereas solver solutions may
+// include alternatives. Contribution counts check which targets that design uses.
 const puzzles = window.LightDiscLevels.map(({
   title,
   difficulty,

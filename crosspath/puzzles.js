@@ -1,5 +1,11 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Fills puzzles.html with difficulty sections, puzzle links and completion marks.
+ * Load after puzzle-levels.js and puzzle-progress.js. Reads completion storage
+ * through CrosspathProgress; does not change saved progress.
+ */
+
 (() => {
   const levels = window.CrosspathLevels;
   const { difficulties, isCompleted, completedCount } = window.CrosspathProgress;
@@ -14,6 +20,7 @@
 
   document.querySelector("#solved-tally").textContent = `${completedCount(levels)} of ${levels.length} solved`;
 
+  // Display numbers restart in each band; link query indices retain catalogue order.
   difficulties.forEach(({ id, label }) => {
     const section = document.createElement("section");
     section.className = "difficulty-section";

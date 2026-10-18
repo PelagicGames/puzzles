@@ -1,6 +1,14 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * SVG string renderer shared by lightdiscs.js and Node rendering/geometry tests.
+ * Load before the board; publishes LightDiscRendering without DOM or file writes.
+ * Layers are {filter, x, y, angle}; filters have background/foreground colour
+ * records with mask/value and a shape.value. Callers insert returned markup.
+ * Prefixes must be unique within an SVG so generated mask references remain local.
+ */
 
 (() => {
+  // Local SVG units agree with the board's shape geometry, independently of disc size.
   const largeShapeRadius = 30;
   const smallShapeRadius = 12;
   const squareHalfSize = 21;
@@ -8,6 +16,7 @@
   const triangleHalfWidth = triangleRadius * Math.sqrt(3) / 2;
   const triangleBaseY = triangleRadius / 2;
 
+  // Oversized user-space masks cover all board placements, including negative offsets.
   const defaultMaskBounds = {
     x: -2000,
     y: -2000,
@@ -15,6 +24,15 @@
     height: 5000
   };
 
+  /**
+   * Render standard intersection by masking blocked channels and screening RGB.
+   * Contrast boundaries are a display aid, not additional filter contributions.
+   * @param {Object[]} layers - Positioned and rotated filter records.
+   * @param {string} idPrefix - Namespace for generated mask IDs.
+   * @param {number} discRadius - Filter disc radius in SVG units.
+   * @param {Object} options - combination, includeContrastOutlines and maskBounds.
+   * @returns {string} Definitions and isolated compositing group.
+   */
   function filterCompositionMarkup(
     layers,
     idPrefix,
@@ -35,6 +53,7 @@
       ({ x, y }, index) => `<circle data-filter-layer="${index}" cx="${x}" cy="${y}" r="${discRadius}"/>`
     ).join("");
     const masks = [];
+    // Sparse per-channel arrays retain original layer indices for outline exclusions.
     const channelMaskIds = channels.map(() => []);
     const visibleMaskIds = [];
     const inverseVisibleMaskIds = [];
@@ -94,6 +113,16 @@
       + `<g fill="#000">${discUnion}</g>${channelLayers}${contrastOutlines}</g>`;
   }
 
+  /**
+   * Render exact per-channel parity with masks rather than colour blend arithmetic.
+   * Connected overlap clusters bound the exponential odd-subset enumeration;
+   * isolated discs bypass parity masks. RGB output regions are mutually exclusive.
+   * @param {Object[]} layers - Positioned filter records.
+   * @param {string} idPrefix - Mask namespace.
+   * @param {number} discRadius - Disc radius.
+   * @param {Object} options - includeContrastOutlines controls boundary aids.
+   * @returns {string} XOR definitions and composited disc markup.
+   */
   function xorCompositionMarkup(layers, idPrefix, discRadius, options) {
     const includeContrastOutlines = options.includeContrastOutlines !== false;
     const discUnion = layers.map(
@@ -171,6 +200,8 @@
           const parityId = `${idPrefix}-xor-${channel.name}-${clusterIndex}-parity`;
           const inverseParityId = `${parityId}-inverse`;
           const oddRegions = [];
+          // An odd number of passing layers turns this channel on. Intersect
+          // passing/inverse masks for each exact subset before taking their union.
           for (let bits = 1; bits < 2 ** cluster.length; bits += 1) {
             if (bitCount(bits) % 2 === 0) continue;
             let content = `<g fill="#fff">${clusterDiscs}</g>`;
@@ -218,6 +249,18 @@
       + `<g fill="#000">${discUnion}</g>${output.join("")}${contrastOutput.join("")}</g>`;
   }
 
+  /**
+   * Outline one-channel boundaries using the other channels' parity to choose
+   * contrast. Exclude coincident same-channel boundaries that cancel in XOR.
+   * Appends reusable shape/exclusion masks to definitions.
+   * @param {number[]} cluster - Indices into layers.
+   * @param {Object[]} layers - All positioned filters.
+   * @param {Object[]} channels - RGB bit/name records.
+   * @param {Object[]} parityMasks - Channel parityId/inverseParityId records.
+   * @param {string} idPrefix - Boundary mask namespace.
+   * @param {string[]} definitions - Mutable SVG definition accumulator.
+   * @returns {string} Non-interactive outline group, or empty text.
+   */
   function xorContrastBoundaryMarkup(
     cluster,
     layers,
@@ -227,6 +270,11 @@
     definitions
   ) {
     const shapeBoundaryMaskIds = new Map();
+    /**
+     * Cache an outward stroke ring per shape, appending its definition on first use.
+     * @param {string} shape - Shape value.
+     * @returns {string} Boundary mask ID.
+     */
     const shapeBoundaryMaskId = (shape) => {
       if (shapeBoundaryMaskIds.has(shape)) return shapeBoundaryMaskIds.get(shape);
       const maskId = `${idPrefix}-contrast-shape-${shape}`;
@@ -302,6 +350,13 @@
     return `<g data-contrast-boundaries="true" pointer-events="none">${outlines.join("")}</g>`;
   }
 
+  /**
+   * Flood-fill the disc-overlap graph; touching discs do not share a cluster.
+   * The remaining set tracks unvisited indices without changing the input layers.
+   * @param {Object[]} layers - Disc centres in x/y fields.
+   * @param {number} discRadius - Shared disc radius.
+   * @returns {number[][]} Connected components of original layer indices.
+   */
   function overlappingLayerClusters(layers, discRadius) {
     const remaining = new Set(layers.map((_, index) => index));
     const maximumDistanceSquared = (discRadius * 2) ** 2;
@@ -325,6 +380,10 @@
     return clusters;
   }
 
+  /**
+   * @param {number} value - Small non-negative integer mask.
+   * @returns {number} Set-bit count used for parity.
+   */
   function bitCount(value) {
     let remaining = value;
     let count = 0;
@@ -335,10 +394,27 @@
     return count;
   }
 
+  /**
+   * @param {Object} bounds - Numeric x, y, width and height fields.
+   * @returns {string} SVG rectangle/mask extent attributes.
+   */
   function maskBoundsMarkup(bounds) {
     return `x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"`;
   }
 
+  /**
+   * Render standard-mode boundary aids only where the changed channel survives.
+   * Stable-channel masks select contrasting ink; opposing same-channel boundaries
+   * exclude hidden edges. Adds shape/exclusion masks to the definitions accumulator.
+   * @param {Object[]} layers - Positioned filter records.
+   * @param {Object[]} channels - RGB bit/name records.
+   * @param {string[][]} channelMaskIds - Blocking masks by channel and layer.
+   * @param {string[]} visibleMaskIds - Final passing-channel masks.
+   * @param {string[]} inverseVisibleMaskIds - Complements of passing-channel masks.
+   * @param {string} idPrefix - Mask namespace.
+   * @param {string[]} definitions - Mutable SVG definition accumulator.
+   * @returns {string} Non-interactive outline group, or empty text.
+   */
   function contrastBoundaryMarkup(
     layers,
     channels,
@@ -350,6 +426,11 @@
   ) {
     const outlines = [];
     const shapeBoundaryMaskIds = new Map();
+    /**
+     * Append and cache a shape's outward stroke ring on first use.
+     * @param {string} shape - Shape value.
+     * @returns {string} Boundary mask ID.
+     */
     const shapeBoundaryMaskId = (shape) => {
       if (shapeBoundaryMaskIds.has(shape)) return shapeBoundaryMaskIds.get(shape);
       const maskId = `${idPrefix}-contrast-shape-${shape}`;
@@ -439,11 +520,19 @@
     return `<g data-contrast-boundaries="true" pointer-events="none">${outlines.join("")}</g>`;
   }
 
+  /**
+   * @param {Object} filter - Background/foreground masks and shape.value.
+   * @returns {boolean} Whether a shaped filter differs by exactly one RGB channel.
+   */
   function needsContrastOutline(filter) {
     const difference = filter.background.mask ^ filter.foreground.mask;
     return filter.shape.value !== "none" && bitCount(difference) === 1;
   }
 
+  /**
+   * @param {Object} filter - Background and foreground colour masks.
+   * @returns {string} Black or white chosen from mean channel-weighted luminance.
+   */
   function contrastOutlineColour(filter) {
     const averageLuminance = (
       maskLuminance(filter.background.mask)
@@ -452,12 +541,20 @@
     return averageLuminance > 0.35 ? "#000000" : "#ffffff";
   }
 
+  /**
+   * @param {number} mask - RGB channel mask.
+   * @returns {number} Weighted luminance using standard RGB channel coefficients.
+   */
   function maskLuminance(mask) {
     return (mask & 4 ? 0.2126 : 0)
       + (mask & 2 ? 0.7152 : 0)
       + (mask & 1 ? 0.0722 : 0);
   }
 
+  /**
+   * @param {number} value - Small non-negative integer mask.
+   * @returns {number} Set-bit count used to identify single-channel differences.
+   */
   function bitCount(value) {
     let remaining = value;
     let count = 0;
@@ -468,6 +565,13 @@
     return count;
   }
 
+  /**
+   * Express channel blocking as black regions, with white holes for passing shapes.
+   * @param {Object} filter - Background/foreground masks and shape.value.
+   * @param {number} channelBit - One RGB bit.
+   * @param {number} discRadius - Disc radius.
+   * @returns {string} Local luminance-mask content; empty when nothing is blocked.
+   */
   function blockedChannelMarkup(filter, channelBit, discRadius) {
     const backgroundPasses = Boolean(filter.background.mask & channelBit);
     const foregroundPasses = filter.shape.value === "none"
@@ -484,6 +588,11 @@
     return `<g fill="#000">${shape}</g>`;
   }
 
+  /**
+   * Build local shape geometry; enclosing groups supply fill and transforms.
+   * @param {string} shape - Supported shape value; final fallback is the annulus.
+   * @returns {string} SVG primitives, or empty text for no shape.
+   */
   function shapeMarkup(shape) {
     if (shape === "none") return "";
     if (shape === "square") {

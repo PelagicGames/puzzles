@@ -1,6 +1,13 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Tutorial reference-card renderer for tutorial.html, after catalogues/progress.
+ * Reads stored unlock status, exposes the XOR section when unlocked and populates
+ * colour/shape grids with existing assets/tutorial SVGs. Does not generate files
+ * or write completion state; image filenames encode the colour masks.
+ */
 
 (() => {
+  // Colour masks encode RGB channels (4, 2, 1); order controls reference-card order.
   const colours = [
     { name: "white", value: "#ffffff", mask: 7 },
     { name: "black", value: "#000000", mask: 0 },
@@ -30,6 +37,7 @@
   const xorUnlocked = window.LightDiscProgress.xorUnlocked();
   xorTutorial.hidden = !xorUnlocked;
 
+  // Upper-triangular pairs include self-pairs once because both rules commute.
   colours.forEach((left, leftIndex) => {
     colours.slice(leftIndex).forEach((right, offset) => {
       const rightIndex = leftIndex + offset;
@@ -45,6 +53,14 @@
   });
   shapes.forEach((shape) => shapeReference.append(createShapeCard(shape)));
 
+  /**
+   * Create a labelled card for a pre-rendered interaction; caller appends it.
+   * @param {Object} left - First colour record with name and mask.
+   * @param {Object} right - Second colour record.
+   * @param {number} index - Supplied reference index; not used in card construction.
+   * @param {string} combination - Standard intersection or XOR.
+   * @returns {HTMLElement} Detached article with image and equation.
+   */
   function createColourCard(left, right, index, combination) {
     const resultMask = combination === "xor"
       ? left.mask ^ right.mask
@@ -66,6 +82,10 @@
     return card;
   }
 
+  /**
+   * @param {Object} shape - Shape value for the asset path and accessible name.
+   * @returns {HTMLElement} Detached article containing a shape image and label.
+   */
   function createShapeCard(shape) {
     const card = document.createElement("article");
     card.className = "reference-card";

@@ -124,12 +124,23 @@ Two connection modes are available:
   the newcomer then connects directly to the host. Each player can have one
   relayed invite open at a time; it expires after ten minutes and is cancelled
   when the game starts or hosting is transferred.
-- **Room code** uses the included lightweight signaling server. The host shares
-  one reusable six-character code, which every player in the lobby can also see
-  and pass on. Each guest's unique WebRTC offer and the
-  host's answer are relayed automatically; gameplay does not pass through the
-  server. This experimental mode is currently hidden from the menus and is
-  available only through its direct URL.
+- **Room code** (still in testing) uses the included lightweight signaling
+  server. The host shares one reusable six-character code, which every player
+  in the lobby can also see and pass on. Each guest's unique WebRTC offer and
+  the host's answer are relayed automatically; gameplay does not pass through
+  the server. Because it is still being tested, this mode is hidden from the
+  menus and is available only through its direct URL. Expect rough edges.
+
+Neither mode uses trickle ICE, so each offer or answer is sent with the
+candidates gathered so far. The code does not wait for ICE gathering to report
+`complete`: Chrome on Android can hold gathering open for about 40 seconds
+while a STUN probe on an unusable interface (often IPv6) retries, Safari can
+stall, and Firefox gathers more slowly. Instead, the description is used
+1.5 seconds after the first public (server-reflexive or relay) candidate, after
+8 seconds with only local candidates, or as soon as gathering completes. Only
+finding no candidates within 20 seconds is an error. Without a TURN relay,
+players behind symmetric or carrier-grade NAT (common on mobile data) may
+still be unable to connect to each other.
 
 Start the room-code server from the repository root:
 
@@ -257,6 +268,22 @@ Connections use public STUN servers but no TURN relay. As a result, peers
 behind some restrictive firewalls or NAT combinations may be unable to
 connect. Offer and answer codes can reveal network connection metadata and
 should only be shared with the intended players.
+
+### Online roadmap
+
+The following improvements are planned but **not yet implemented**:
+
+- **TURN relay fallback.** Add a TURN server (managed or self-hosted coturn)
+  with short-lived credentials issued by a small endpoint. Direct connections
+  would still be preferred; the relay would only carry traffic for players
+  who cannot connect directly, such as those behind carrier-grade NAT on
+  mobile data or strict corporate networks. If credentials cannot be fetched,
+  play would continue without a relay, as it does today.
+- **Room codes out of testing.** Finish testing the room-code signaling
+  server and make it available from the menus.
+- **Host-loss recovery.** Elect a new host and re-establish connections if
+  the host disconnects unexpectedly, rather than only supporting graceful
+  transfer.
 
 ## Country data
 

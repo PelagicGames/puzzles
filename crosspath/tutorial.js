@@ -1,5 +1,11 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Builds the worked SVG examples in tutorial.html after rules and rendering load.
+ * Small diagrams use local geometry; complete boards use shared rule diagnostics.
+ * Replay buttons and first visibility start check animations; no progress is written.
+ */
+
 (() => {
   const rules = window.CrosspathRules;
   const render = window.CrosspathRender;
@@ -8,13 +14,23 @@
   const CELL = 40;
   const PAD = 14;
   const LEAD = 20;
+  // A fixed worked solution supplies both valid boards and deliberately swapped examples.
   const WORKED_TILES = "0066af505 c00900000 006005005 5035003c0 c005003c0 069690500 050afc039 05005003a 3c0050a90"
     .split(" ")
     .map(rules.parseTile);
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /**
+   * @param {string} text - Whitespace-separated masks, with dots for absent cells.
+   * @returns {Array<number|null>} Row-major diagram cells.
+   */
   const hex = (text) => text.replace(/\s+/g, "").split("").map((digit) => (digit === "." ? null : parseInt(digit, 16)));
 
+  /**
+   * @param {string} containerId - Destination element ID.
+   * @param {Object} options - Verdict, caption, SVG dimensions and optional accessible label.
+   * @returns {Object} Appended figure element and its SVG drawing surface.
+   */
   function figure(containerId, { verdict = null, caption, width, height, label }) {
     const element = document.createElement("figure");
     element.className = `example${verdict ? ` is-${verdict}` : ""}`;
@@ -34,6 +50,12 @@
   }
 
   // A block of cells on a paper (movable) or newsprint (fixed/board) background, outlined as pieces.
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Array<number|null>} cells - Row-major diagram masks.
+   * @param {Object} options - Columns, origin, background and outline choices.
+   * @returns {Object} Grid origin, columns and rows used by subsequent overlays.
+   */
   function drawGrid(svg, cells, { columns, x = PAD, y = PAD, fixed = false, pieces = true, frame = false }) {
     const rows = Math.ceil(cells.length / columns);
     const width = columns * CELL;
@@ -50,10 +72,30 @@
     return { x, y, columns, rows };
   }
 
+  /**
+   * @param {Object} grid - Diagram dimensions.
+   * @param {number} row - Candidate row.
+   * @param {number} col - Candidate column.
+   * @returns {boolean} Whether the cell lies in the diagram.
+   */
   const inside = (grid, row, col) => row >= 0 && row < grid.rows && col >= 0 && col < grid.columns;
+  /**
+   * @param {Array<number|null>} cells - Diagram masks.
+   * @param {Object} grid - Diagram column count.
+   * @param {number} row - Cell row.
+   * @param {number} col - Cell column.
+   * @returns {number|null} Mask at the requested cell.
+   */
   const maskAt = (cells, grid, row, col) => cells[row * grid.columns + col];
 
   // Small-grid equivalent of CrosspathRules.tracePath, for figures smaller than the full board.
+  /**
+   * @param {Array<number|null>} cells - Diagram masks.
+   * @param {Object} grid - Diagram dimensions.
+   * @param {Object} start - Entry row, column and outward direction.
+   * @param {Object} [options={}] - Optional deliberately incorrect crossroads turn.
+   * @returns {Object} Start, ordered steps and break/exit/guard-limit loop event.
+   */
   function traceSmall(cells, grid, start, { turnAtCrossroads = null } = {}) {
     const steps = [];
     let { row, col } = start;
@@ -76,7 +118,12 @@
     return { start, steps, end: { type: "loop" } };
   }
 
-  // Joins that half-connect, and path squares that touch side by side without joining.
+  // Joins that half-connect, and path squares that are adjacent without joining.
+  /**
+   * @param {Array<number|null>} cells - Diagram masks.
+   * @param {Object} grid - Diagram dimensions.
+   * @returns {Object} Mismatch and touching edges, each identified by row, col and dir.
+   */
   function joinProblems(cells, grid) {
     const mismatches = [];
     const touching = [];
@@ -96,15 +143,32 @@
     return { mismatches, touching };
   }
 
+  /**
+   * @param {Object} grid - Diagram origin.
+   * @returns {Object} Geometry accepted by shared rendering helpers.
+   */
   function geometryFor(grid) {
     return { cell: CELL, originX: grid.x, originY: grid.y, lead: LEAD };
   }
 
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Object} trace - Small or full-board trace.
+   * @param {Object} grid - Diagram geometry.
+   * @param {string} [className="pen-trace"] - Trace styling.
+   * @returns {SVGElement} Appended trace path.
+   */
   function drawTrace(svg, trace, grid, className = "pen-trace") {
     const points = render.tracePoints(trace, geometryFor(grid));
     return svgElement("path", { class: className, d: pointsToPath(points) }, svg);
   }
 
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Array<number|null>} cells - Diagram masks.
+   * @param {Object} grid - Diagram geometry.
+   * @returns {void} Appends crosses for mismatches and zigzags for disconnected adjacency.
+   */
   function markProblems(svg, cells, grid) {
     const { mismatches, touching } = joinProblems(cells, grid);
     mismatches.forEach(({ row, col, dir }) => {
@@ -123,6 +187,12 @@
     });
   }
 
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Object} grid - Diagram origin.
+   * @param {Object[]} list - Row, col and unvisited mask entries.
+   * @returns {void} Appends cell washes and red ink for unvisited path arms.
+   */
   function markUnvisited(svg, grid, list) {
     list.forEach(({ row, col, mask }) => {
       const x = grid.x + col * CELL;
@@ -132,12 +202,28 @@
     });
   }
 
+  /**
+   * @param {Object} grid - Diagram origin.
+   * @param {number} row - Boundary row.
+   * @param {number} col - Boundary column.
+   * @param {number} dir - Outward direction.
+   * @param {number} distance - Distance beyond the cell edge.
+   * @returns {number[]} Outer coordinate pair.
+   */
   function outward(grid, row, col, dir, distance) {
     const [x, y] = edgePoint(row, col, dir, CELL, grid.x, grid.y);
     const [ex, ey] = render.EDGE[dir];
     return [x + (ex - 0.5) * 2 * distance, y + (ey - 0.5) * 2 * distance];
   }
 
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Object} grid - Diagram origin.
+   * @param {number} row - Boundary row.
+   * @param {number} col - Boundary column.
+   * @param {number} dir - Outward direction.
+   * @returns {number[]} Outer endpoint after appending the marker stub and dot.
+   */
   function drawEndMarker(svg, grid, row, col, dir) {
     const edge = edgePoint(row, col, dir, CELL, grid.x, grid.y);
     const outer = outward(grid, row, col, dir, LEAD);
@@ -146,12 +232,19 @@
     return outer;
   }
 
+  /**
+   * @param {number} columns - Diagram column count.
+   * @param {number} rows - Diagram row count.
+   * @param {number} [margin=PAD] - Outer padding in SVG units.
+   * @returns {Object} Width and height including both margins.
+   */
   function size(columns, rows, margin = PAD) {
     return { width: columns * CELL + margin * 2, height: rows * CELL + margin * 2 };
   }
 
   // ---- 1. The goal ----------------------------------------------------------
 
+  /** @returns {void} Appends the shuffled tray and its solved full-board illustration. */
   function goalFigures() {
     const trayOrder = [4, 8, 1, 6, 0, 3, 7, 2, 5];
     const gap = 16;
@@ -189,6 +282,7 @@
 
   // ---- 2. Path squares ------------------------------------------------------
 
+  /** @returns {void} Appends straight, corner and crossroads mask examples. */
   function squareFigures() {
     const gap = 12;
     const span = 2 * CELL + gap;
@@ -214,6 +308,7 @@
 
   // ---- 3. The pieces --------------------------------------------------------
 
+  /** @returns {void} Appends contrasting movable and fixed tile illustrations. */
   function pieceFigures() {
     let fig = figure("figures-pieces", {
       caption: "A moveable tile: printed on a lighter background, ready to move. It is placed exactly as printed.",
@@ -230,6 +325,13 @@
 
   // ---- 4. Joining pieces ----------------------------------------------------
 
+  /**
+   * @param {string} verdict - Valid or invalid styling.
+   * @param {string} caption - Explanation beneath the diagram.
+   * @param {string} text - Six-column hexadecimal cells.
+   * @param {Function} [extras] - Optional SVG/grid/cells decoration callback.
+   * @returns {void} Appends one tile-join example and its diagnostics.
+   */
   function joinFigure(verdict, caption, text, extras = () => {}) {
     const cells = hex(text);
     const { svg } = figure("figures-joins", { verdict, caption, ...size(6, 3) });
@@ -238,17 +340,21 @@
     extras(svg, grid, cells);
   }
 
+  /** @returns {void} Appends aligned, broken, adjacent and separated join examples. */
   function joinFigures() {
     joinFigure("valid", "The path leaves one tile and enters the next at the same point.", "000000 aaaaaa 000000");
     joinFigure("invalid", "Unaligned: the path leaves the left tile on the top row, but the right tile continues on the middle row.", "aaa000 000aaa 000000");
     joinFigure("invalid", "Unaligned: the path runs into the next tile where it has no path to continue it.", "000050 aaa050 000050");
-    joinFigure("invalid", "Parallel paths: two path squares sit side by side without being joined.", "005500 005500 005500");
+    joinFigure("invalid", "Adjacent without joining directly: two straights run next to each other.", "005500 005500 005500");
+    joinFigure("invalid", "Adjacent without joining directly: a straight sits next to a corner.", "0053aa aa9000 000000");
+    joinFigure("invalid", "Adjacent without joining directly: two corners next to each other, but not directly connected.", "aa93aa 000000 000000");
     joinFigure("valid", "Paths can run near each other with a gap between them.", "050500 050500 050500");
-    joinFigure("valid", "Path squares only touch where the path turns from one into the other.", "000000 aaac00 000500");
+    joinFigure("valid", "Path squares only next to each other where the path continues directly from one into the other.", "000000 aaac00 000500");
   }
 
   // ---- 5. Crossroads --------------------------------------------------------
 
+  /** @returns {void} Appends straight-through crossing and deliberately invalid turn examples. */
   function crossroadsFigures() {
     const columns = 6;
     const rows = 5;
@@ -257,6 +363,12 @@
     const start = { row: 2, col: 0, dir: W };
     const markers = [start, { row: 4, col: 3, dir: S }];
 
+    /**
+     * @param {string} verdict - Valid or invalid styling.
+     * @param {string} caption - Diagram explanation.
+     * @param {string} text - Six-column diagram masks.
+     * @returns {Object} Appended SVG, grid and cells with both required end markers.
+     */
     const board = (verdict, caption, text) => {
       const cells = hex(text);
       const { svg } = figure("figures-crossroads", { verdict, caption, ...dims });
@@ -291,6 +403,14 @@
 
   // ---- 6. Two ends, one path ------------------------------------------------
 
+  /**
+   * @param {string} verdict - Valid or invalid styling.
+   * @param {string} caption - Diagram explanation.
+   * @param {string} text - Six-column diagram masks.
+   * @param {Object} start - Trace entry cell and outward bit.
+   * @param {Function} decorate - Receives SVG, grid, cells and trace for diagnostic overlays.
+   * @returns {void} Appends a traced six-by-six example.
+   */
   function endsFigure(verdict, caption, text, start, decorate) {
     const cells = hex(text);
     const margin = LEAD + 8;
@@ -304,7 +424,16 @@
 
   // Red marks for path squares the trace never reached, edge exits it did not use or that are
   // not marked ends, and marked ends it missed.
+  /**
+   * @param {SVGElement} svg - Drawing destination.
+   * @param {Object} grid - Diagram geometry.
+   * @param {number[]} cells - Diagram masks.
+   * @param {Object} trace - Route actually travelled.
+   * @param {Object[]} [markers=[]] - Required row/col/dir ends.
+   * @returns {void} Adds unvisited ink and invalid/missing boundary-end marks.
+   */
   function markTraceFailures(svg, grid, cells, trace, markers = []) {
+    // Accumulated arm masks preserve the distinction between both axes of a crossroads.
     const visited = new Map();
     trace.steps.forEach(({ row, col, entry, exit }) => {
       const key = `${row},${col}`;
@@ -344,7 +473,12 @@
     });
   }
 
+  /** @returns {void} Appends a complete route, a detached loop and two separate paths. */
   function endsFigures() {
+    /**
+     * @param {string} verdict - Whether diagnostic marks are required.
+     * @returns {Function} Decorator accepting SVG, grid, cells and trace; appends failure marks.
+     */
     const decorate = (verdict) => (svg, grid, cells, trace) => {
       if (verdict === "invalid") markTraceFailures(svg, grid, cells, trace);
     };
@@ -364,6 +498,7 @@
 
   // ---- 7. Clues -------------------------------------------------------------
 
+  /** @returns {void} Appends matching and missed boundary-clue illustrations. */
   function cluesFigures() {
     const margin = LEAD + 10;
     const dims = { width: 6 * CELL + margin * 2, height: 3 * CELL + margin * 2 };
@@ -391,6 +526,12 @@
 
   // ---- 8. Checking ----------------------------------------------------------
 
+  /**
+   * @param {string} caption - Check explanation.
+   * @param {string} verdict - Valid or invalid styling.
+   * @param {number[]} placement - Worked tile indices by slot.
+   * @returns {void} Appends a full-board animated check and replay control.
+   */
   function boardFigure(caption, verdict, placement) {
     const margin = LEAD + 12;
     const full = 9 * CELL + margin * 2;
@@ -409,12 +550,14 @@
     replay.textContent = "Replay";
     element.querySelector("figcaption").append(" ", replay);
 
+    /** @returns {void} Clears corrections and starts a fresh ink/nib animation. */
     function play() {
       marksLayer.replaceChildren();
       const length = trace.getTotalLength();
       trace.style.strokeDasharray = `${length} ${length}`;
       const duration = reduceMotion ? 0 : Math.min(4200, 700 + length * 2.2);
       const begun = performance.now();
+      /** @returns {void} Completes the trace, hides the nib and appends failure marks. */
       const finish = () => {
         trace.style.strokeDashoffset = "0";
         nib.setAttribute("cx", -20);
@@ -429,6 +572,10 @@
         finish();
         return;
       }
+      /**
+       * @param {number} now - Animation-frame timestamp.
+       * @returns {void} Advances ink/nib and reschedules until finishing.
+       */
       const frame = (now) => {
         const progress = Math.min(1, (now - begun) / duration);
         const drawn = length * progress;
@@ -442,6 +589,7 @@
       requestAnimationFrame(frame);
     }
 
+    // Replay is explicit; the observer starts the first run only once, on half visibility.
     replay.addEventListener("click", play);
     if ("IntersectionObserver" in window) {
       const observer = new IntersectionObserver((entries) => {
@@ -456,6 +604,7 @@
     }
   }
 
+  /** @returns {void} Appends successful and swapped-tile check demonstrations. */
   function checkFigures() {
     boardFigure("Correct: the pen runs from one end to the other, through every path square.", "valid", [0, 1, 2, 3, 4, 5, 6, 7, 8]);
     boardFigure("Wrong: two tiles in the top row are swapped. The pen stops at a broken join, and red marks show the extra ends and the squares it never reached.", "invalid", [2, 1, 0, 3, 4, 5, 6, 7, 8]);

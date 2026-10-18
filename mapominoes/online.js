@@ -1,16 +1,27 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Host-authoritative online play, invite exchange and optional room signalling.
+ * Loaded by online.html after countries, rules, codes, maps and the map renderer.
+ * Reads form controls, URL map/signaling options and room credentials in localStorage;
+ * writes the page, room credentials, HTTP signalling requests and JSON DataChannels.
+ * The signalling service exchanges SDP only; the host validates all gameplay actions.
+ */
 (() => {
   "use strict";
 
+  // Map-local country codes index both the rules graph and the rendered geometry.
   let countries = window.MapominoesCountries;
   const { searchCountries, validateMove, validChoices } = window.MapominoesRules;
   let countriesByCode = new Map(countries.map((country) => [country.code, country]));
+  // Snapshot validation and host setup share these permitted turn lengths in seconds.
   const allowedTimers = new Set([5, 10, 15, 30, 45, 60]);
   const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
   const roomSignaling = new URLSearchParams(location.search).get("signaling") === "room";
+  // Heartbeats refresh liveness; transport silence, not a missed single ping, disconnects.
   const heartbeatMs = 3000;
   const disconnectMs = 30000;
+  /** @param {string} selector - CSS selector. @returns {Element|null} First page match. */
   const $ = (selector) => document.querySelector(selector);
   const screens = {
     menu: $("#menu-screen"),
@@ -21,25 +32,31 @@
     result: $("#result-screen")
   };
 
+  // Identity survives round changes; guests hold one host link, hosts index guests by ID.
   let role = null;
   let myId = null;
   let myName = "";
   let hostConnection = null;
   let hostChannel = null;
+  // Invite IDs own unjoined connections, expiry handles and optional guest requesters.
   const pendingInvites = new Map();
   let ownInviteId = null;
   let proxyInvite = null;
   const proxyInviteLifetimeMs = 10 * 60 * 1000;
   const peers = new Map();
+  // Replicated state holds lobby/turn/challenge/result, players, path and selections.
+  // Only the host mutates it; selectedCode and shortlist indices are local UI state.
   let state = null;
   let selectedCode = null;
   let matches = [];
   let activeMatchIndex = -1;
+  // Host turn expiry is authoritative; the display interval merely paints a countdown.
   let turnTimeout = null;
   let activityTimeout = null;
   let timerInterval = null;
   let heartbeatInterval = null;
   let peerSweepInterval = null;
+  // Room polling uses a monotonic event cursor and a busy guard against overlap.
   let signalPollTimer = null;
   let signalPollBusy = false;
   let roomCode = "";
@@ -48,11 +65,16 @@
   let guestSignalPeer = null;
   let lastHostMessage = 0;
   let closingConnections = false;
+  // Outgoing transfer tracks required peers and timeout; incoming transfer stages links
+  // without replacing live channels until the old host sends a commit.
   let migration = null;
   let incomingMigration = null;
   let mapData = window.MapominoesMaps.get("world").mapData;
+  // Invalidate in-flight map loads when a newer snapshot or navigation wins the race.
   let snapshotSequence = 0;
   let changingMap = false;
+  // Player IDs map to private room resume tokens; pending room IDs own unjoined links.
+  // Weakly held retired channels suppress obsolete close/error notifications.
   const resumeTokens = new Map();
   const pendingRoomPeers = new Map();
   const retiredChannels = new WeakSet();
@@ -67,8 +89,12 @@
     hostMapPicker.value = requestedMap;
     menuMapPicker.value = requestedMap;
   }
+  // Keep setup consistent with the menu picker before a lobby exists.
   menuMapPicker.addEventListener("change", () => { hostMapPicker.value = menuMapPicker.value; });
 
+  /** Switch rules, geometry and page vocabulary to an already loaded map.
+   * @param {string} id - Catalogue map ID. @returns {void}
+   */
   function activateMap(id) {
     const data = maps.get(id);
     if (!data) throw new Error(`Map ${id} has not loaded.`);
@@ -79,6 +105,7 @@
     maps.updateVocabulary(id);
   }
 
+  // Only the host may change maps; ignore a load completed after leaving this lobby.
   lobbyMapPicker.addEventListener("change", async () => {
     if (role !== "host" || state?.phase !== "lobby" || migration || changingMap) return;
     const id = lobbyMapPicker.value;
@@ -103,6 +130,7 @@
     }
   });
 
+  // Reuse the invite page controls with room-specific labels and no manual answer.
   if (roomSignaling) {
     document.title = "Mapominoes Online · Room code";
     $("#online-mode-label").textContent = "Server-assisted WebRTC room";
@@ -116,12 +144,17 @@
     $("#join-form button[type='submit']").textContent = "Join room";
   }
 
+  /** @param {string} name - Screen key to reveal; hides all others. @returns {void} */
   function showScreen(name) {
     Object.entries(screens).forEach(([key, element]) => {
       element.hidden = key !== name;
     });
   }
 
+  /** Display a recoverable error and log an optional cause.
+   * @param {string} message - User-facing context.
+   * @param {Error|null} error - Optional diagnostic cause. @returns {void}
+   */
   function exposeError(message, error = null) {
     const detail = error instanceof Error ? ` ${error.message}` : "";
     $("#connection-error").textContent = `${message}${detail}`;
@@ -129,47 +162,98 @@
     if (error) console.error(message, error);
   }
 
+  /** Clear and hide the shared connection error region. @returns {void} */
   function clearError() {
     $("#connection-error").hidden = true;
     $("#connection-error").textContent = "";
   }
 
+  /** @param {*} value - Untrusted name. @returns {string} Collapsed, trimmed name, at most 40 characters. */
   function cleanName(value) {
     return String(value || "").replace(/\s+/g, " ").trim().slice(0, 40);
   }
 
+  /** @param {string} prefix - Identity category. @returns {string} Random session-local identifier. */
   function randomId(prefix) {
     const values = new Uint32Array(2);
     crypto.getRandomValues(values);
     return `${prefix}-${values[0].toString(36)}${values[1].toString(36)}`;
   }
 
+  /** @param {Object} value - Invite or answer envelope.
+   * @param {number} version - Wire version to emit. @returns {Promise<string>} Shareable code.
+   */
   function encodeCode(value, version = 3) {
     return window.MapominoesCodes.encode(value, { version });
   }
 
+  // Shared decoder checks the expected invite/answer kind and legacy wire versions.
   const decodeCode = window.MapominoesCodes.decode;
 
-  function waitForIce(connection) {
+  // Codes are exchanged without trickle ICE, so the offer/answer must carry candidates.
+  // Waiting for gathering to finish is unreliable: Chrome on Android can keep it open
+  // for ~40 s when one interface (often IPv6) never hears back from STUN, Safari can
+  // stall, and Firefox is slow. Use the description once a public candidate has had a
+  // moment for siblings from other interfaces to arrive.
+  const iceTiming = { settleMs: 1500, hostOnlyMs: 8000, limitMs: 20000 };
+
+  /** Wait for usable non-trickle ICE, removing listeners and timers on completion.
+   * @param {RTCPeerConnection} connection - Connection gathering local candidates.
+   * @param {Object} timing - Millisecond settle, host-only and hard limits.
+   * @returns {Promise<void>} Rejects at the hard limit if no candidates exist.
+   */
+  function waitForIce(connection, timing = iceTiming) {
+    /** @returns {string} Current local SDP, including candidates gathered so far. */
+    const sdp = () => connection.localDescription?.sdp || "";
+    /** @param {string} types - Candidate-type alternatives. @returns {boolean} Whether SDP contains one. */
+    const hasCandidate = (types) => new RegExp(`^a=candidate:.* typ (${types})( |$)`, "m").test(sdp());
     if (connection.iceGatheringState === "complete") return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        reject(new Error("Timed out gathering connection candidates. Check your network and try again."));
-      }, 15000);
-      const changed = () => {
-        if (connection.iceGatheringState !== "complete") return;
+      let settleTimer = null;
+      const timers = [
+        window.setTimeout(() => { if (hasCandidate("host|srflx|prflx|relay")) finish(); }, timing.hostOnlyMs),
+        window.setTimeout(() => {
+          if (hasCandidate("host|srflx|prflx|relay")) finish();
+          else fail();
+        }, timing.limitMs)
+      ];
+      /** @param {Event} [event] - Gathering notification. @returns {void} Start settling or finish early. */
+      const check = (event) => {
+        if (connection.iceGatheringState === "complete" || event?.candidate === null) {
+          finish();
+          return;
+        }
+        if (!settleTimer && hasCandidate("srflx|relay")) {
+          settleTimer = window.setTimeout(finish, timing.settleMs);
+        }
+      };
+      /** Cancel every wait handle and detach candidate observers. @returns {void} */
+      function cleanup() {
+        timers.forEach(clearTimeout);
+        clearTimeout(settleTimer);
+        connection.removeEventListener("icegatheringstatechange", check);
+        connection.removeEventListener("icecandidate", check);
+      }
+      /** Release observers and resolve the gathering wait. @returns {void} */
+      function finish() {
         cleanup();
         resolve();
-      };
-      function cleanup() {
-        clearTimeout(timeout);
-        connection.removeEventListener("icegatheringstatechange", changed);
       }
-      connection.addEventListener("icegatheringstatechange", changed);
+      /** Release observers and reject a candidate-free connection. @returns {void} */
+      function fail() {
+        cleanup();
+        reject(new Error("No connection candidates were found. Check your network and try again."));
+      }
+      connection.addEventListener("icegatheringstatechange", check);
+      connection.addEventListener("icecandidate", check);
+      check();
     });
   }
 
+  /** Exchange JSON with the same-origin signalling service; HTTP errors reject.
+   * @param {string} pathname - API path and optional query.
+   * @param {Object} options - Fetch options. @returns {Promise<Object|null>} Response or empty 204.
+   */
   async function signalRequest(pathname, options = {}) {
     const response = await fetch(pathname, {
       ...options,
@@ -181,6 +265,7 @@
     return value;
   }
 
+  /** Allocate room credentials, display its reusable code and start polling. @returns {Promise<void>} */
   async function createSignaledRoom() {
     const result = await signalRequest("/signal/rooms", { method: "POST" });
     roomCode = result.code;
@@ -191,12 +276,14 @@
     scheduleHostSignalPoll(0);
   }
 
+  /** @param {number} delay - Delay in milliseconds; replaces any pending host poll. @returns {void} */
   function scheduleHostSignalPoll(delay = 800) {
     clearTimeout(signalPollTimer);
     if (!roomSignaling || role !== "host" || !roomCode) return;
     signalPollTimer = window.setTimeout(pollHostSignals, delay);
   }
 
+  /** Consume sequenced offer/cancel events and reschedule while hosting. @returns {Promise<void>} */
   async function pollHostSignals() {
     if (signalPollBusy || role !== "host") return;
     signalPollBusy = true;
@@ -220,6 +307,9 @@
     }
   }
 
+  /** Stage a guest connection and post its gathered answer; failures close it.
+   * @param {Object} event - Offer event with peerId and RTC description. @returns {Promise<void>}
+   */
   async function answerSignaledPeer(event) {
     if (pendingRoomPeers.has(event.peerId)) return;
     const connection = new RTCPeerConnection(rtcConfig);
@@ -245,6 +335,7 @@
     }
   }
 
+  /** @returns {Object} Saved player/token pair, or an empty object if storage is unavailable or invalid. */
   function roomResumeDetails() {
     if (!roomCode) return {};
     try {
@@ -254,6 +345,9 @@
     }
   }
 
+  /** Register a guest, post an offer and await the host; updates connection controls.
+   * @param {SubmitEvent} event - Join form submission to suppress. @returns {Promise<void>}
+   */
   async function joinSignaledRoom(event) {
     event.preventDefault();
     clearError();
@@ -296,6 +390,9 @@
     }
   }
 
+  /** Poll the guest-token endpoint for up to 30 seconds and apply the answer.
+   * @returns {Promise<void>} Rejects if the room handshake times out.
+   */
   async function pollSignaledAnswer() {
     const deadline = Date.now() + 30000;
     while (role === "guest" && guestSignalPeer && Date.now() < deadline) {
@@ -312,6 +409,10 @@
     throw new Error("The host did not answer the connection in time.");
   }
 
+  /** Copy a code, or select it for manual copying when clipboard access fails.
+   * @param {HTMLTextAreaElement} element - Code source.
+   * @param {HTMLButtonElement} button - Temporary feedback target. @returns {Promise<void>}
+   */
   async function copyText(element, button) {
     try {
       await navigator.clipboard.writeText(element.value);
@@ -325,6 +426,10 @@
     }
   }
 
+  /** @param {RTCDataChannel|null} channel - Destination.
+   * @param {Object} message - JSON envelope with a type discriminator.
+   * @returns {boolean} Whether sending succeeded; displays transport errors.
+   */
   function safeSend(channel, message) {
     if (channel?.readyState !== "open") return false;
     try {
@@ -336,10 +441,14 @@
     }
   }
 
+  /** @param {*} value - Candidate record. @returns {boolean} Whether non-null, object-valued and not an array. */
   function isPlainObject(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
   }
 
+  /** @param {MessageEvent} event - DataChannel input.
+   * @returns {Object|null} Bounded JSON object with a string type, or null.
+   */
   function parseMessage(event) {
     if (typeof event.data !== "string" || event.data.length > 200000) return null;
     try {
@@ -350,6 +459,9 @@
     }
   }
 
+  /** Tear down channels, staged invites, migration and network/game timers.
+   * Suppresses close notifications until queued transport events have run. @returns {void}
+   */
   function closeConnections() {
     closingConnections = true;
     if (migration) clearTimeout(migration.timeout);
@@ -378,6 +490,7 @@
     window.setTimeout(() => { closingConnections = false; }, 0);
   }
 
+  /** Invalidate pending snapshots, close networking and reset session forms/state. @returns {void} */
   function returnToMenu() {
     snapshotSequence += 1;
     closeConnections();
@@ -394,6 +507,9 @@
     showScreen("menu");
   }
 
+  /** @param {string} mode - Autocheck or challenge.
+   * @param {number} seconds - Turn duration. @returns {Object} Version-one host snapshot.
+   */
   function initialLobby(mode, seconds) {
     return {
       version: 1,
@@ -423,10 +539,12 @@
     };
   }
 
+  /** @returns {Object} JSON-safe detached copy of the replicated state, excluding transport credentials. */
   function publicState() {
     return JSON.parse(JSON.stringify(state));
   }
 
+  /** Send a complete {type, state} snapshot to each guest and render locally. @returns {void} */
   function broadcastSnapshot() {
     if (role !== "host" || !state) return;
     const snapshot = { type: "snapshot", state: publicState() };
@@ -434,10 +552,12 @@
     render();
   }
 
+  /** @returns {number} Connected players who have not explicitly left. */
   function hostPlayerConnectedCount() {
     return state.players.filter((player) => player.connected && !player.left).length;
   }
 
+  /** Replace the host liveness interval; stale peers follow normal disconnect handling. @returns {void} */
   function startPeerSweep() {
     clearInterval(peerSweepInterval);
     peerSweepInterval = window.setInterval(() => {
@@ -448,6 +568,11 @@
     }, heartbeatMs);
   }
 
+  /** Bind handshake, action and disconnect listeners to an unidentified guest.
+   * @param {RTCPeerConnection} connection - Guest transport.
+   * @param {RTCDataChannel} channel - Ordered JSON channel.
+   * @param {string} inviteId - Manual invite or pending room peer ID. @returns {void}
+   */
   function setupHostChannel(connection, channel, inviteId) {
     const peer = { connection, channel, id: null, inviteId, lastSeen: Date.now() };
     channel.addEventListener("open", () => {
@@ -461,6 +586,11 @@
     });
   }
 
+  /** Dispatch guest envelopes: hello authenticates resume credentials, ping updates
+   * liveness, invite-* proxies codes, migration-* stages transfer and action requests play.
+   * @param {Object} peer - Host-owned transport record.
+   * @param {MessageEvent} event - Untrusted JSON message. @returns {void}
+   */
   function handleHostMessage(peer, event) {
     peer.lastSeen = Date.now();
     const message = parseMessage(event);
@@ -543,6 +673,9 @@
     }
   }
 
+  /** Close a guest, cancel their unused invites and remove or skip their player.
+   * @param {Object} peer - Transport record; repeated notifications are harmless. @returns {void}
+   */
   function disconnectPeer(peer) {
     if (role !== "host" || closingConnections || !peer.id || !state) return;
     const player = state.players.find((candidate) => candidate.id === peer.id);
@@ -564,6 +697,9 @@
     broadcastSnapshot();
   }
 
+  /** Advance an unavailable current player without restarting a challenge timer.
+   * @param {Object} player - Replicated player record; may end an empty round. @returns {void}
+   */
   function skipUnavailableCurrent(player) {
     const index = state.players.indexOf(player);
     if (!["turn", "challenge"].includes(state.phase) || index !== state.currentPlayer) return;
@@ -586,6 +722,9 @@
     else state.deadline = null;
   }
 
+  /** Mark an explicit departure, broadcast it, then close the guest after delivery.
+   * @param {string} playerId - Departing identity; the local host returns to menu. @returns {void}
+   */
   function leavePlayer(playerId) {
     if (playerId === myId) {
       returnToMenu();
@@ -607,11 +746,17 @@
     }, 50);
   }
 
+  /** @param {*} signal - Proposed RTC description.
+   * @param {string} type - Required offer/answer type. @returns {boolean} Whether bounded and correctly typed.
+   */
   function validMigrationSignal(signal, type) {
     return isPlainObject(signal) && signal.type === type
       && typeof signal.sdp === "string" && signal.sdp.length <= 50000;
   }
 
+  /** Freeze lobby invites and ask a successor to establish replacement guest links.
+   * @param {string} targetId - Connected successor. @returns {void}
+   */
   function startHostMigration(targetId) {
     if (role !== "host" || state.phase !== "lobby" || migration || changingMap) return;
     const target = state.players.find((player) => player.id === targetId);
@@ -652,6 +797,9 @@
     render();
   }
 
+  /** Stage a non-successor guest's transfer bookkeeping without changing authority.
+   * @param {Object} message - migration-prepare envelope. @returns {void}
+   */
   function prepareIncomingMigration(message) {
     if (role !== "guest" || incomingMigration
       || typeof message.migrationId !== "string"
@@ -668,6 +816,10 @@
     };
   }
 
+  /** Load and validate transfer data, then prepare all successor-to-guest offers.
+   * @param {Object} message - migration-start snapshot, peer IDs and room credentials.
+   * @returns {Promise<void>} Reports failures to the old host and discards staged links.
+   */
   async function beginIncomingMigration(message) {
     await maps.load(message.state?.mapId || "world");
     if (role !== "guest" || message.targetId !== myId || incomingMigration
@@ -707,6 +859,9 @@
     }
   }
 
+  /** Create a successor link, relaying gathered SDP via the current host.
+   * @param {string} peerId - Existing guest identity. @returns {Promise<void>}
+   */
   async function createMigrationOffer(peerId) {
     const connection = new RTCPeerConnection(rtcConfig);
     const channel = connection.createDataChannel("mapominoes-migrated", { ordered: true });
@@ -726,6 +881,9 @@
     });
   }
 
+  /** Apply a relayed answer as successor, or answer an offer as another guest.
+   * @param {Object} message - Migration ID, sender and RTC signal. @returns {Promise<void>}
+   */
   async function receiveMigrationRelay(message) {
     if (!incomingMigration || message.migrationId !== incomingMigration.id) return;
     if (myId === incomingMigration.targetId) {
@@ -752,6 +910,7 @@
     });
   }
 
+  /** Notify the old host only when every required successor channel is open. @returns {void} */
   function reportMigrationReady() {
     if (!incomingMigration || myId !== incomingMigration.targetId
       || incomingMigration.ready.size !== incomingMigration.expected.size) return;
@@ -761,6 +920,10 @@
     });
   }
 
+  /** Forward only signals between the designated successor and expected guests.
+   * @param {Object} peer - Authenticated sender.
+   * @param {Object} message - migration-relay envelope. @returns {void}
+   */
   function relayMigrationSignal(peer, message) {
     if (!migration || message.migrationId !== migration.id
       || !validMigrationSignal(message.signal, peer.id === migration.targetId ? "offer" : "answer")) return;
@@ -775,6 +938,10 @@
     });
   }
 
+  /** Increase authority epoch and broadcast the ready successor's transfer commit.
+   * @param {Object} peer - Successor transport.
+   * @param {Object} message - Matching migration-ready envelope. @returns {void}
+   */
   function commitHostMigration(peer, message) {
     if (!migration || peer.id !== migration.targetId
       || message.migrationId !== migration.id) return;
@@ -793,6 +960,7 @@
     applyMigrationCommit(commit).catch((error) => exposeError("Could not commit host transfer.", error));
   }
 
+  /** @param {string} reason - Broadcast explanation; restores the existing host's lobby. @returns {void} */
   function abortHostMigration(reason) {
     if (!migration) return;
     const message = { type: "migration-abort", migrationId: migration.id, reason };
@@ -803,11 +971,16 @@
     render();
   }
 
+  /** Close only staged replacement connections, retaining the current host link. @returns {void} */
   function discardIncomingMigration() {
     incomingMigration?.connections.forEach((connection) => connection.close());
     incomingMigration = null;
   }
 
+  /** Promote staged links, rebind listeners and retire superseded channels.
+   * @param {Object} message - Committed snapshot and old/new host IDs.
+   * @returns {Promise<void>} Loads map data before accepting the new authority.
+   */
   async function applyMigrationCommit(message) {
     await maps.load(message.state?.mapId || "world");
     if (!validSnapshot(message.state) || message.state.hostId !== message.targetId) return;
@@ -896,6 +1069,7 @@
     }
   }
 
+  /** Hide and clear manual invite controls without closing their transport. @returns {void} */
   function resetInviteUi() {
     $("#invite-area").hidden = true;
     $("#invite-output").value = "";
@@ -904,6 +1078,9 @@
     $("#invite-status").textContent = "";
   }
 
+  /** @param {string} code - Encoded offer.
+   * @param {string} status - Instructions; reveals and resets answer controls. @returns {void}
+   */
   function showInviteCode(code, status) {
     $("#invite-output").value = code;
     $("#answer-input").value = "";
@@ -912,7 +1089,9 @@
     $("#invite-status").textContent = status;
   }
 
-  // Forget an invite whose player has joined, leaving its connection open.
+  /** Forget a joined invite without closing its now-active connection.
+   * @param {string} inviteId - Invite key. @returns {Object|null} Released record, if present.
+   */
   function releasePendingInvite(inviteId) {
     const invite = pendingInvites.get(inviteId);
     if (!invite) return null;
@@ -925,6 +1104,9 @@
     return invite;
   }
 
+  /** @param {string} inviteId - Pending offer to close.
+   * @param {string} reason - Optional cancellation message to its guest requester. @returns {void}
+   */
   function closePendingInvite(inviteId, reason = "") {
     const invite = releasePendingInvite(inviteId);
     if (!invite) return;
@@ -934,10 +1116,15 @@
     }
   }
 
+  /** @param {string} reason - Optional shared requester notification; closes every pending offer. @returns {void} */
   function closeAllPendingInvites(reason = "") {
     [...pendingInvites.keys()].forEach((inviteId) => closePendingInvite(inviteId, reason));
   }
 
+  /** Stage a host offer; proxied invites expire, and failures release their transport.
+   * @param {string|null} requesterId - Guest asking to relay, or null for the host.
+   * @returns {Promise<Object>} Invite ID and encoded gathered offer.
+   */
   async function createHostedInvite(requesterId) {
     const inviteId = randomId("invite");
     const connection = new RTCPeerConnection(rtcConfig);
@@ -967,6 +1154,10 @@
     }
   }
 
+  /** Accept one matching answer, restoring retry eligibility if RTC rejects it.
+   * @param {Object} invite - Pending transport record.
+   * @param {Object} code - Decoded answer envelope. @returns {Promise<void>}
+   */
   async function applyInviteAnswer(invite, code) {
     if (code.inviteId !== invite.inviteId || code.description.type !== "answer") {
       throw new Error("This answer belongs to a different invite.");
@@ -981,11 +1172,13 @@
     }
   }
 
+  /** @returns {boolean} Whether lobby capacity and transfer state permit another invite. */
   function invitesOpen() {
     return state?.phase === "lobby" && !migration && !incomingMigration
       && state.players.length < 12;
   }
 
+  /** Request a guest proxy offer or replace the host's own displayed offer. @returns {Promise<void>} */
   async function createInvite() {
     clearError();
     if (role === "guest") {
@@ -1008,9 +1201,14 @@
     }
   }
 
+  /** Create one outstanding proxied invite per guest and correlate replies by request ID.
+   * @param {Object} peer - Requesting guest.
+   * @param {Object} message - invite-request envelope. @returns {Promise<void>}
+   */
   async function handleInviteRequest(peer, message) {
     if (typeof message.requestId !== "string" || !message.requestId || message.requestId.length > 80) return;
     const requestId = message.requestId;
+    /** @param {string} text - Refusal reason. @returns {boolean} Whether the correlated error was sent. */
     const refuse = (text) => safeSend(peer.channel, { type: "invite-error", requestId, message: text });
     if (!invitesOpen() || changingMap) {
       refuse(state.players.length >= 12
@@ -1033,9 +1231,14 @@
     }
   }
 
+  /** Verify invite ownership before decoding and applying a guest-relayed answer.
+   * @param {Object} peer - Relaying guest.
+   * @param {Object} message - Invite ID and encoded answer. @returns {Promise<void>}
+   */
   async function handleProxyAnswer(peer, message) {
     const inviteId = typeof message.inviteId === "string" ? message.inviteId : "";
     const invite = pendingInvites.get(inviteId);
+    /** @param {boolean} ok - Acceptance result. @param {string} text - Feedback. @returns {boolean} Send success. */
     const reply = (ok, text) => safeSend(peer.channel, { type: "invite-answer-result", inviteId, ok, message: text });
     if (!invite || invite.requesterId !== peer.id) {
       reply(false, "That invite is no longer active. Create a fresh invite.");
@@ -1049,6 +1252,7 @@
     }
   }
 
+  /** Correlate a new guest invite request and show pending feedback. @returns {void} */
   function requestProxyInvite() {
     if (role !== "guest" || !myId || !invitesOpen()) return;
     proxyInvite = { requestId: randomId("request"), inviteId: null };
@@ -1062,6 +1266,9 @@
     render();
   }
 
+  /** Update only the current request/invite UI, ignoring stale correlated replies.
+   * @param {Object} message - invite-code/error/answer-result/joined/cancelled envelope. @returns {void}
+   */
   function handleProxyInviteMessage(message) {
     if (!proxyInvite) return;
     if (message.type === "invite-code" || message.type === "invite-error") {
@@ -1101,6 +1308,7 @@
     }
   }
 
+  /** Decode the entered answer, then apply locally or relay to its owning host. @returns {Promise<void>} */
   async function acceptAnswer() {
     clearError();
     const invite = role === "host" ? pendingInvites.get(ownInviteId) : null;
@@ -1131,6 +1339,9 @@
     }
   }
 
+  /** Answer a manual offer and expose a compatible code for return to the inviter.
+   * @param {SubmitEvent} event - Join submission to suppress. @returns {Promise<void>}
+   */
   async function joinFromInvite(event) {
     event.preventDefault();
     clearError();
@@ -1176,8 +1387,12 @@
     }
   }
 
+  /** Bind guest protocol/liveness listeners, ignoring errors from retired transfer links.
+   * @param {boolean} sendHello - Whether this link needs initial player registration. @returns {void}
+   */
   function setupGuestChannel(sendHello = true) {
     const channel = hostChannel;
+    /** Send optional identity/resume data, start heartbeats and update join feedback. @returns {void} */
     const opened = () => {
       if (sendHello) {
         const resume = roomSignaling ? roomResumeDetails() : {};
@@ -1214,6 +1429,9 @@
     });
   }
 
+  /** Validate bounded player/path/result records against the snapshot's loaded map.
+   * @param {*} snapshot - Untrusted replicated state. @returns {boolean} Whether safe to apply.
+   */
   function validSnapshot(snapshot) {
     const data = maps.get(snapshot?.mapId || "world");
     if (!data || !maps.catalog.some((map) => map.id === (snapshot?.mapId || "world"))) return false;
@@ -1262,6 +1480,9 @@
           && typeof snapshot.lastResult.reason === "string"));
   }
 
+  /** Dispatch host snapshots, welcome credentials, proxy replies and transfer control.
+   * @param {MessageEvent} event - JSON DataChannel input; refreshes host liveness. @returns {void}
+   */
   function handleGuestMessage(event) {
     lastHostMessage = Date.now();
     const message = parseMessage(event);
@@ -1325,6 +1546,9 @@
     }
   }
 
+  /** Load a snapshot's map, discarding stale asynchronous work and older authority.
+   * @param {Object} snapshot - Proposed complete host state. @returns {Promise<void>} Renders accepted state.
+   */
   async function receiveSnapshot(snapshot) {
     const sequence = ++snapshotSequence;
     try {
@@ -1344,19 +1568,30 @@
     }
   }
 
+  /** Route both host and guest commands through the host's action validation.
+   * @param {string} action - Command discriminator.
+   * @param {Object} payload - Command fields, such as code. @returns {void}
+   */
   function sendAction(action, payload = {}) {
     if (role === "host") processAction(myId, { type: "action", action, ...payload });
     else safeSend(hostChannel, { type: "action", action, ...payload });
   }
 
+  /** @returns {Object|null} Current replicated player, if state exists. */
   function currentPlayer() {
     return state?.players[state.currentPlayer] || null;
   }
 
+  /** @param {string} id - Player ID. @returns {boolean} Whether they own the current turn. */
   function isCurrent(id) {
     return currentPlayer()?.id === id;
   }
 
+  /** Authorise phase, identity and selected code before mutating host state.
+   * Only the host may restart rounds or return everyone to the lobby.
+   * @param {string} playerId - Authenticated sender.
+   * @param {Object} message - Action envelope. @returns {void}
+   */
   function processAction(playerId, message) {
     if (role !== "host" || !state || typeof message.action !== "string") return;
     const player = state.players.find((candidate) => candidate.id === playerId);
@@ -1404,6 +1639,9 @@
     }
   }
 
+  /** @param {number} index - Previous player index.
+   * @returns {number|null} Next eligible index; marks unavailable players ineligible.
+   */
   function nextPlayer(index) {
     for (let offset = 1; offset <= state.players.length; offset += 1) {
       const candidateIndex = (index + offset) % state.players.length;
@@ -1417,6 +1655,9 @@
     return null;
   }
 
+  /** @param {number} preferredIndex - First index to consider.
+   * @returns {number|null} Connected, non-departed starter, wrapping through the roster.
+   */
   function connectedStarter(preferredIndex) {
     for (let offset = 0; offset < state.players.length; offset += 1) {
       const index = (preferredIndex + offset) % state.players.length;
@@ -1426,12 +1667,14 @@
     return null;
   }
 
+  /** Replace the host's turn expiry and publish its wall-clock deadline in state. @returns {void} */
   function beginDeadline() {
     clearTimeout(turnTimeout);
     state.deadline = Date.now() + state.turnSeconds * 1000;
     turnTimeout = window.setTimeout(expireTurn, state.turnSeconds * 1000 + 30);
   }
 
+  /** Auto-submit the host-known selection, otherwise resolve a timed concession. @returns {void} */
   function expireTurn() {
     if (role !== "host" || state.phase !== "turn") return;
     const player = currentPlayer();
@@ -1440,6 +1683,7 @@
     else concede(true);
   }
 
+  /** Close outstanding invites and begin with a connected starter when lobby permits. @returns {void} */
   function startGame() {
     if (role !== "host" || state.phase !== "lobby" || changingMap || migration || hostPlayerConnectedCount() < 2) return;
     if (state.round === 0) state.players.forEach((player) => { player.score = 0; });
@@ -1452,6 +1696,9 @@
     startRound(starter);
   }
 
+  /** Reset round eligibility, route and selections, then start the host deadline.
+   * @param {number} startPlayer - Preferred starter index. @returns {void}
+   */
   function startRound(startPlayer) {
     const starter = connectedStarter(startPlayer);
     if (starter === null) return;
@@ -1471,6 +1718,11 @@
     broadcastSnapshot();
   }
 
+  /** Store validation alongside the move; autocheck ends immediately on invalidity,
+   * whereas challenge mode defers judgement to the following player.
+   * @param {string} code - Selected map code.
+   * @param {boolean} timedOut - Whether expiry submitted the selection. @returns {void}
+   */
   function commitCountry(code, timedOut) {
     clearTimeout(turnTimeout);
     const playerIndex = state.currentPlayer;
@@ -1511,6 +1763,7 @@
     broadcastSnapshot();
   }
 
+  /** Resolve stored move validity; a failed challenge penalises its challenger. @returns {void} */
   function challengeMove() {
     clearTimeout(turnTimeout);
     const challenger = currentPlayer();
@@ -1533,6 +1786,9 @@
     }
   }
 
+  /** End without a penalty if no legal continuation exists.
+   * @param {boolean} timedOut - Whether the current player ran out of time. @returns {void}
+   */
   function concede(timedOut = false) {
     clearTimeout(turnTimeout);
     const choices = validChoices(countries, state.path, state.roundPlayerCount);
@@ -1560,6 +1816,10 @@
     });
   }
 
+  /** Freeze results and broadcast; scores count losses, so the loser gains a point.
+   * @param {Object} options - Award flag, optional choices, choicePath, loser index,
+   * noLegalMoves flag and explanatory reason. @returns {void}
+   */
   function endRound({
     awardPoint = true,
     choices = null,
@@ -1584,6 +1844,7 @@
     broadcastSnapshot();
   }
 
+  /** Preserve the next starter, remove departed players and reopen host invitations. @returns {void} */
   function returnGameToLobby() {
     clearTimeout(turnTimeout);
     state.nextStarterId = state.players[state.lastResult?.restartPlayer]?.id || null;
@@ -1599,6 +1860,7 @@
     broadcastSnapshot();
   }
 
+  /** Render the screen selected by the replicated phase. @returns {void} */
   function render() {
     if (!state) return;
     if (state.phase === "lobby") renderLobby();
@@ -1606,6 +1868,7 @@
     else renderGame();
   }
 
+  /** Rebuild roster, transfer controls, invite availability and host/guest feedback. @returns {void} */
   function renderLobby() {
     showScreen("lobby");
     if (!changingMap) lobbyMapPicker.value = state.mapId || "world";
@@ -1644,10 +1907,12 @@
       : `${state.activity} Waiting for the host to start.`;
   }
 
+  /** @param {number} index - Roster index. @returns {string} Display name or a safe fallback. */
   function playerName(index) {
     return state.players[index]?.name || "Unknown player";
   }
 
+  /** Rebuild loss scores and current/offline/next-round indicators. @returns {void} */
   function renderScores() {
     const list = $("#scoreboard");
     list.replaceChildren();
@@ -1664,6 +1929,7 @@
     });
   }
 
+  /** List eligible connected players in circular turn order. @returns {void} */
   function renderUpcoming() {
     const list = $("#upcoming-list");
     list.replaceChildren();
@@ -1680,6 +1946,7 @@
     }
   }
 
+  /** Paint turn/challenge state, hiding input from spectators, and refresh the clock. @returns {void} */
   function renderGame() {
     showScreen("game");
     const player = currentPlayer();
@@ -1705,6 +1972,7 @@
     startTimerDisplay();
   }
 
+  /** @param {boolean} mine - Whether local input is allowed; reconcile any host-known selection. @returns {void} */
   function renderEntry(mine) {
     $("#country-form").hidden = !mine;
     $("#waiting-copy").hidden = mine;
@@ -1723,6 +1991,7 @@
     }
   }
 
+  /** @param {boolean} mine - Whether local player decides; display the unjudged prior move. @returns {void} */
   function renderChallenge(mine) {
     clearSelectionUi(false);
     const entry = state.path[state.path.length - 1];
@@ -1734,9 +2003,11 @@
     $("#challenge-waiting").textContent = `Waiting for ${currentPlayer().name}'s decision…`;
   }
 
+  /** Replace the visual countdown interval; never decides when a turn expires. @returns {void} */
   function startTimerDisplay() {
     clearInterval(timerInterval);
     const timer = $("#timer");
+    /** Paint whole seconds and the urgent class from the replicated deadline. @returns {void} */
     function update() {
       if (!state?.deadline || state.phase !== "turn") {
         timer.textContent = "—";
@@ -1751,6 +2022,9 @@
     timerInterval = window.setInterval(update, 200);
   }
 
+  /** Reset shortlist, selection and accessible expansion state.
+   * @param {boolean} send - Whether to tell the host the active selection was cleared. @returns {void}
+   */
   function clearSelectionUi(send = true) {
     selectedCode = null;
     matches = [];
@@ -1765,6 +2039,7 @@
     if (send && state?.phase === "turn" && isCurrent(myId)) sendAction("select", { code: null });
   }
 
+  /** Build the keyboard/pointer shortlist; pointerdown retains input focus until selection. @returns {void} */
   function renderMatches() {
     const list = $("#country-results");
     list.replaceChildren();
@@ -1792,6 +2067,7 @@
     $("#country-search").setAttribute("aria-expanded", String(matches.length > 0));
   }
 
+  /** @param {number} index - Shortlist index to select locally and announce to the host. @returns {void} */
   function chooseMatch(index) {
     const match = matches[index];
     if (!match || state?.phase !== "turn" || !isCurrent(myId)) return;
@@ -1805,6 +2081,7 @@
     sendAction("select", { code: selectedCode });
   }
 
+  /** Rebuild route validation, legal alternatives and host-only next-round controls. @returns {void} */
   function renderResult() {
     showScreen("result");
     clearInterval(timerInterval);
@@ -1843,6 +2120,7 @@
     renderResultMap();
   }
 
+  /** Render completed-route geometry, exposing a recoverable map error if needed. @returns {void} */
   function renderResultMap() {
     const error = document.querySelector("#map-error");
     error.hidden = true;
@@ -1857,6 +2135,7 @@
     }
   }
 
+  // Navigation tears down live sessions; setup waits for map data before creating state.
   $("#host-menu-button").addEventListener("click", () => showScreen("host"));
   $("#join-menu-button").addEventListener("click", () => showScreen("join"));
   document.querySelectorAll(".menu-return").forEach((button) => button.addEventListener("click", returnToMenu));
@@ -1897,6 +2176,7 @@
     }
     render();
   });
+  // Join mode chooses either HTTP room introduction or the manual offer/answer workflow.
   $("#join-form").addEventListener("submit", roomSignaling ? joinSignaledRoom : joinFromInvite);
   $("#create-invite").addEventListener("click", createInvite);
   $("#accept-answer").addEventListener("click", acceptAnswer);
@@ -1912,6 +2192,7 @@
     }
   });
   $("#start-game").addEventListener("click", startGame);
+  // Typing invalidates the previous host-known selection; only shortlist choices submit.
   $("#country-search").addEventListener("input", () => {
     selectedCode = null;
     $("#selected-country").hidden = true;
@@ -1921,6 +2202,7 @@
     activeMatchIndex = matches.length ? 0 : -1;
     renderMatches();
   });
+  // Circular keyboard navigation mirrors pointer choice without submitting the form.
   $("#country-search").addEventListener("keydown", (event) => {
     if ((event.key === "ArrowDown" || event.key === "ArrowUp") && matches.length) {
       event.preventDefault();
@@ -1933,6 +2215,7 @@
       $("#country-results").hidden = true;
     }
   });
+  // Let a pending shortlist click finish before dismissing the popup.
   $("#country-search").addEventListener("blur", () => {
     window.setTimeout(() => { $("#country-results").hidden = true; }, 100);
   });
@@ -1944,6 +2227,7 @@
     }
     sendAction("submit", { code: selectedCode });
   });
+  // All play buttons share host validation; leaving allows a brief delivery window.
   $("#concede-button").addEventListener("click", () => sendAction("concede"));
   $("#accept-move").addEventListener("click", () => sendAction("accept"));
   $("#challenge-move").addEventListener("click", () => sendAction("challenge"));

@@ -1,11 +1,20 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Run node mapominoes/generate-maps.mjs with the package's mapshaper dependency.
+ * Reads the bundled TopoJSON client and fetches geoBoundaries metadata/geometry or
+ * the Historic Counties Trust archive. Writes assets/maps/*.js and map-catalog.js
+ * beside this script; these browser globals contain graphs, geometry and provenance.
+ * No CLI arguments are used. Source changes can affect every generated map.
+ */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import vm from "node:vm";
 import mapshaper from "mapshaper";
 
+// The bundled browser client runs in isolation to decode topology and shared arcs.
 const context = vm.createContext({});
 vm.runInContext(await readFile(new URL("./assets/topojson-client.min.js", import.meta.url), "utf8"), context);
+// Each specification is [asset ID, display name, ISO country, administrative level].
 const specs = [
   ["us", "US states and Washington, DC", "USA", 1],
   ["uk", "UK historic counties", "GBR", 2],
@@ -20,6 +29,7 @@ const specs = [
 ];
 const directory = new URL("./assets/maps/", import.meta.url);
 await mkdir(directory, { recursive: true });
+// Named fixed-link endpoints augment shared-boundary adjacency symmetrically.
 const additionalConnections = {
   uk: [["Anglesey", "Caernarfonshire"]],
   china: [
@@ -35,12 +45,17 @@ const additionalConnections = {
   ]
 };
 
+/** @param {string} url - Remote JSON source. @returns {Promise<Object>} Parsed response; rejects HTTP failures. */
 async function json(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return response.json();
 }
 
+/** Round coordinates and orient exterior/hole rings for D3's spherical convention.
+ * @param {Object} geometry - Polygon or MultiPolygon GeoJSON geometry.
+ * @returns {Object} New geometry with consistent winding; source arrays stay unchanged.
+ */
 function mapGeometry(geometry) {
   const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
   const coordinates = polygons.map((polygon) => polygon.map((ring, index) => {
@@ -54,10 +69,12 @@ function mapGeometry(geometry) {
   return { type: geometry.type, coordinates: geometry.type === "Polygon" ? coordinates[0] : coordinates };
 }
 
+// Process serially to retain catalogue order and avoid overlapping source downloads.
 const catalog = [];
 for (const [id, name, iso, level] of specs) {
   let metadata;
   let topology;
+  // Historic counties require shapefile conversion; other maps use API TopoJSON.
   if (id === "uk") {
     const url = "https://county-borders.co.uk/UKDefinitionA_WG84_Simplified.zip";
     const response = await fetch(url);
@@ -88,12 +105,15 @@ for (const [id, name, iso, level] of specs) {
     });
     if (sourceFeatures.length !== 92) throw new Error(`Expected 92 historic counties, received ${sourceFeatures.length}.`);
   }
+  // Derive borders from full shared arcs, not simplified outlines that may lose contact.
   const neighbors = context.topojson.neighbors(object.geometries);
   const geometry = id === "uk" ? { features: sourceFeatures } : await json(metadata.simplifiedGeometryGeoJSON);
   const simplified = new Map(geometry.features.map((feature) => [feature.properties.shapeID, feature]));
   const excluded = /American Samoa|Guam|Northern Mariana|Puerto Rico|Virgin Islands/i;
   const features = sourceFeatures.filter((feature) => iso !== "USA" || !excluded.test(feature.properties.shapeName));
+  /** @param {Object} feature - Source feature. @returns {string} Stable map-scoped region code. */
   const codeFor = (feature) => `${id}:${feature.properties.shapeID}`;
+  /** @param {Object} feature - Source feature. @returns {string} Name with the upstream Guangdong error corrected. */
   const nameFor = (feature) => iso === "CHN" && feature.properties.shapeName === "Guangzhou Province"
     ? "Guangdong Province" : feature.properties.shapeName;
   const included = new Set(features.map(codeFor));
@@ -121,6 +141,7 @@ for (const [id, name, iso, level] of specs) {
     if (!left.borders.includes(right.code)) left.borders.push(right.code);
     if (!right.borders.includes(left.code)) right.borders.push(left.code);
   }
+  // Geometry retains region codes for ownership and flags politically disputed areas.
   const outputFeatures = features.map((feature) => ({
     type: "Feature",
     properties: {
@@ -132,6 +153,7 @@ for (const [id, name, iso, level] of specs) {
     },
     geometry: mapGeometry((simplified.get(feature.properties.shapeID) || feature).geometry)
   }));
+  // Iterative graph traversal counts the largest playable connected component.
   const byCode = new Map(countries.map((country) => [country.code, country]));
   let largest = 0;
   const seen = new Set();
@@ -152,6 +174,7 @@ for (const [id, name, iso, level] of specs) {
   if (countries.length < 20 || largest < (id === "italy" ? 18 : 20)) {
     throw new Error(`${id}: insufficient connected subdivisions (${largest}/${countries.length})`);
   }
+  // Embed provenance alongside each payload; the UK content hash busts stale caches.
   const source = {
     url: metadata.tjDownloadURL,
     simplifiedUrl: metadata.simplifiedGeometryGeoJSON,

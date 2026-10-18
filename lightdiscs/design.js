@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Design-page code editor, loaded by design.html after puzzle-code.js and the
+ * initialised LightDiscGame. Formats contenteditable text, highlights validation
+ * ranges and applies layouts without moving pieces. Reads/writes DOM selection
+ * and opens the native help dialog; no storage or network writes.
+ */
 
 (() => {
   const input = document.querySelector("#puzzle-code-input");
@@ -9,10 +15,17 @@
   const helpClose = document.querySelector("#code-help-close");
   const { formatPuzzleCode, validatePuzzleCode } = window.LightDiscPuzzleCode;
 
+  /**
+   * @returns {string} Editor text with non-breaking spaces normalised.
+   */
   function inputText() {
     return input.textContent.replace(/\u00a0/g, " ");
   }
 
+  /**
+   * Read the current selection without changing it.
+   * @returns {number} Text offset of the selection anchor, or editor length.
+   */
   function caretOffset() {
     const selection = window.getSelection();
     if (!selection.rangeCount || !input.contains(selection.anchorNode)) return inputText().length;
@@ -22,6 +35,11 @@
     return range.toString().length;
   }
 
+  /**
+   * Replace the selection with a collapsed caret, walking through highlight nodes.
+   * @param {number} offset - Desired editor text offset.
+   * @returns {void}
+   */
   function setCaret(offset) {
     const selection = window.getSelection();
     const range = document.createRange();
@@ -43,6 +61,12 @@
     selection.addRange(range);
   }
 
+  /**
+   * Replace editor contents with plain text and marked invalid ranges.
+   * @param {string} code - Formatted level code.
+   * @param {Object[]} diagnostics - Start/end offsets into that code.
+   * @returns {void}
+   */
   function renderCode(code, diagnostics = []) {
     input.replaceChildren();
     if (diagnostics.length === 0) {
@@ -67,6 +91,10 @@
     if (offset < code.length) input.append(document.createTextNode(code.slice(offset)));
   }
 
+  /**
+   * Reformat edited text, clearing stale marks and approximately preserving caret offset.
+   * @returns {void}
+   */
   function formatInput() {
     const current = inputText();
     const oldOffset = caretOffset();
@@ -76,6 +104,10 @@
     setCaret(Math.min(formatted.length, oldOffset + formatted.length - current.length));
   }
 
+  /**
+   * Validate the editor, update accessible status, and apply only a valid layout.
+   * @returns {void}
+   */
   function applyCode() {
     const result = validatePuzzleCode(inputText());
     renderCode(result.code, result.diagnostics);
@@ -92,6 +124,8 @@
     status.textContent = "Layout set. Triangle positions and rotations were preserved.";
   }
 
+  // Edits clear stale errors; Enter applies, while paste inserts text only so
+  // clipboard markup cannot become part of the editable code or its diagnostics.
   input.addEventListener("input", () => {
     input.removeAttribute("aria-invalid");
     status.classList.remove("is-error");
@@ -119,6 +153,7 @@
     selection.addRange(range);
     input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
   });
+  // Native dialog methods retain modal focus handling; backdrop clicks dismiss it.
   setButton.addEventListener("click", applyCode);
   helpButton.addEventListener("click", () => helpDialog.showModal());
   helpClose.addEventListener("click", () => helpDialog.close());

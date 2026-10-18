@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Catalogue selector for puzzles.html, loaded after both catalogues and progress.
+ * Reads local completion/unlock state and populates difficulty-list with links,
+ * ticks and accessible completion labels. Original catalogue indices become
+ * one-based ?level values; no completion or catalogue data is written.
+ */
 
 (() => {
   const levels = window.LightDiscLevels;
@@ -6,6 +12,7 @@
     window.LightDiscProgress;
   const list = document.querySelector("#difficulty-list");
 
+  // Omit locked XOR groups entirely; build separate difficulty sections per campaign.
   ["standard", "xor"].forEach((combination) => {
     if (combination === "xor" && !xorUnlocked()) return;
     if (combination === "xor") {

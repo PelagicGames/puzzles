@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Random play page: the board creates filters/targets, while random.js exposes
+     the resulting code for copying. Asset ?v queries invalidate cached releases. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -11,6 +13,7 @@
 <body>
   <main class="page-shell">
     <a class="back-link" href="./index.html" aria-label="Back to main menu">&#8592; Menu</a>
+    <!-- Shared board controls and polite live success feedback. -->
     <header class="page-header">
       <div class="page-title">
         <p class="eyebrow">Light Discs</p>
@@ -23,6 +26,7 @@
       </div>
     </header>
 
+    <!-- random.js fills this read-only field and handles clipboard status. -->
     <section class="design-panel random-code-panel" aria-labelledby="random-code-label">
       <div class="design-panel-heading">
         <label id="random-code-label" for="random-code">Level code</label>
@@ -32,6 +36,7 @@
       <p class="code-status" id="copy-code-status" role="status" aria-live="polite">Select the code or use Copy.</p>
     </section>
 
+    <!-- Board listeners populate live counts, SVG groups and the hidden comparison. -->
     <div class="interaction-stage">
       <div class="match-summary">
         <p class="progress-indicator" id="progress-indicator" aria-live="polite"></p>
@@ -43,6 +48,8 @@
             <g aria-label="Fixed black triangle" transform="translate(500 440)">
               <path class="fixed-triangle triangle-path"></path>
             </g>
+            <!-- Layer order keeps composited colours above bodies, edges above colours,
+                 and the interactive target controls on top. Populated by lightdiscs.js. -->
             <g id="pieces"></g>
             <g class="fixed-discs-layer">
               <g class="fixed-discs" transform="translate(500 440)"></g>
@@ -55,6 +62,7 @@
           </svg>
         </div>
       </div>
+      <!-- Transient hover/focus preview becomes dismissible when a target is pinned. -->
       <aside class="target-inspector" id="target-inspector" role="tooltip" hidden>
         <div class="target-inspector-header">
           <strong id="target-inspector-title">Target detail</strong>
@@ -74,6 +82,8 @@
       </aside>
     </div>
   </main>
+  <!-- Helpers precede the board; random.js runs last so its Reset listener reads
+       the new code after the board's earlier Reset listener has rebuilt the puzzle. -->
   <script src="./filter-composition.js?v=20261014c"></script>
   <script src="./game-geometry.js"></script>
   <script src="./puzzle-code.js"></script>

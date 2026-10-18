@@ -1,4 +1,9 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Main-menu completion ring for index.html. Load after both level catalogues and
+ * puzzle-progress.js. Reads local completion storage and appends ten decorative
+ * stars plus an accessible total; it does not write progress.
+ */
 
 (() => {
   const starRing = document.querySelector("#completion-stars");
@@ -8,6 +13,8 @@
   const xorStars = completedDifficultyCount(levels, "xor");
   const earned = standardStars + xorStars;
 
+  // Five positions per campaign represent fully completed difficulty bands.
+  // The ring uses sine/cosine around the logo, with standard stars first.
   for (let index = 0; index < 10; index += 1) {
     const star = document.createElement("span");
     const campaignIndex = index < 5 ? index : index - 5;

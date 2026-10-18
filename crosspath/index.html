@@ -1,15 +1,18 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Crosspath landing page: introduces the game and links to rules and puzzle selection. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f2ede1">
   <title>Crosspath</title>
-  <link rel="stylesheet" href="./styles.css?v=20261016d">
+  <!-- The version query refreshes cached shared presentation after visual changes. -->
+  <link rel="stylesheet" href="./styles.css?v=20261018b">
 </head>
 <body>
   <main class="paper">
+    <!-- Shared newspaper masthead; menu.js fills the saved-completion tally. -->
     <header class="masthead">
       <div class="masthead-row">
         <a class="back-link" href="../index.html" aria-label="Back to all puzzles">&#8592; All puzzles</a>
@@ -20,6 +23,7 @@
       <p class="dateline"></p>
     </header>
 
+    <!-- Feature illustration and primary navigation remain useful without scripting. -->
     <div class="front-page">
       <figure class="front-feature">
         <img src="./assets/crosspath.svg" alt="A three-by-three tile with a path that loops through a crossroads" width="200" height="200">
@@ -45,6 +49,7 @@
       </section>
     </div>
   </main>
+  <!-- Load catalogue and storage helpers before menu.js computes the solved tally. -->
   <script src="./puzzle-levels.js"></script>
   <script src="./puzzle-progress.js"></script>
   <script src="./menu.js"></script>

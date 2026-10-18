@@ -1,11 +1,13 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Static game selector for the repository site; each link opens a game's own menu. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#fff7ed">
   <title>Puzzles</title>
+  <!-- Root-only presentation; individual games load their own stylesheets. -->
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body class="page-home">
@@ -13,6 +15,7 @@
     <p class="eyebrow">Pelagic Games</p>
     <h1 id="page-title">Puzzles</h1>
     <p class="tagline">Choose a game to begin.</p>
+    <!-- Decorative icons accompany visible link text and are excluded from accessible names. -->
     <nav aria-label="Available puzzles">
         <a href="./lightdiscs/index.html">
           <span class="link-icon light-disc-icon" aria-hidden="true"></span>

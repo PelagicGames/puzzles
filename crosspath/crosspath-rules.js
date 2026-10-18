@@ -1,6 +1,14 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Shared, non-mutating puzzle parsing and path analysis, loaded before the renderer,
+ * solver and page controllers. Publishes CrosspathRules on window; Node consumers
+ * supply a window shim. Board cells are row-major direction masks, with null for
+ * unoccupied tiles and zero for empty cells within placed tiles.
+ */
+
 (() => {
+  // A board has nine 3-by-3 tiles; compass bits describe cell-edge connections.
   const SIZE = 9;
   const TILE = 3;
   const N = 1;
@@ -13,17 +21,26 @@
     { bit: S, dr: 1, dc: 0, side: "S" },
     { bit: W, dr: 0, dc: -1, side: "W" }
   ];
+  // Direction lookups share the descriptors above; crossroads contain two separate axes.
   const BY_BIT = new Map(DIRECTIONS.map((direction) => [direction.bit, direction]));
   const BY_SIDE = new Map(DIRECTIONS.map((direction) => [direction.side, direction]));
   const OPPOSITE = { [N]: S, [E]: W, [S]: N, [W]: E };
   const CROSSROADS = N | E | S | W;
   const VALID_MASKS = new Set([0, N | S, E | W, N | E, E | S, S | W, N | W, CROSSROADS]);
 
+  /**
+   * @param {number} mask - Cell direction mask.
+   * @returns {number} Independent path units, counting a crossroads twice.
+   */
   function unitsForMask(mask) {
     if (!mask) return 0;
     return mask === CROSSROADS ? 2 : 1;
   }
 
+  /**
+   * @param {string} text - Nine lowercase hexadecimal cell masks.
+   * @returns {number[]} Parsed cells; throws for invalid or entirely empty tiles.
+   */
   function parseTile(text) {
     if (!/^[0-9a-f]{9}$/.test(text)) {
       throw new Error(`Tile "${text}" must contain nine hexadecimal cells.`);
@@ -40,21 +57,38 @@
     return cells;
   }
 
+  /**
+   * @param {number[]} cells - Tile masks in row-major order.
+   * @returns {string} Compact hexadecimal tile representation.
+   */
   function formatTile(cells) {
     return cells.map((mask) => mask.toString(16)).join("");
   }
 
+  /**
+   * @param {string} text - Compass side followed by a one-based position.
+   * @returns {{side: string, index: number}} Zero-based marker; throws for invalid text.
+   */
   function parseMarker(text) {
     const match = /^([NESW])([1-9])$/.exec(text);
     if (!match) throw new Error(`Path end "${text}" must be a side and position, such as N4.`);
     return { side: match[1], index: Number(match[2]) - 1 };
   }
 
+  /**
+   * @param {{side: string, index: number}} marker - Zero-based boundary marker.
+   * @returns {string} Side and one-based position.
+   */
   function formatMarker({ side, index }) {
     return `${side}${index + 1}`;
   }
 
   // Code format: "T: <nine tiles> F: <tile@slot ...|-> X: <side+position ...|->".
+  /**
+   * @param {string} code - Complete puzzle code.
+   * @returns {{tiles: number[][], fixed: Object[], markers: Object[]}} Validated puzzle
+   * with zero-based tile and slot indices; throws for malformed or duplicate entries.
+   */
   function parseCode(code) {
     const match = /^T:\s+(.+?)\s+F:\s+(.+?)\s+X:\s+(.+)$/.exec(code.trim());
     if (!match) throw new Error(`Invalid Crosspath code "${code}".`);
@@ -81,6 +115,10 @@
     return { tiles, fixed, markers };
   }
 
+  /**
+   * @param {Object} puzzle - Tiles and optional fixed placements and end markers.
+   * @returns {string} Puzzle code, using hyphens for absent clues.
+   */
   function formatCode({ tiles, fixed = [], markers = [] }) {
     const fixedText = fixed.length
       ? fixed.map(({ tile, slot }) => `${tile + 1}@${slot + 1}`).join(" ")
@@ -90,6 +128,10 @@
   }
 
   // Boundary position of a marker: the board cell and its outward direction.
+  /**
+   * @param {{side: string, index: number}} marker - Boundary marker.
+   * @returns {{row: number, col: number, dir: number}} Cell and outward bit.
+   */
   function markerCell({ side, index }) {
     if (side === "N") return { row: 0, col: index, dir: N };
     if (side === "S") return { row: SIZE - 1, col: index, dir: S };
@@ -97,21 +139,41 @@
     return { row: index, col: SIZE - 1, dir: E };
   }
 
+  /**
+   * @param {number} row - Boundary cell row.
+   * @param {number} col - Boundary cell column.
+   * @param {number} dir - Outward direction bit.
+   * @returns {string} Matching marker key.
+   */
   function boundaryKey(row, col, dir) {
     const side = BY_BIT.get(dir).side;
     const index = side === "N" || side === "S" ? col : row;
     return `${side}${index + 1}`;
   }
 
+  /**
+   * @param {number} slot - Zero-based tile slot.
+   * @returns {{row: number, col: number}} Top-left board cell.
+   */
   function slotOrigin(slot) {
     return { row: Math.floor(slot / 3) * TILE, col: (slot % 3) * TILE };
   }
 
+  /**
+   * @param {number} row - Board cell row.
+   * @param {number} col - Board cell column.
+   * @returns {number} Containing tile slot.
+   */
   function slotForCell(row, col) {
     return Math.floor(row / TILE) * 3 + Math.floor(col / TILE);
   }
 
   // placement[slot] = tile index or null. Returns 81 masks, with null for cells in empty slots.
+  /**
+   * @param {number[][]} tiles - Available tile masks.
+   * @param {Array<number|null>} placement - Tile index at each slot.
+   * @returns {Array<number|null>} New board without changing tiles or placements.
+   */
   function composeBoard(tiles, placement) {
     const board = new Array(SIZE * SIZE).fill(null);
     placement.forEach((tileIndex, slot) => {
@@ -126,10 +188,19 @@
     return board;
   }
 
+  /**
+   * @param {number} row - Candidate row.
+   * @param {number} col - Candidate column.
+   * @returns {boolean} Whether the cell lies within the board.
+   */
   function inside(row, col) {
     return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
   }
 
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @returns {Object[]} Boundary connections with row, col, dir and marker key.
+   */
   function findExits(board) {
     const exits = [];
     for (let row = 0; row < SIZE; row += 1) {
@@ -147,6 +218,11 @@
   }
 
   // Follows the path from a boundary exit, going straight through crossroads.
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @param {Object} start - Boundary exit from findExits.
+   * @returns {Object} Start, ordered steps, visited unit-key Set and terminal event.
+   */
   function tracePath(board, start) {
     const steps = [];
     const visited = new Set();
@@ -162,6 +238,7 @@
         break;
       }
       const out = mask === CROSSROADS ? travel : mask & ~entry;
+      // Axis-specific keys allow crossing the same cell without joining its paths.
       const unit = mask === CROSSROADS
         ? `${row},${col},${travel === N || travel === S ? "v" : "h"}`
         : `${row},${col}`;
@@ -185,6 +262,10 @@
     return { start, steps, visited, end };
   }
 
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @returns {Object[]} Path units with unique keys and optional crossroads axes.
+   */
   function allUnits(board) {
     const units = [];
     board.forEach((mask, cell) => {
@@ -202,6 +283,11 @@
   }
 
   // Adjacent cell pairs that either half-connect (mismatches) or touch without connecting.
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @returns {{mismatches: Object[], touching: Object[]}} Conflicting occupied neighbours;
+   * pairs adjoining unplaced tiles are deferred.
+   */
   function connectionProblems(board) {
     const mismatches = [];
     const touching = [];
@@ -225,6 +311,11 @@
     return { mismatches, touching };
   }
 
+  /**
+   * @param {Object[]} exits - Actual boundary connections.
+   * @param {Object[]} markers - Preferred marked ends in clue order.
+   * @returns {Object|null} First matching marked exit, first exit, or null.
+   */
   function chooseTraceStart(exits, markers) {
     for (const marker of markers) {
       const exit = exits.find(({ key }) => key === formatMarker(marker));
@@ -234,6 +325,12 @@
   }
 
   // Full rule check of a (possibly incomplete) board. Shared by the game, tutorial, solver and tests.
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @param {Object[]} [markers=[]] - Required boundary ends.
+   * @returns {Object} Solved/completeness flags, trace, connection diagnostics,
+   * unvisited units and issue codes, without changing the board.
+   */
   function analyseBoard(board, markers = []) {
     const complete = board.every((mask) => mask !== null);
     const exits = findExits(board);

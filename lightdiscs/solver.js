@@ -1,4 +1,11 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Symbolic placement solver and difficulty estimator, loaded after puzzle-code.js
+ * and puzzle-math.js by Node tests/offline tools. Publishes LightDiscSolver; no DOM,
+ * storage or file access. Analysis accepts code or a definition and sets the
+ * definition's combination field, including when the caller supplied that object.
+ * Pose search reasons about snapped circle mappings, not arbitrary board collisions.
+ */
 
 (() => {
   const {
@@ -11,6 +18,7 @@
     normalizeAngle,
     shapeKeys
   } = window.LightDiscMath;
+  // Stable shape indices form the component-vector encoding, not display ordering.
   const shapeOrder = [
     "none",
     "square",
@@ -24,11 +32,14 @@
   const pieceNames = ["red", "green", "blue"];
   const targetNames = ["top", "left", "right"];
   const rootThree = Math.sqrt(3);
+  // Scale-free equilateral coordinates suffice for enumerating coincident corners.
   const cornerCoordinates = [
     { x: 0, y: -2 },
     { x: -rootThree, y: 1 },
     { x: rootThree, y: 1 }
   ];
+  // Poses carry id, 60-degree angleStep/angle, three moving-to-target indices
+  // (-1 for a free corner), movingMask/targetMask bitsets and snapCount.
   const poseTemplates = enumeratePoseTemplates();
   const poseById = new Map(poseTemplates.map((pose) => [pose.id, pose]));
   const unsnappedPoses = Array.from({ length: 6 }, (_, angleStep) => ({
@@ -40,11 +51,19 @@
     targetMask: 0,
     snapCount: 0
   }));
+  // Search domains use snapped poses; movement distances also include six free poses.
   const graphPoses = [...unsnappedPoses, ...poseTemplates];
   const graphPoseById = new Map(graphPoses.map((pose) => [pose.id, pose]));
   const poseGraph = buildPoseGraph();
   const shortestPaths = buildShortestPaths();
 
+  /**
+   * Find solutions with local pruning, arc consistency and smallest-domain search.
+   * Symmetric constructions are grouped before optional heuristic difficulty scoring.
+   * @param {string|Object} codeOrDefinition - Encoded or parsed puzzle.
+   * @param {Object} options - combination override and includeComplexity switch.
+   * @returns {Object} Definition, diagnostics, domains, solutions, statistics and complexity.
+   */
   function analyzePuzzle(codeOrDefinition, options = {}) {
     const definition = typeof codeOrDefinition === "string"
       ? window.LightDiscPuzzleCode.parsePuzzleCode(codeOrDefinition)
@@ -54,6 +73,8 @@
       || "standard";
     const targetFormations = definition.targets.map(targetFormation);
     const diagnostics = [];
+    // Counters distinguish initial Cartesian size, local constructions, removed
+    // domain values, visited branches and ungrouped complete pose assignments.
     const stats = {
       initialCombinations: poseTemplates.length ** 3,
       localWays: [],
@@ -127,6 +148,8 @@
     }
 
     stats.rawSolutionCount = solutionIds.length;
+    // Key by contributing disc identities and canonical shape predicates, ignoring
+    // orientation changes that leave each shape unchanged.
     const solutionGroups = new Map();
     solutionIds.forEach((poseIds) => {
       const signature = solutionSignature(definition, poseIds);
@@ -159,6 +182,12 @@
     return analysis;
   }
 
+  /**
+   * @param {Object} definition - Analysed puzzle.
+   * @param {Object[]} diagnostics - Reasons accumulated so far.
+   * @param {Object} stats - Search counters retained by reference.
+   * @returns {Object} Uniform failure result with empty domains and infinite reset distance.
+   */
   function unsolvableAnalysis(definition, diagnostics, stats) {
     return {
       definition,
@@ -180,6 +209,11 @@
     };
   }
 
+  /**
+   * Align each moving/fixed corner at six orientations and deduplicate mappings.
+   * Sorting fixes public pose IDs independently of enumeration duplicates.
+   * @returns {Object[]} All distinct poses with at least one coincident corner.
+   */
   function enumeratePoseTemplates() {
     const poses = new Map();
     for (let angleStep = 0; angleStep < 6; angleStep += 1) {
@@ -231,6 +265,11 @@
     )).map((pose, index) => ({ ...pose, id: `p${index}` }));
   }
 
+  /**
+   * @param {Object} point - Local x/y coordinate.
+   * @param {number} angle - Rotation in degrees.
+   * @returns {Object} Rotated point about the origin.
+   */
   function rotatePoint(point, angle) {
     const radians = angle * Math.PI / 180;
     return {
@@ -239,10 +278,21 @@
     };
   }
 
+  /**
+   * @param {Object} filter - Target filter with optional rotation.
+   * @returns {Object[]} Single-filter symbolic formation.
+   */
   function targetFormation(filter) {
     return [{ filter, angle: filter.rotation || 0 }];
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {number} pieceIndex - Moving triangle index.
+   * @param {Object|undefined} pose - Candidate pose.
+   * @param {number} targetIndex - Fixed corner index.
+   * @returns {Object|null} Filter, total angle and source indices, or no contribution.
+   */
   function contributionForTarget(definition, pieceIndex, pose, targetIndex) {
     if (!pose || pose.snapCount === 0) return null;
     const discIndex = pose.mapping.indexOf(targetIndex);
@@ -256,6 +306,12 @@
     };
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {string[]} poseIds - One graph pose ID per triangle.
+   * @param {number} targetIndex - Fixed corner index.
+   * @returns {Object[]} Contributions from all triangles at that corner.
+   */
   function formationForTarget(definition, poseIds, targetIndex) {
     return poseIds.flatMap((poseId, pieceIndex) => {
       const contribution = contributionForTarget(
@@ -268,6 +324,13 @@
     });
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {number} pieceIndex - Moving triangle index.
+   * @param {Object|undefined} pose - Candidate pose.
+   * @param {number} targetIndex - Fixed corner index.
+   * @returns {string} Disc index and angle identity, or "-" for no contribution.
+   */
   function localContributionKey(definition, pieceIndex, pose, targetIndex) {
     const contribution = contributionForTarget(
       definition,
@@ -279,6 +342,13 @@
     return `${contribution.discIndex}@${normalizeAngle(contribution.angle, 360)}`;
   }
 
+  /**
+   * Enumerate unique local contributions independently of other target constraints.
+   * @param {Object} definition - Puzzle and combination rule.
+   * @param {Object[][]} targetFormations - One desired formation per fixed corner.
+   * @param {number} targetIndex - Corner to construct.
+   * @returns {string[][]} Matching triples of local contribution keys.
+   */
   function localTargetWays(definition, targetFormations, targetIndex) {
     const options = definition.pieces.map((_, pieceIndex) => (
       [...new Set(poseTemplates.map((pose) => (
@@ -309,6 +379,13 @@
     return ways;
   }
 
+  /**
+   * Build a per-target cache keyed by local contribution triples, not full poses.
+   * The returned matcher mutates only its private caches.
+   * @param {Object} definition - Puzzle and combination rule.
+   * @param {Object[][]} targets - Desired formations.
+   * @returns {function(number, string[]): boolean} Target-index/pose-ID matcher.
+   */
   function createTargetMatcher(definition, targets) {
     const caches = targets.map(() => new Map());
     return (targetIndex, poseIds) => {
@@ -334,6 +411,14 @@
     };
   }
 
+  /**
+   * Repeatedly remove poses with no supporting pair for any target constraint.
+   * Copies domains but increments the supplied arcRevisions counter.
+   * @param {Function} matchesTarget - Cached target matcher.
+   * @param {string[][]} sourceDomains - Allowed poses per triangle.
+   * @param {Object} stats - Mutable search counters.
+   * @returns {string[][]} Pruned domains, possibly containing an empty domain.
+   */
   function enforceArcConsistency(matchesTarget, sourceDomains, stats) {
     const domains = sourceDomains.map((domain) => [...domain]);
     let changed = true;
@@ -362,6 +447,14 @@
     return domains;
   }
 
+  /**
+   * @param {Function} matchesTarget - Target matcher.
+   * @param {number} targetIndex - Constraint to check.
+   * @param {number} fixedPiece - Triangle whose pose is held fixed.
+   * @param {string} fixedPose - Pose ID for that triangle.
+   * @param {string[][]} domains - Available poses for the remaining triangles.
+   * @returns {boolean} Whether some remaining pair satisfies this target.
+   */
   function hasTargetSupport(
     matchesTarget,
     targetIndex,
@@ -382,6 +475,16 @@
     return false;
   }
 
+  /**
+   * Recursively branch on the smallest non-singleton domain after pruning.
+   * Mutates stats, appends complete solutions and records visited domain signatures.
+   * @param {Function} matchesTarget - Target matcher.
+   * @param {string[][]} sourceDomains - Current allowed poses.
+   * @param {Object} stats - Mutable counters.
+   * @param {string[][]} solutions - Output pose triples.
+   * @param {Set<string>} visited - Already searched domain signatures.
+   * @returns {void}
+   */
   function searchSolutions(
     matchesTarget,
     sourceDomains,
@@ -423,6 +526,14 @@
     });
   }
 
+  /**
+   * Encode placements and target contributions; throws for unknown graph poses.
+   * placements contain snap count, bitsets, angle step and mapping; circles contain
+   * component vectors. tuple repeats those arrays and the snapped-triangle count.
+   * @param {Object} definition - Puzzle pieces.
+   * @param {string[]} poseIds - One pose per triangle.
+   * @returns {Object} Structured state vector with copied pose IDs.
+   */
   function createStateVector(definition, poseIds) {
     const placements = poseIds.map((poseId) => {
       const pose = graphPoseById.get(poseId);
@@ -456,6 +567,10 @@
     };
   }
 
+  /**
+   * @param {Object} contribution - Filter and total angle.
+   * @returns {number[]} Background mask, foreground mask, shape index and angle step.
+   */
   function componentVector({ filter, angle }) {
     return [
       filter.background.mask,
@@ -465,6 +580,12 @@
     ];
   }
 
+  /**
+   * Sum target mismatch heuristics and a penalty for each unsnapped triangle.
+   * @param {Object} definition - Puzzle and combination rule.
+   * @param {Object|string[]} stateOrPoseIds - State vector or pose IDs.
+   * @returns {number} Semantic mismatch score, not a shortest movement distance.
+   */
   function solutionDistance(definition, stateOrPoseIds) {
     const state = Array.isArray(stateOrPoseIds)
       ? createStateVector(definition, stateOrPoseIds)
@@ -480,6 +601,14 @@
     return targetDistance + (3 - state.snappedTriangleCount);
   }
 
+  /**
+   * Combine channel, predicate, orientation and symbolic differences; exact matches
+   * bypass the heuristic. Used for trap scoring rather than search pruning.
+   * @param {Object[]} current - Current formation.
+   * @param {Object[]} target - Desired formation.
+   * @param {string} combination - Channel combination rule.
+   * @returns {number} Non-negative mismatch score.
+   */
   function targetCircleDistance(current, target, combination = "standard") {
     if (formationsMatch(current, target, combination)) return 0;
     const keys = formationKeys([...current, ...target]);
@@ -508,6 +637,11 @@
       + semanticDistance;
   }
 
+  /**
+   * @param {Set<string>} currentKeys - Current primitive predicates.
+   * @param {Set<string>} targetKeys - Desired primitive predicates.
+   * @returns {number} Symmetry-aware 30-degree steps for single like polygon keys, else zero.
+   */
   function orientationDistance(currentKeys, targetKeys) {
     const current = [...currentKeys].filter(
       (key) => key.startsWith("square:") || key.startsWith("triangle:")
@@ -524,6 +658,12 @@
     return Math.min(difference, period - difference) / 30;
   }
 
+  /**
+   * Minimise summed independent-triangle graph costs over every equivalent solution.
+   * @param {Object|string[]} stateOrPoseIds - State vector or graph pose IDs.
+   * @param {Object} analysis - Completed solver analysis.
+   * @returns {number} Minimum movement cost, or Infinity for an unsolvable puzzle.
+   */
   function pathDistance(stateOrPoseIds, analysis) {
     if (!analysis.solvable) return Infinity;
     const poseIds = Array.isArray(stateOrPoseIds)
@@ -538,6 +678,11 @@
     )));
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {string[]} poseIds - Candidate solved poses.
+   * @returns {string} Contributor/shape-symmetry key used to group equivalent solutions.
+   */
   function solutionSignature(definition, poseIds) {
     return [0, 1, 2].map((targetIndex) => (
       formationForTarget(definition, poseIds, targetIndex)
@@ -548,6 +693,11 @@
     )).join("|");
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {string[]} poseIds - Solved poses.
+   * @returns {string} Target-by-target contributor labels with canonical rotation marks.
+   */
   function solutionShorthand(definition, poseIds) {
     const pieceCodes = ["R", "G", "B"];
     return [0, 1, 2].map((targetIndex) => {
@@ -559,6 +709,11 @@
     }).join(" ");
   }
 
+  /**
+   * @param {Object} filter - Filter whose shape determines rotational symmetry.
+   * @param {number} angle - Total rotation in degrees.
+   * @returns {string} Canonical apostrophe suffix for triangle/square orientations.
+   */
   function rotationMarks(filter, angle) {
     if (filter.shape.value === "triangle") {
       return "'".repeat(normalizeAngle(angle, 120) / 60);
@@ -571,12 +726,23 @@
     return "";
   }
 
+  /**
+   * @param {string[]} poseIds - Destination poses.
+   * @returns {number} Sum of graph costs from the upright free pose u0.
+   */
   function resetDistance(poseIds) {
     return poseIds.reduce((total, poseId) => (
       total + shortestPaths.distances.get("u0").get(poseId)
     ), 0);
   }
 
+  /**
+   * Build representative vectors and reset instructions using precomputed paths.
+   * @param {Object} definition - Puzzle and combination rule.
+   * @param {string[]} poseIds - Chosen representative.
+   * @param {string[][]} equivalentPoseIds - Symmetry-equivalent solved triples.
+   * @returns {Object} Solution record with copied IDs, shorthand, vector, moves and costs.
+   */
   function formulateSolution(definition, poseIds, equivalentPoseIds) {
     const moves = [];
     let distance = 0;
@@ -610,6 +776,11 @@
     };
   }
 
+  /**
+   * @param {Object} definition - Puzzle pieces.
+   * @param {string[]} poseIds - Solved poses.
+   * @returns {number} Targets with multiple contributors whose XOR differs from intersection.
+   */
   function xorCombinationCount(definition, poseIds) {
     return [0, 1, 2].filter((targetIndex) => {
       const formation = formationForTarget(definition, poseIds, targetIndex);
@@ -626,6 +797,10 @@
     }).length;
   }
 
+  /**
+   * Connect finite-cost transitions in both directions.
+   * @returns {Map<string, Object[]>} Pose ID to neighbouring {id, cost} records.
+   */
   function buildPoseGraph() {
     const adjacency = new Map(graphPoses.map(({ id }) => [id, []]));
     graphPoses.forEach((left, leftIndex) => {
@@ -639,6 +814,13 @@
     return adjacency;
   }
 
+  /**
+   * Model rotations and snap reconfiguration, permitting only adjacent snap counts.
+   * A weighted edge may summarise several actions; Infinity forbids an edge.
+   * @param {Object} left - Source graph pose.
+   * @param {Object} right - Destination graph pose.
+   * @returns {number} Symmetric abstract movement cost.
+   */
   function transitionCost(left, right) {
     if (left.snapCount === 0 && right.snapCount === 0) {
       return cyclicStepDistance(left.angleStep, right.angleStep, 6);
@@ -683,6 +865,11 @@
     return cyclicStepDistance(left.angleStep / 2, right.angleStep / 2, 3);
   }
 
+  /**
+   * @param {Object} left - One-snap pose.
+   * @param {Object} right - One-snap pose.
+   * @returns {number} Cost of changing moving corner, target and orientation.
+   */
   function singleSnapMoveCost(left, right) {
     return Number(left.mapping.findIndex((value) => value >= 0)
         !== right.mapping.findIndex((value) => value >= 0))
@@ -691,20 +878,39 @@
       + cyclicStepDistance(left.angleStep, right.angleStep, 6);
   }
 
+  /**
+   * @param {Object} left - Two-snap pose.
+   * @param {Object} right - Two-snap pose.
+   * @returns {number} Cost of changing the free moving corner and free target.
+   */
   function doubleSnapMoveCost(left, right) {
     return Number(left.mapping.indexOf(-1) !== right.mapping.indexOf(-1))
       + Number(missingIndex(left.targetMask) !== missingIndex(right.targetMask));
   }
 
+  /**
+   * @param {number} mask - Three-bit target occupancy.
+   * @returns {number|undefined} First unoccupied index, or undefined when full.
+   */
   function missingIndex(mask) {
     return [0, 1, 2].find((index) => !(mask & (1 << index)));
   }
 
+  /**
+   * @param {number} left - First canonical cyclic value.
+   * @param {number} right - Second canonical cyclic value.
+   * @param {number} period - Cycle length.
+   * @returns {number} Shorter distance around the cycle.
+   */
   function cyclicStepDistance(left, right, period) {
     const difference = Math.abs(left - right);
     return Math.min(difference, period - difference);
   }
 
+  /**
+   * Run Dijkstra from every graph pose, retaining predecessor maps for instructions.
+   * @returns {Object} Nested distances and previous Maps keyed by source/destination IDs.
+   */
   function buildShortestPaths() {
     const distances = new Map();
     const previous = new Map();
@@ -735,6 +941,11 @@
     return { distances, previous };
   }
 
+  /**
+   * @param {string} source - Starting graph pose ID.
+   * @param {string} target - Destination graph pose ID.
+   * @returns {string[]} Inclusive shortest route, or empty when unreachable.
+   */
   function shortestPath(source, target) {
     const previous = shortestPaths.previous.get(source);
     if (!shortestPaths.distances.get(source).has(target)) return [];
@@ -743,6 +954,12 @@
     return path;
   }
 
+  /**
+   * @param {string} pieceName - Triangle colour name.
+   * @param {Object} from - Starting pose.
+   * @param {Object} to - Destination pose.
+   * @returns {string} Human-readable summary of an abstract graph transition.
+   */
   function describeTransition(pieceName, from, to) {
     if (from.snapCount === 0 && to.snapCount === 0) {
       return `Rotate the ${pieceName} triangle by 60 degrees.`;
@@ -772,6 +989,13 @@
     return `Rotate the fully snapped ${pieceName} triangle by 120 degrees.`;
   }
 
+  /**
+   * Assign heuristic difficulty from solution multiplicity, snap count and reset
+   * cost. Harder unique solutions also enumerate near states whose route cost
+   * exceeds their semantic distance; these are counted as apparent near traps.
+   * @param {Object} analysis - Solvable analysis.
+   * @returns {Object} Label, bounded score and supporting movement/trap metrics.
+   */
   function calculateComplexity(analysis) {
     const resetPathDistance = pathDistance(["u0", "u0", "u0"], analysis);
     const minimumSnappedCircles = Math.min(
@@ -862,6 +1086,11 @@
     };
   }
 
+  /**
+   * Extend the standard heuristic with a capped XOR-specific combination burden.
+   * @param {Object} analysis - Solvable XOR analysis with minimumXorCombinations.
+   * @returns {Object} Difficulty metrics with XOR-adjusted score and thresholds.
+   */
   function calculateXorComplexity(analysis) {
     const standardScale = calculateComplexity(analysis);
     const xorBurden = Math.min(12, analysis.minimumXorCombinations * 4);
@@ -883,6 +1112,12 @@
     };
   }
 
+  /**
+   * @param {number} angle - Rotation in degrees, expected in 60-degree steps.
+   * @param {number[]} mapping - Moving-to-target indices, -1 for free corners.
+   * @param {boolean} snapped - Whether at least one corner is snapped.
+   * @returns {string|null} Free pose ID or matching snapped ID; null for unknown snapped poses.
+   */
   function poseIdFor(angle, mapping, snapped) {
     const angleStep = normalizeAngle(angle, 360) / 60;
     if (!snapped) return `u${angleStep}`;

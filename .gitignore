@@ -7,9 +7,9 @@ Thumbs.db
 mapominoes/node_modules/
 
 lightdiscs/puzzle-analysis.local.json
-lightdiscs/generate-*.local.js
-lightdiscs/generate-*-levels*.js
+lightdiscs/*.local.js
+lightdiscs/*-*-levels*.js
 
 crosspath/puzzle-catalogue.local.json
 crosspath/complexity-survey.local.json
-crosspath/generate-*.local.js
+crosspath/*.local.js

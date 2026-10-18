@@ -1,8 +1,15 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Exhaustive tile-assignment solver and human-style difficulty estimator.
+ * Load after crosspath-rules.js; publishes CrosspathSolver on window for browser
+ * consumers and Node scripts using a window shim. Inputs are not mutated.
+ */
+
 (() => {
   const rules = window.CrosspathRules;
   const { N, E, S, W, OPPOSITE } = rules;
+  // Row-major tile-edge indices, ordered left-to-right or top-to-bottom on both sides.
   const SIDE_CELLS = {
     [N]: [0, 1, 2],
     [S]: [6, 7, 8],
@@ -17,7 +24,7 @@
     { dir: W, dr: 0, dc: -1 }
   ];
 
-  // Complexity score thresholds (inclusive lower bounds), calibrated on ~200,000 generated puzzles.
+  // Complexity score thresholds (inclusive lower bounds), calibrated on ~200,000 puzzles.
   // Very hard puzzles need a trial placement; hard ones need elimination (see README).
   const COMPLEXITY_BANDS = [
     { id: "very-easy", label: "Very easy", minimum: 0 },
@@ -27,6 +34,12 @@
     { id: "very-hard", label: "Very hard", minimum: 300 }
   ];
 
+  /**
+   * @param {number[]} tileA - First tile's masks.
+   * @param {number} dir - Direction from the first tile to the second.
+   * @param {number[]} tileB - Neighbouring tile's masks.
+   * @returns {boolean} Whether connections match without disconnected paths touching.
+   */
   function edgeCompatible(tileA, dir, tileB) {
     const opposite = OPPOSITE[dir];
     for (let index = 0; index < 3; index += 1) {
@@ -40,6 +53,11 @@
     return true;
   }
 
+  /**
+   * @param {Object} puzzle - Parsed tiles, fixed placements and end markers.
+   * @returns {Object} Compatibility tables, boundary exit costs, fixed slots and
+   * unmarked-exit allowance used throughout one search.
+   */
   function prepare(puzzle) {
     const { tiles, fixed, markers } = puzzle;
     const count = tiles.length;
@@ -77,6 +95,13 @@
     return { puzzle, count, compatible, boundary, fixedSlots, exitAllowance: 2 - markers.length };
   }
 
+  /**
+   * @param {Object} prep - Prepared puzzle tables.
+   * @param {Array<number|null>} placement - Current tile indices by slot.
+   * @param {number} tile - Candidate tile index.
+   * @param {number} slot - Candidate slot index.
+   * @returns {boolean} Whether all occupied neighbouring slots agree.
+   */
   function neighbourOk(prep, placement, tile, slot) {
     const row = Math.floor(slot / 3);
     const col = slot % 3;
@@ -90,6 +115,11 @@
     return true;
   }
 
+  /**
+   * @param {Object} prep - Prepared boundary costs.
+   * @param {Array<number|null>} placement - Locally valid current placement.
+   * @returns {number} Unmarked exits contributed by placed tiles.
+   */
   function unmarkedExitTotal(prep, placement) {
     return placement.reduce((total, tile, slot) => (
       tile === null ? total : total + prep.boundary[tile][slot]
@@ -97,6 +127,14 @@
   }
 
   // A placement is locally valid if it agrees with every placed neighbour and the board boundary.
+  /**
+   * @param {Object} prep - Prepared puzzle tables.
+   * @param {Array<number|null>} placement - Current placement.
+   * @param {number} tile - Candidate tile index.
+   * @param {number} slot - Candidate slot index.
+   * @param {number} unmarkedSoFar - Existing unmarked exit count.
+   * @returns {boolean} Whether boundary clues, exit budget and neighbours permit the move.
+   */
   function locallyValid(prep, placement, tile, slot, unmarkedSoFar) {
     const extra = prep.boundary[tile][slot];
     if (extra === null) return false;
@@ -104,10 +142,18 @@
     return neighbourOk(prep, placement, tile, slot);
   }
 
+  /**
+   * @param {Object} prep - Prepared fixed slots.
+   * @returns {Array<number|null>} Independent copy containing only fixed tiles.
+   */
   function initialPlacement(prep) {
     return prep.fixedSlots.slice();
   }
 
+  /**
+   * @param {Object} prep - Prepared puzzle.
+   * @returns {boolean} Whether fixed clues are locally consistent.
+   */
   function fixedConsistent(prep) {
     const placement = new Array(9).fill(null);
     let unmarked = 0;
@@ -121,12 +167,23 @@
     return true;
   }
 
+  /**
+   * @param {Object} puzzle - Parsed puzzle.
+   * @param {Array<number|null>} placement - Candidate tile arrangement.
+   * @returns {boolean} Whether the full shared rule check succeeds.
+   */
   function isSolution(puzzle, placement) {
     const board = rules.composeBoard(puzzle.tiles, placement);
     return rules.analyseBoard(board, puzzle.markers).solved;
   }
 
   // Exhaustive backtracking over tile-to-slot assignments, stopping after `limit` solutions.
+  /**
+   * @param {Object} puzzle - Parsed puzzle.
+   * @param {Object} [options={}] - Solution limit, defaulting to two for uniqueness checks.
+   * @returns {Object} Solution copies, count, attempted-node count and a complete flag
+   * which is false when the solution limit stops the search.
+   */
   function solve(puzzle, { limit = 2 } = {}) {
     const prep = prepare(puzzle);
     const solutions = [];
@@ -140,6 +197,11 @@
     const openSlots = [];
     for (let slot = 0; slot < 9; slot += 1) if (placement[slot] === null) openSlots.push(slot);
 
+    /**
+     * @param {number} depth - Next open slot in the fixed search order.
+     * @param {number} unmarked - Boundary exits used so far.
+     * @returns {void} Appends solutions and counts attempts; restores placement and used flags.
+     */
     function search(depth, unmarked) {
       if (solutions.length >= limit) return;
       if (depth === openSlots.length) {
@@ -164,6 +226,10 @@
     return { solutions, count: solutions.length, complete: solutions.length < limit, nodes };
   }
 
+  /**
+   * @param {number} score - Weighted difficulty score.
+   * @returns {Object} Highest difficulty band whose lower bound is met.
+   */
   function bandFor(score) {
     let band = COMPLEXITY_BANDS[0];
     COMPLEXITY_BANDS.forEach((candidate) => {
@@ -172,6 +238,11 @@
     return band;
   }
 
+  /**
+   * @param {Object} prep - Prepared puzzle.
+   * @param {Array<number|null>} placement - Current arrangement.
+   * @returns {Object[]} Locally valid unused tile/open slot pairs.
+   */
   function validPlacements(prep, placement) {
     const placedTiles = new Set(placement.filter((tile) => tile !== null));
     const unmarked = unmarkedExitTotal(prep, placement);
@@ -187,6 +258,12 @@
   }
 
   // Counts the options for every open slot and unplaced tile. `dead` means one has none left.
+  /**
+   * @param {Object} prep - Prepared puzzle.
+   * @param {Array<number|null>} placement - Current arrangement.
+   * @param {Object[]} moves - Available tile/slot pairs.
+   * @returns {Object} Counts indexed by slot and tile, plus a dead-end flag.
+   */
   function optionCounts(prep, placement, moves) {
     const bySlot = new Array(9).fill(0);
     const byTile = new Array(prep.count).fill(0);
@@ -200,6 +277,11 @@
     return { bySlot, byTile, dead };
   }
 
+  /**
+   * @param {Object} counts - Option counts by slot and tile.
+   * @param {Object} move - Tile and slot indices.
+   * @returns {number} Smaller ambiguity count for the move.
+   */
   const choiceOf = (counts, { tile, slot }) => Math.min(counts.bySlot[slot], counts.byTile[tile]);
 
   // Step weights for the reasoning needed to find the next placement (see README).
@@ -210,6 +292,12 @@
   // slot or piece with no options and look again; otherwise make the least ambiguous trial
   // placement. Each step's distractors (locally valid placements not in the solution) are weighted
   // by the technique that step needed, plus log2 of the options for a trial placement.
+  /**
+   * @param {Object} puzzle - Parsed puzzle.
+   * @param {number[]} solution - Known correct tile indices by slot.
+   * @returns {Object} Weighted score, band and per-step reasoning statistics.
+   * Throws when the supplied arrangement cannot supply a locally valid next move.
+   */
   function complexity(puzzle, solution) {
     const prep = prepare(puzzle);
     const placement = initialPlacement(prep);
@@ -252,6 +340,10 @@
     const distractorTotal = steps.reduce((total, { distractors }) => total + distractors, 0);
     const score = Math.round(steps.reduce((total, { weighted }) => total + weighted, 0));
     const band = bandFor(score);
+    /**
+     * @param {string} name - Technique identifier.
+     * @returns {number} Number of recorded steps using that technique.
+     */
     const techniqueCount = (name) => steps.filter(({ technique }) => technique === name).length;
     return {
       score,
@@ -272,10 +364,19 @@
     };
   }
 
+  /**
+   * @param {number[]} placement - Complete tile indices by slot.
+   * @returns {string} One-based tile@slot entries for diagnostics.
+   */
   function describePlacement(placement) {
     return placement.map((tile, slot) => `${tile + 1}@${slot + 1}`).join(" ");
   }
 
+  /**
+   * @param {string} code - Puzzle code to parse and solve.
+   * @returns {Object} Validation diagnostics, up to two solution descriptions and
+   * complexity for a unique solution; malformed codes become diagnostics.
+   */
   function analyseCode(code) {
     const diagnostics = [];
     let puzzle;

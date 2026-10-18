@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Catalogue-puzzle bootstrap for puzzle.html, after helpers, catalogues and
+ * puzzle-progress.js. Reads the one-based ?level query, writes titles/body data
+ * and navigation, then loads lightdiscs.js only after that configuration exists.
+ * Solved events persist completion in localStorage; invalid indices redirect.
+ */
 
 (() => {
   const levels = window.LightDiscLevels;
@@ -35,6 +41,10 @@
   document.body.dataset.combination = level.combination;
   position.textContent = `${difficultyNumber} / ${difficultyLevels.length}`;
 
+  /**
+   * Read completion state and show a link only after solving, if another level remains.
+   * @returns {void}
+   */
   function updateNextLink() {
     if (!window.LightDiscProgress.isCompleted(level.code, level)) {
       nextLink.hidden = true;
@@ -49,6 +59,7 @@
     nextLink.hidden = false;
   }
 
+  // Ignore unrelated codes; the selected level supplies the campaign storage key.
   document.addEventListener("lightdiscs:solved", (event) => {
     if (event.detail.code !== level.code) return;
     window.LightDiscProgress.markCompleted(level.code, level);
@@ -56,6 +67,7 @@
   });
   updateNextLink();
 
+  // Explicit version query invalidates browser caches when the board bundle changes.
   const gameScript = document.createElement("script");
   gameScript.src = "./lightdiscs.js?v=20261014c";
   document.body.append(gameScript);

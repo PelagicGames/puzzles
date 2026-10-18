@@ -1,15 +1,18 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Interactive puzzle page; puzzle.js selects a one-based level from the URL query. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f2ede1">
   <title>Puzzle | Crosspath</title>
-  <link rel="stylesheet" href="./styles.css?v=20261016d">
+  <!-- Version queries on presentation/controller resources invalidate cached revisions. -->
+  <link rel="stylesheet" href="./styles.css?v=20261018b">
 </head>
 <body class="page-puzzle">
   <main class="paper">
+    <!-- puzzle.js fills catalogue position, difficulty title and band position. -->
     <header class="masthead masthead-compact">
       <div class="masthead-row">
         <a class="back-link" href="./puzzles.html" aria-label="Back to puzzle menu">&#8592; Puzzles</a>
@@ -23,19 +26,29 @@
       <p class="standfirst">Drag the pieces onto the board to make one path from edge to edge. Pieces cannot be rotated.</p>
     </div>
 
+    <!-- The controller constructs SVG slots, end markers, focus/drop hints and check layers. -->
     <section class="puzzle-layout">
       <div class="board-column">
         <div class="board-wrap" id="board-wrap">
           <svg class="board" id="board" role="group" aria-label="Crosspath board, nine spaces for three-by-three tiles"></svg>
           <div class="solved-stamp" aria-hidden="true">Solved</div>
         </div>
+        <a class="action-button solved-next" id="solved-next-puzzle" href="./puzzle.html" hidden>Next unsolved puzzle &#8594;</a>
+        <!-- Clue legends are filtered by puzzle clues; correction entries match rendered marks. -->
         <ul class="legend" id="legend" aria-label="Key">
           <li id="fixed-legend"><span class="legend-swatch is-fixed" aria-hidden="true"></span> Fixed tile</li>
           <li id="movable-legend"><span class="legend-swatch is-movable" aria-hidden="true"></span> Movable tile</li>
           <li id="marker-legend"><span class="legend-dot" aria-hidden="true"></span> Path end</li>
         </ul>
+        <ul class="legend correction-legend" id="correction-legend" aria-label="Red correction marks" hidden>
+          <li data-mark=".correction-mark" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path class="correction-mark" d="M8 8L24 24M24 8L8 24"/></svg> Broken join or wrong edge exit</li>
+          <li data-mark=".correction-line" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><path class="correction-line" d="M16 3L12 12L20 20L16 29"/></svg> Path squares touching without joining</li>
+          <li data-mark=".unvisited" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><rect class="unvisited-wash" x="2" y="2" width="28" height="28"/><path class="unvisited-ink" d="M16 2V30"/></svg> Path squares never visited</li>
+          <li data-mark=".correction-ring" hidden><svg viewBox="0 0 32 32" aria-hidden="true"><circle class="marker-dot" cx="16" cy="16" r="4"/><circle class="correction-ring" cx="16" cy="16" r="12"/></svg> Path end missed or not traced</li>
+        </ul>
       </div>
 
+      <!-- Rebuilt tile buttons support pointer and keyboard input; checks announce results politely. -->
       <aside class="tray-panel" id="tray-panel" aria-labelledby="tray-heading">
         <h2 id="tray-heading" class="column-heading">The pieces</h2>
         <div class="tray" id="tray"></div>
@@ -51,16 +64,18 @@
       </aside>
     </section>
 
+    <!-- Both next-unsolved links are filled from saved completion, not simply the next index. -->
     <nav class="puzzle-navigation" aria-label="Puzzle navigation">
       <a href="./puzzles.html">&#8592; Puzzle menu</a>
       <span id="puzzle-position"></span>
       <a id="next-puzzle" href="./puzzle.html" hidden>Next unsolved &#8594;</a>
     </nav>
   </main>
+  <!-- Rules precede rendering; level data and progress must load before the page controller. -->
   <script src="./crosspath-rules.js"></script>
   <script src="./crosspath-render.js"></script>
   <script src="./puzzle-levels.js"></script>
   <script src="./puzzle-progress.js"></script>
-  <script src="./puzzle.js?v=20261016d"></script>
+  <script src="./puzzle.js?v=20261018b"></script>
 </body>
 </html>

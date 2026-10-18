@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Standalone regression suite: node lightdiscs/solver.test.js
+ * Reads parser, maths, solver and both catalogue scripts via Node's VM into a
+ * window shim. Uses built-in assertions; writes only the success log, and throws
+ * on failure. Does not write analysis files.
+ */
 
 const assert = require("assert");
 const fs = require("fs");
@@ -19,6 +25,8 @@ global.window = {};
   );
 });
 
+// Fixed authored cases pin raw/grouped solution counts, cheapest reset costs,
+// difficulty metrics and deterministic representative shorthand.
 const authoredPuzzles = [
   {
     code: "R: nr nr nr G: ng ng ng B: nb nb nb T: nr ng nb",
@@ -162,13 +170,17 @@ const authoredPuzzles = [
   }
 ];
 
+// Catalogue/pose invariants ensure unique codes and retention of authored fixtures.
 assert.strictEqual(window.LightDiscSolver.poseTemplates.length, 39);
 assert.strictEqual(window.LightDiscLevels.length, 60);
 assert.strictEqual(new Set(window.LightDiscLevels.map(({ code }) => code)).size, 60);
 const catalogCodes = new Set(window.LightDiscLevels.map(({ code }) => code));
 authoredPuzzles.forEach(({ code }) => assert.strictEqual(catalogCodes.has(code), true));
+// Reuse full analyses when the subsequent catalogue sweep reaches the same code.
 const analyses = new Map();
 
+// Check fixture metrics, vector structure, zero distances for all equivalent
+// solved states, and consistency between route costs and their listed moves.
 authoredPuzzles.forEach(({
   code,
   rawSolutions,
@@ -215,6 +227,8 @@ authoredPuzzles.forEach(({
   });
 });
 
+// Every catalogue entry must solve in its own campaign and match its difficulty.
+// XOR designs must require XOR logic and cover all three targets in authored poses.
 window.LightDiscLevels.forEach((level, index) => {
   const analysis = analyses.get(level.code)
     || window.LightDiscSolver.analyzePuzzle(level.code, {
@@ -255,21 +269,31 @@ window.LightDiscLevels.forEach((level, index) => {
   }
 });
 
+/**
+ * @param {number} mask - RGB channel bits.
+ * @returns {Object} Shape-free test filter with identical foreground/background.
+ */
 const solid = (mask) => ({
   background: { mask },
   foreground: { mask },
   shape: { value: "none" }
 });
+/**
+ * @param {...number} masks - Solid filter masks.
+ * @returns {number} XOR result for a formation with no shape predicates.
+ */
 const xorMask = (...masks) => window.LightDiscMath.formationMask(
   masks.map((mask) => ({ filter: solid(mask), angle: 0 })),
   new Map(),
   "xor"
 );
+// Equal channels cancel; black is neutral; mixed masks toggle independently.
 assert.strictEqual(xorMask(4, 4), 0);
 assert.strictEqual(xorMask(4, 0), 4);
 assert.strictEqual(xorMask(4, 6), 2);
 assert.strictEqual(xorMask(3, 5), 6);
 
+// A target colour absent from every available filter must be rejected locally.
 const impossible = window.LightDiscSolver.analyzePuzzle(
   "R: nr nr nr G: nr nr nr B: nr nr nr T: nb nb nb"
 );

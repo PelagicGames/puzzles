@@ -1,7 +1,20 @@
 /* Copyright (C) 2026 Pelagic Games */
 
+/*
+ * Shared newspaper presentation for all four Crosspath pages, including SVG
+ * artwork created by crosspath-render.js, puzzle.js and tutorial.js. Page
+ * controllers own state classes and hidden attributes; this sheet supplies their
+ * visual feedback without changing the underlying interaction state.
+ */
+
 @import url("https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;800&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap");
 
+/* Palette: newsprint is the board/fixed surface, paper is movable tile stock;
+ * ink/ink-soft/faint separate paths, prose and fine rules. Pen/pen-soft show
+ * selection and successful traces; red/red-soft/red-ink show corrections.
+ * Highlight marks selection/hover. Serif, display and sans separate article
+ * copy, newspaper headings and compact controls; system fallbacks remain usable.
+ */
 :root {
   color-scheme: light;
   --newsprint: #f2ede1;
@@ -51,6 +64,7 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+/* puzzle.js draws a single SVG focus ring above the board rules instead. */
 .slot:focus,
 .slot:focus-visible {
   outline: none;
@@ -313,6 +327,7 @@ button:focus-visible {
   background: var(--highlight);
 }
 
+/* puzzles.js adds completion styling from saved puzzle codes. */
 .puzzle-selector.is-completed {
   background: var(--newsprint-deep);
 }
@@ -359,12 +374,15 @@ button:focus-visible {
   user-select: none;
 }
 
+/* Unoccupied/fixed board regions permit page scrolling; movable slots opt out below. */
 .board {
   display: block;
   width: 100%;
   height: auto;
-  touch-action: none;
+  touch-action: pan-y;
 }
+
+/* ---- Shared SVG board, tile faces and path ink -------------------------- */
 
 .board-margin {
   fill: var(--newsprint);
@@ -411,6 +429,8 @@ button:focus-visible {
 
 .slot.is-movable {
   cursor: grab;
+  /* Only a movable piece reserves touch gestures for dragging; empty spaces can scroll. */
+  touch-action: none;
 }
 
 .slot-empty {
@@ -434,6 +454,7 @@ button:focus-visible {
   fill: var(--newsprint);
 }
 
+/* puzzle.js owns selected, locked and drag-source states; fixed faces retain board colour. */
 .slot.is-selected .tile-face,
 .tray-tile.is-selected .tile-face {
   fill: var(--highlight);
@@ -447,6 +468,9 @@ button:focus-visible {
   opacity: 0.3;
 }
 
+/* Overlays must never intercept slot targeting; SVG insertion order puts these
+ * above tile/grid artwork, with the keyboard focus ring aligned to the slot.
+ */
 .drop-target {
   fill: var(--pen-soft);
   stroke: var(--pen);
@@ -480,10 +504,12 @@ button:focus-visible {
   stroke-width: 2;
 }
 
+/* Rule checks mark missing required ends without removing their original stubs. */
 .end-marker.is-missing .marker-dot {
   fill: var(--red);
 }
 
+/* Traces and diagnostic marks remain transparent to pointer interaction. */
 .trace-layer,
 .marks-layer {
   pointer-events: none;
@@ -504,6 +530,7 @@ button:focus-visible {
   stroke-width: 1.5;
 }
 
+/* JavaScript staggers mark-in using per-group delays; fill-box centres each mark locally. */
 .correction {
   animation: mark-in 320ms ease-out both;
   transform-box: fill-box;
@@ -537,6 +564,7 @@ button:focus-visible {
   stroke-linecap: round;
 }
 
+/* The absolutely positioned stamp overlays the board but cannot block input. */
 .solved-stamp {
   position: absolute;
   top: 2%;
@@ -558,6 +586,29 @@ button:focus-visible {
 .board-wrap.is-solved .solved-stamp {
   animation: stamp 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
 }
+
+.solved-next {
+  display: block;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--pen);
+  color: var(--paper);
+  background: var(--pen);
+  text-align: center;
+}
+
+/* Explicit hidden rules override component display declarations during check/reset. */
+.solved-next[hidden] {
+  display: none;
+}
+
+.correction-legend svg {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+}
+
+/* ---- Clue and correction legends --------------------------------------- */
 
 .legend {
   display: flex;
@@ -602,6 +653,8 @@ button:focus-visible {
   background: var(--ink);
 }
 
+/* ---- Tray and captured-pointer drag presentation ----------------------- */
+
 .tray {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -613,6 +666,7 @@ button:focus-visible {
   border: 1.5px dashed var(--faint);
 }
 
+/* Tray pieces reserve touch gestures for dragging; puzzle.js handles edge scrolling. */
 .tray-tile {
   display: block;
   width: 100%;
@@ -645,6 +699,9 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+/* Fixed viewport positioning matches client coordinates; high stacking keeps
+ * the ghost over both columns, while pointer transparency preserves hit tests.
+ */
 .drag-ghost {
   position: fixed;
   top: 0;
@@ -658,6 +715,8 @@ body.is-dragging {
   cursor: grabbing;
   user-select: none;
 }
+
+/* ---- Live check feedback, controls and onward navigation ---------------- */
 
 .status-box {
   min-height: 5.5rem;
@@ -814,6 +873,7 @@ body.is-dragging {
   text-transform: uppercase;
 }
 
+/* tutorial.js supplies verdict states; text labels also convey validity without colour. */
 .example.is-valid .verdict {
   color: var(--pen);
 }
@@ -882,6 +942,10 @@ body.is-dragging {
   color: var(--paper);
 }
 
+/* ---- Feedback animation ------------------------------------------------
+ * Corrections settle from enlarged marks, success stamps into place, and fixed
+ * clues flash briefly; puzzle.js removes the locked class on animationend.
+ */
 @keyframes mark-in {
   from {
     opacity: 0;
@@ -912,6 +976,10 @@ body.is-dragging {
   }
 }
 
+/* ---- Responsive layout and motion preferences ---------------------------
+ * Stack the board above the tray on narrower screens, then reduce tray columns
+ * further on phones. The compact masthead drops only its repeated centre name.
+ */
 @media (max-width: 820px) {
   .puzzle-layout,
   .front-page {
@@ -944,6 +1012,9 @@ body.is-dragging {
   }
 }
 
+/* Keep final correction/stamp states with near-instant CSS effects. Controllers
+ * independently shorten SVG trace drawing when reduced motion is requested.
+ */
 @media (prefers-reduced-motion: reduce) {
   .correction,
   .board-wrap.is-solved .solved-stamp {

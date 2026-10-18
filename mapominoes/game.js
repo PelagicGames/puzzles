@@ -1,6 +1,16 @@
 // Copyright (C) 2026 Pelagic Games
 
+/**
+ * Coordinates solo and pass-and-play rounds, including map setup, country entry, challenges, scoring and result screens.
+ * Loaded by solo.html and local.html after the shared country, rules, map and rendering scripts.
+ * The mutable state object is the current round: path entries record country code, player, validity and reasons;
+ * mode and phase select the rules and screen, while scores and restartPlayer drive the next round.
+ * Reads setup/search controls, the body mode and URL map query; writes page state
+ * and result SVG. Regional map scripts may be fetched through the shared map API.
+ */
+
 (() => {
+  // The page attribute distinguishes solo setup from local multiplayer without duplicating this controller.
   const pageMode = document.body.dataset.mapominoesMode || "local";
   const t = window.MapominoesMaps.text;
   let countries = window.MapominoesCountries;
@@ -42,6 +52,7 @@
   const finalScores = document.querySelector("#final-scores");
   const allPuzzlesLink = document.querySelector("#all-puzzles-link");
   const menuButton = document.querySelector("#mapominoes-menu-button");
+  // `state` is the active round; selection fields hold the current autocomplete interaction, not game history.
   let state = null;
   let selectedCode = null;
   let matches = [];
@@ -51,15 +62,28 @@
   const requestedMap = new URLSearchParams(location.search).get("map") || "world";
   if (window.MapominoesMaps.catalog.some((map) => map.id === requestedMap)) mapPicker.value = requestedMap;
 
+  /** Returns the display name for a player index, using a second-person label in solo mode.
+   * @param {number} index - Zero-based player index.
+   * @returns {string} Player label.
+   */
   function playerName(index) {
     if (state.mode === "solo") return "You";
     return `Player ${index + 1}`;
   }
 
+  /** Advances cyclically to the player after `index`.
+   * @param {number} index - Current zero-based player index.
+   * @returns {number} Next player index.
+   */
   function nextPlayer(index) {
     return (index + 1) % state.playerCount;
   }
 
+  /** Shows exactly the page panel for the named state and updates persistent navigation visibility.
+   * @param {string} screen - One of mode, setup, game, result or final.
+   * @returns {void}
+   * @sideEffects Updates panel `hidden` properties.
+   */
   function setScreen(screen) {
     if (modePanel) modePanel.hidden = screen !== "mode";
     if (setupPanel) setupPanel.hidden = screen !== "setup";
@@ -70,6 +94,10 @@
     if (menuButton) menuButton.hidden = screen === "mode";
   }
 
+  /** Clears an unfinished game and returns to the mode-selection screen.
+   * @returns {void}
+   * @sideEffects Resets the setup form and country-entry UI, and changes visible panels.
+   */
   function returnToMenu() {
     state = null;
     setupForm?.reset();
@@ -77,6 +105,12 @@
     setScreen("mode");
   }
 
+  /** Initialises a local multiplayer match with zero scores and an empty first-round route.
+   * @param {number} playerCount - Number of local players, from two to eight.
+   * @param {string} mode - Validation mode: autocheck or challenge.
+   * @returns {void}
+   * @sideEffects Replaces round state, updates panels and renders the opening turn.
+   */
   function startGame(playerCount, mode) {
     state = {
       currentPlayer: 0,
@@ -93,6 +127,10 @@
     renderTurn();
   }
 
+  /** Starts a solo chain seeded by one random region from the currently selected map.
+   * @returns {void}
+   * @sideEffects Replaces round state, including the valid starting path entry, then renders the turn.
+   */
   function startSolo() {
     const startingCountry = countries[Math.floor(Math.random() * countries.length)];
     state = {
@@ -116,6 +154,11 @@
     renderTurn();
   }
 
+  /** Begins the next local round with its loser (or current player after a draw) leading.
+   * @param {number} startPlayer - Zero-based index of the opening player.
+   * @returns {void}
+   * @sideEffects Resets the route and result, increments the round, and renders the first turn.
+   */
   function startRound(startPlayer) {
     if (state.mode === "solo") {
       startSolo();
@@ -131,6 +174,10 @@
     renderTurn();
   }
 
+  /** Rebuilds the local scoreboard and marks the active player; solo play has no scoreboard.
+   * @returns {void}
+   * @sideEffects Replaces scoreboard DOM children and visibility.
+   */
   function renderScores() {
     scoreboard.hidden = state.mode === "solo";
     if (state.mode === "solo") return;
@@ -147,6 +194,10 @@
     });
   }
 
+  /** Synchronises the turn interface with the current player, phase and route.
+   * @returns {void}
+   * @sideEffects Updates game DOM, clears any stale selection, and focuses search during a turn.
+   */
   function renderTurn() {
     const solo = state.mode === "solo";
     roundLabel.textContent = solo
@@ -183,6 +234,10 @@
     if (state.phase === "turn") countrySearch.focus();
   }
 
+  /** Explains the most recent submitted move to the next player in challenge mode.
+   * @returns {void}
+   * @sideEffects Updates challenge heading and explanatory text.
+   */
   function renderChallenge() {
     const entry = state.path[state.path.length - 1];
     const country = countriesByCode.get(entry.code);
@@ -190,6 +245,10 @@
     challengeCopy.textContent = `${playerName(entry.player)} named ${country.name}. ${t("Challenge if it was previously named, does not border the last country, or blocked the first circuit. A false challenge loses the round.")}`;
   }
 
+  /** Resets autocomplete, selected-country confirmation and validation feedback.
+   * @returns {void}
+   * @sideEffects Clears and hides country-entry DOM controls.
+   */
   function clearCountrySelection() {
     selectedCode = null;
     matches = [];
@@ -204,11 +263,19 @@
     formMessage.classList.remove("is-error");
   }
 
+  /** Formats an alternate name only when the result matched an alias rather than the canonical name.
+   * @param {object} match - Search result containing `alias` and `country`.
+   * @returns {string} Parenthesised alias or an empty string.
+   */
   function resultLabel(match) {
     if (!match.alias) return "";
     return `(${match.alias})`;
   }
 
+  /** Builds accessible autocomplete options and wires pointer/click selection behaviour.
+   * @returns {void}
+   * @sideEffects Replaces result-list DOM and updates combobox expansion state.
+   */
   function renderMatches() {
     countryResults.replaceChildren();
     matches.forEach((match, index) => {
@@ -228,6 +295,7 @@
         detail.textContent = alternative;
         button.append(detail);
       }
+      // Keep focus in the combobox and stop touch/pointer events reaching its container.
       button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -248,6 +316,11 @@
     countrySearch.setAttribute("aria-expanded", String(matches.length > 0));
   }
 
+  /** Applies one current search result as the pending move, without committing the turn.
+   * @param {number} index - Index in the current `matches` array.
+   * @returns {void}
+   * @sideEffects Updates search text, selected-country details and submit availability.
+   */
   function chooseMatch(index) {
     const match = matches[index];
     if (!match) return;
@@ -261,6 +334,10 @@
     formMessage.textContent = "";
   }
 
+  /** Validates and appends the selected region, then advances or ends the round as appropriate.
+   * @returns {void}
+   * @sideEffects Mutates route/current-player/phase state and may render a result or next turn.
+   */
   function commitCountry() {
     if (!selectedCode) {
       formMessage.textContent = t("Select a country from the shortlist first.");
@@ -268,6 +345,7 @@
       return;
     }
     const player = state.currentPlayer;
+    // Keep the pre-move route for the first-circuit check and the result map when autocheck rejects this move.
     const previousPath = [...state.path];
     const validation = validateMove(
       countries,
@@ -299,11 +377,19 @@
     renderTurn();
   }
 
+  /** Accepts the challenged move and returns play to the normal turn-entry phase.
+   * @returns {void}
+   * @sideEffects Changes phase and renders the next player's turn.
+   */
   function acceptMove() {
     state.phase = "turn";
     renderTurn();
   }
 
+  /** Resolves a challenge: an invalid move loses for its author; a valid one costs the challenger.
+   * @returns {void}
+   * @sideEffects Marks the route entry challenged and ends the round with the appropriate loser.
+   */
   function challengeMove() {
     const challengedEntry = state.path[state.path.length - 1];
     challengedEntry.challenged = true;
@@ -322,6 +408,10 @@
     });
   }
 
+  /** Checks whether the player is right that no legal continuation exists before ending play.
+   * @returns {void}
+   * @sideEffects May finish the round, award a point for an incorrect concession, and render results.
+   */
   function concede() {
     const choices = validChoices(countries, state.path, state.playerCount);
     if (choices.length === 0) {
@@ -348,6 +438,11 @@
     });
   }
 
+  /** Records a terminal result, awards any point, and renders the route/map summary.
+   * @param {object} result - Result options: choices, choicePath, loser, reason, awardPoint and noLegalMoves.
+   * @returns {void}
+   * @sideEffects Mutates scores/result/phase, changes screens and updates result DOM.
+   */
   function endRound({
     awardPoint = true,
     choices = null,
@@ -356,6 +451,7 @@
     noLegalMoves = false,
     reason
   }) {
+    // Prefer the already-computed list when concession checked it; otherwise derive it from the displayed route.
     const availableChoices = choices
       || validChoices(countries, choicePath, state.playerCount);
     if (awardPoint && loser !== null) state.scores[loser] += 1;
@@ -393,6 +489,10 @@
     renderMap();
   }
 
+  /** Rebuilds the numbered route, distinguishing invalid entries from valid player moves.
+   * @returns {void}
+   * @sideEffects Replaces route-list DOM children.
+   */
   function renderRouteList() {
     routeList.replaceChildren();
     state.path.forEach((entry, index) => {
@@ -414,6 +514,10 @@
     });
   }
 
+  /** Draws the shared result map and surfaces renderer/data failures in the page.
+   * @returns {void}
+   * @sideEffects Updates SVG through MapominoesRenderer and toggles the map error message.
+   */
   function renderMap() {
     const error = document.querySelector("#map-error");
     error.hidden = true;
@@ -428,6 +532,10 @@
     }
   }
 
+  /** Displays cumulative scores from lowest (best) to highest, retaining player order for ties.
+   * @returns {void}
+   * @sideEffects Switches to final-screen phase and rebuilds the final scoreboard.
+   */
   function showFinalScores() {
     state.phase = "final";
     setScreen("final");
@@ -448,6 +556,7 @@
       });
   }
 
+  // Setup submission loads the selected catalogue entry before changing the active map or starting play.
   setupForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = setupForm.querySelector("button[type='submit']");
@@ -493,6 +602,7 @@
   });
   menuButton?.addEventListener("click", returnToMenu);
 
+  // Input and keyboard listeners implement a combobox: edits invalidate prior selection, arrows cycle, Enter chooses, Escape dismisses.
   countrySearch.addEventListener("input", () => {
     selectedCode = null;
     selectedCountry.hidden = true;
@@ -519,12 +629,14 @@
       countrySearch.setAttribute("aria-expanded", "false");
     }
   });
+  // Delay dismissal briefly so pointer selection can complete before focus leaves the input.
   countrySearch.addEventListener("blur", () => {
     window.setTimeout(() => {
       countryResults.hidden = true;
       countrySearch.setAttribute("aria-expanded", "false");
     }, 100);
   });
+  // Form and action-button listeners are the state-machine transitions exposed by the page controls.
   countryForm.addEventListener("submit", (event) => {
     event.preventDefault();
     commitCountry();

@@ -5,6 +5,12 @@
 //
 //   node crosspath/generate-puzzle-catalogue.js
 
+/**
+ * Loads rules, solver and committed levels through a Node window shim. Includes
+ * complexity-survey.local.json when present, then overwrites the local catalogue
+ * report. Invalid puzzles are reported and set a failing process exit code.
+ */
+
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
@@ -15,7 +21,7 @@ global.window = global.window || {};
 });
 
 const rules = window.CrosspathRules;
-// Optional summary written by the generator's calibrate mode.
+// Optional complexity survey summary included alongside per-level analysis.
 const surveyPath = path.join(__dirname, "complexity-survey.local.json");
 const puzzles = window.CrosspathLevels.map(({ title, difficulty, code }, index) => {
   const analysis = window.CrosspathSolver.analyseCode(code);
@@ -39,6 +45,7 @@ const puzzles = window.CrosspathLevels.map(({ title, difficulty, code }, index) 
   };
 });
 
+// Human-readable solution grids use one-based tile numbers; solver arrays remain zero-based.
 const report = {
   _copyright: "Copyright (C) 2026 Pelagic Games",
   generatedAt: new Date().toISOString(),

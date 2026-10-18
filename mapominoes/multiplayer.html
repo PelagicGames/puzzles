@@ -1,11 +1,14 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Multiplayer transport menu: local pass-and-play or manual-code WebRTC.
+     map-menu.js inserts the map picker and propagates its map query to game links. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Multiplayer | Mapominoes</title>
+  <!-- Version queries invalidate cached shared assets on deployment. -->
   <link rel="stylesheet" href="./styles.css?v=20261015a">
 </head>
 <body>
@@ -19,6 +22,7 @@
       </div>
     </header>
 
+    <!-- Native navigation remains separate from the script-inserted map selector. -->
     <section class="panel mode-panel" aria-labelledby="mode-title">
       <div class="section-heading">
         <p class="step-label">Multiplayer</p>
@@ -41,6 +45,8 @@
       <a href="./ATTRIBUTION.md">Data attribution</a>
     </footer>
   </main>
+  <!-- Load catalogue, map API and menu bindings in order; v values are cache keys,
+       not gameplay options. Regional datasets are deferred to the game page. -->
   <script src="./map-catalog.js?v=20261016b"></script>
   <script src="./maps.js?v=20261016b"></script>
   <script src="./map-menu.js"></script>

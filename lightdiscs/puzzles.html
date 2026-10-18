@@ -1,5 +1,7 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Campaign selector: puzzles.js builds difficulty groups, completion ticks and
+     unlocked XOR links. The stylesheet/controller ?v queries are cache-busting versions. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -16,8 +18,10 @@
       <h1>Puzzles</h1>
       <p class="tagline">Choose a puzzle. Completed puzzles are ticked.</p>
     </header>
+    <!-- Populated from catalogue records and local completion state by puzzles.js. -->
     <div class="difficulty-list" id="difficulty-list"></div>
   </main>
+  <!-- Load the base catalogue before XOR appends, then progress before the selector. -->
   <script src="./puzzle-levels.js"></script>
   <script src="./xor-puzzle-levels.js"></script>
   <script src="./puzzle-progress.js"></script>

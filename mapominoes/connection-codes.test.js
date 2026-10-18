@@ -1,4 +1,10 @@
 // Copyright (C) 2026 Pelagic Games
+/**
+ * Run with node connection-codes.test.js, or through npm test.
+ * Reads the browser codec into isolated VMs with native and simulated stream support.
+ * Checks exact wire round trips, compatibility, integrity and size limits; writes
+ * only assertion diagnostics, compression summaries and process exit status.
+ */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
@@ -6,20 +12,33 @@ const { createHash } = require("node:crypto");
 const { deflateRawSync, inflateRawSync, gzipSync } = require("node:zlib");
 const source = fs.readFileSync(`${__dirname}/connection-codes.js`, "utf8");
 
+/** Buffer stream chunks before applying a synchronous raw-DEFLATE operation.
+ * @param {Function} transform - Buffer-to-buffer compressor or inflater.
+ * @returns {TransformStream} Browser-shaped stream backed by Node zlib.
+ */
 function rawStream(transform) {
   const chunks = [];
   return new TransformStream({
+    /** @param {Uint8Array} chunk - Incoming bytes to retain. @returns {void} */
     transform(chunk) { chunks.push(Buffer.from(chunk)); },
+    /** @param {TransformStreamDefaultController} controller - Output sink. @returns {void} */
     flush(controller) { controller.enqueue(new Uint8Array(transform(Buffer.concat(chunks)))); }
   });
 }
+/** @param {Function} native - Native stream constructor.
+ * @param {Function} transform - Raw format operation. @returns {Function} Compatible constructor.
+ */
 function streams(native, transform) {
   return class {
+    /** @param {string} format - Compression format; delegates non-raw formats to native streams. */
     constructor(format) {
       return format === "deflate-raw" ? rawStream(transform) : new native(format);
     }
   };
 }
+/** @param {Object} overrides - Browser globals to replace.
+ * @returns {Object} Codec loaded into a fresh VM, without page startup.
+ */
 function environment(overrides = {}) {
   const context = vm.createContext({
     window: {}, TextEncoder, TextDecoder, Blob, TypeError, btoa, atob,
@@ -31,8 +50,12 @@ function environment(overrides = {}) {
   return context.window.MapominoesCodes;
 }
 const codes = environment();
+/** @param {string} hash - Digest algorithm. @returns {string} Deterministic synthetic certificate fingerprint. */
 const fingerprint = (hash = "sha256") => createHash(hash).update("test certificate").digest("hex")
   .toUpperCase().match(/../g).join(":");
+/** @param {string} kind - Invite or answer.
+ * @param {number} index - Session/address variation. @returns {Object} Synthetic SDP fixture.
+ */
 const fixture = (kind = "invite", index = 0) => ({
   version: 3,
   kind,
@@ -52,12 +75,16 @@ const fixture = (kind = "invite", index = 0) => ({
     ].join("\r\n")
   }
 });
+/** @param {*} value - VM value. @returns {*} JSON copy with local prototypes for strict equality. */
 const plain = (value) => JSON.parse(JSON.stringify(value));
+/** @param {string} code - M3 code. @returns {Buffer} Decoded envelope including its five-byte header. */
 const bytes = (code) => Buffer.from(code.slice(3), "base64url");
+/** @param {string} code - M3 code. @returns {Buffer} Uncompressed packed payload, without header. */
 const body = (code) => {
   const envelope = bytes(code);
   return envelope[0] ? inflateRawSync(envelope.subarray(5)) : envelope.subarray(5);
 };
+/** @param {Uint8Array} bytes - Payload bytes. @returns {number} Independent unsigned CRC-32 oracle. */
 function crc(bytes) {
   let value = 0xffffffff;
   for (const byte of bytes) {
@@ -66,12 +93,17 @@ function crc(bytes) {
   }
   return (value ^ 0xffffffff) >>> 0;
 }
+/** Construct valid checksums around deliberately invalid packed test payloads.
+ * @param {Buffer} body - Raw packed bytes.
+ * @param {boolean} compressed - Whether to deflate. @returns {string} M3 envelope.
+ */
 function envelope(body, compressed = false) {
   const header = Buffer.alloc(5);
   header[0] = compressed ? 1 : 0;
   header.writeUInt32LE(crc(body), 1);
   return `M3.${Buffer.concat([header, compressed ? deflateRawSync(body) : body]).toString("base64url")}`;
 }
+/** @param {number} value - Non-negative integer. @returns {number[]} Base-128 continuation bytes. */
 function uint(value) {
   const result = [];
   do {
@@ -81,6 +113,9 @@ function uint(value) {
   } while (value);
   return result;
 }
+/** @param {Object} value - Expected connection envelope.
+ * @param {Object} codec - Browser capability variant. @returns {Promise<string>} Code after exact equality checks.
+ */
 async function roundTrip(value, codec = codes) {
   const code = await codec.encode(value);
   assert.match(code, /^M3\.[A-Za-z0-9_-]+$/);
@@ -88,7 +123,11 @@ async function roundTrip(value, codec = codes) {
   return code;
 }
 
+/** Run compatibility, field packing, capability fallback and hostile-input groups.
+ * @returns {Promise<void>} Rejects on the first failed assertion.
+ */
 async function main() {
+  // Both kinds must stay compact and preserve legacy version-one/two interoperability.
   for (const kind of ["invite", "answer"]) {
     const value = fixture(kind);
     const m3 = await roundTrip(value);
@@ -112,6 +151,7 @@ async function main() {
       `${kind}: gathered media port and connection address must remain compact`);
   }
 
+  // Candidate extensions, unfamiliar SDP and unusual identifiers must remain byte-exact.
   const base = fixture();
   const extraCandidates = [
     "a=candidate:42 1 UDP 4294967295 2001:db8::1 65535 typ host generation 0 network-id 1",
@@ -149,10 +189,12 @@ async function main() {
   for (const inviteId of ["invite-0", "invite-01", "invite-zzzzzzzzzzzzzz", "invite-ABC", "custom-id", "\u00e9".repeat(80)]) {
     await roundTrip({ ...base, inviteId });
   }
+  // M3 accepts the current SDP ceiling even when the legacy envelope cannot fit.
   const boundary = { ...base, description: { ...base.description, sdp: "v=0\r\n".repeat(20000) } };
   await roundTrip(boundary);
   await assert.rejects(codes.encode(boundary, { version: 2 }), /legacy connection payload is too large/);
 
+  // Missing or partially implemented stream APIs must select explicit safe fallbacks.
   const noStreams = environment({ CompressionStream: undefined, DecompressionStream: undefined });
   const uncompressed = await roundTrip(base, noStreams);
   assert.equal(bytes(uncompressed)[0], 0);
@@ -163,6 +205,7 @@ async function main() {
   assert.equal(bytes(compressed)[0], 1);
   await assert.rejects(noStreams.decode(compressed, "invite"), /cannot expand/);
   class UnsupportedRaw {
+    /** @param {string} format - Requested format; simulate a browser lacking raw DEFLATE. */
     constructor(format) {
       if (format === "deflate-raw") throw new TypeError("Unsupported format");
       return new CompressionStream(format);
@@ -175,6 +218,7 @@ async function main() {
   const legacyFallback = await noStreams.encode(base, { version: 2 });
   assert.equal((await noStreams.decode(legacyFallback, "invite")).version, 1);
 
+  // Integrity, framing, truncation, expansion limits and malformed packed fields.
   const corrupt = bytes(uncompressed);
   corrupt[1] ^= 1;
   await assert.rejects(codes.decode(`M3.${corrupt.toString("base64url")}`, "invite"), /checksum/);
@@ -201,6 +245,7 @@ async function main() {
   await assert.rejects(codes.decode(envelope(expanded), "invite"), /reconstructed SDP is too large/);
   const gzipBomb = `M2.${gzipSync(Buffer.alloc(100001)).toString("base64url")}`;
   await assert.rejects(codes.decode(gzipBomb, "invite"), /too large/);
+  // Encoding rejects invalid envelopes and Unicode rather than emitting lossy codes.
   await assert.rejects(codes.encode({ ...base, inviteId: "" }), /not a valid/);
   await assert.rejects(codes.encode({ ...base, description: { ...base.description, type: "answer" } }), /not a valid/);
   await assert.rejects(codes.encode({ ...base, description: { ...base.description, sdp: "\ud800" } }), /invalid Unicode/);

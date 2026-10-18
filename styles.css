@@ -1,5 +1,16 @@
 /* Copyright (C) 2026 Pelagic Games */
 
+/* Landing page shared by the puzzle catalogue; its links lead to each game. */
+/* Loaded by root index.html only, with no script-driven state classes. Fluid
+ * widths and heading size adapt without media queries; focus outlines remain
+ * distinct from hover feedback and no animation is required for navigation.
+ */
+
+/* Warm catalogue palette and the shared card shadow. */
+/* bg-start/bg-end form the page wash; card is the link surface, text/muted
+ * separate primary and secondary copy, line defines card edges, focus marks
+ * keyboard navigation, and shadow supplies card depth.
+ */
 :root {
   --bg-start: #fff7ed;
   --bg-end: #ffedd5;
@@ -11,10 +22,12 @@
   --shadow: 0 10px 30px rgba(120, 80, 40, 0.14);
 }
 
+/* Keep declared dimensions inclusive of padding and borders. */
 * {
   box-sizing: border-box;
 }
 
+/* Centre the compact landing page over a soft two-layer background. */
 body {
   display: grid;
   min-width: 320px;
@@ -29,11 +42,13 @@ body {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
 }
 
+/* Constrain the catalogue content while allowing it to shrink on phones. */
 main {
   width: min(32rem, 100%);
   text-align: center;
 }
 
+/* Small overline and title copy establish the catalogue hierarchy. */
 .eyebrow {
   margin: 0 0 0.35rem;
   color: var(--muted);
@@ -55,6 +70,7 @@ h1 {
   font-size: 1.05rem;
 }
 
+/* Each game is a full-width, keyboard-focusable navigation card. */
 nav {
   display: grid;
   gap: 0.75rem;
@@ -76,6 +92,7 @@ nav a {
   text-decoration: none;
 }
 
+/* The third grid column balances the icon column and holds the onward arrow. */
 nav a::after {
   color: var(--muted);
   content: "\2192";
@@ -92,6 +109,7 @@ nav a:focus-visible {
   outline-offset: 3px;
 }
 
+/* The icon column accommodates both text glyphs and the Crosspath SVG. */
 .link-icon {
   color: var(--muted);
   font-size: 1.5rem;
@@ -103,6 +121,7 @@ nav a:focus-visible {
   height: 1.65rem;
 }
 
+/* Three radial gradients form the red, green, and blue disc emblem. */
 .light-disc-icon {
   position: relative;
   width: 1.65rem;

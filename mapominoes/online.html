@@ -1,11 +1,15 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Online lobby/game shell for online.js. Manual codes are the default; the
+     signaling=room query enables same-origin server introductions. Gameplay stays
+     host-authoritative over WebRTC, with script-owned screens and replicated state. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13271f">
   <title>Mapominoes Online</title>
+  <!-- online.css imports the shared theme; v queries bust deployed asset caches. -->
   <link rel="stylesheet" href="./online.css?v=20261015e">
 </head>
 <body>
@@ -21,6 +25,7 @@
       </div>
     </header>
 
+    <!-- Connection failures remain available across screens in a shared alert region. -->
     <p class="connection-error" id="connection-error" role="alert" aria-live="assertive" hidden></p>
 
     <section class="panel mode-panel" id="menu-screen" aria-labelledby="menu-title">
@@ -41,6 +46,7 @@
       </div>
     </section>
 
+    <!-- Map pickers are inserted by the map API; only the host chooses rules/timing. -->
     <section class="panel setup-panel" id="host-screen" hidden aria-labelledby="host-title">
       <button class="back-button menu-return" type="button">&#8592; Multiplayer menu</button>
       <p class="step-label">Host</p>
@@ -66,6 +72,8 @@
       </form>
     </section>
 
+    <!-- Room mode relabels these controls and hides manual answer output, without
+         putting markup or diagnostic content inside the code textareas. -->
     <section class="panel setup-panel" id="join-screen" hidden aria-labelledby="join-title">
       <button class="back-button menu-return" type="button">&#8592; Multiplayer menu</button>
       <p class="step-label">Join</p>
@@ -85,6 +93,7 @@
       </div>
     </section>
 
+    <!-- online.js rebuilds the roster and host-transfer controls from snapshots. -->
     <section class="panel lobby-screen" id="lobby-screen" hidden aria-labelledby="lobby-title">
       <p class="step-label">Lobby</p>
       <h2 id="lobby-title">Players</h2>
@@ -95,6 +104,7 @@
           <button class="primary-button" id="start-game" type="button" disabled>Start game</button>
         </div>
         <p class="muted" id="invite-relay-note" hidden>Any player can invite others. Your invite and their answer are relayed through the host, and the new player connects directly to the host.</p>
+        <!-- Room codes are reusable; manual offers below are single-player handshakes. -->
         <div class="room-code-area" id="room-code-area" hidden>
           <p class="field-label">Reusable room code</p>
           <strong class="room-code" id="room-code"></strong>
@@ -115,6 +125,8 @@
       <p class="muted" id="lobby-status" role="status"></p>
     </section>
 
+    <!-- Guests see replicated state; only the current player receives entry/decision
+         controls. The visual timer is not live-announced on every countdown tick. -->
     <section class="game-screen" id="game-screen" hidden aria-labelledby="turn-heading">
       <div class="game-toolbar">
         <div class="truncate">
@@ -140,6 +152,7 @@
         <section class="turn-card" id="entry-panel">
           <form id="country-form" autocomplete="off">
             <label class="field-label" for="country-search">Choose a country</label>
+            <!-- Search fills the listbox; selection is announced to the host before submit. -->
             <div class="combobox">
               <input id="country-search" type="search" role="combobox" aria-autocomplete="list" aria-controls="country-results" aria-expanded="false" placeholder="Start typing a country" required>
               <ul id="country-results" role="listbox" hidden></ul>
@@ -153,6 +166,7 @@
           </form>
           <p class="waiting-copy" id="waiting-copy"></p>
         </section>
+        <!-- Challenge decisions pause the next turn's deadline until acceptance. -->
         <section class="turn-card challenge-card" id="challenge-panel" hidden>
           <p class="field-label">Player decision</p>
           <h3 id="challenge-heading"></h3>
@@ -166,6 +180,7 @@
       </div>
     </section>
 
+    <!-- Results render full route text and SVG; only the host may restart/open lobby. -->
     <section class="panel result-screen" id="result-screen" hidden aria-labelledby="result-heading">
       <p class="step-label">Round over</p>
       <h2 id="result-heading"></h2>
@@ -177,6 +192,7 @@
           <button id="map-zoom-out" type="button" aria-label="Zoom map out">&#8722;</button>
           <button id="map-reset" type="button">Reset</button>
         </div>
+        <!-- The renderer fills these layers and supplies disputed-area pattern definitions. -->
         <svg id="result-map" viewBox="0 0 1000 520" role="img" aria-label="Map of the round route">
           <g id="map-countries"></g><g id="map-routes"></g><g id="map-markers"></g>
         </svg>
@@ -197,6 +213,9 @@
 
     <footer>Peer connections are direct and encrypted. Country and map data stay local. <a href="./ATTRIBUTION.md">Data attribution</a></footer>
   </main>
+  <!-- Load world data/rules, D3/TopoJSON/topology, catalogue/map API and geometry/
+       renderer helpers before the codec and online controller. The final controller
+       binds these element IDs; v queries are cache-busting deployment keys. -->
   <script src="./countries.js"></script>
   <script src="./game-rules.js"></script>
   <script src="./assets/d3.min.js"></script>
@@ -207,6 +226,6 @@
   <script src="./map-geometry.js"></script>
   <script src="./map-renderer.js"></script>
   <script src="./connection-codes.js?v=20261016b"></script>
-  <script src="./online.js?v=20261017a"></script>
+  <script src="./online.js?v=20261018a"></script>
 </body>
 </html>

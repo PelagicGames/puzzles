@@ -4,20 +4,29 @@
 
 Crosspath is a newspaper-style browser puzzle. Nine 3x3 path squares must be dragged into the nine 3x3 slots of a 9x9 board. Squares cannot be rotated or flipped. When they are all placed correctly, they form one unbroken path from one edge of the board to another.
 
-This is a unique puzzle idea I came up with, because I like newspaper puzzles, and I thought this would be a kind of game that might fit alongside some of those.
-I checked for any existing games with the same premise and found games with similarities, but nothing quite like this one.
+## Background
+
+This is a unique puzzle idea I came up with, because I like newspaper puzzles, and was trying to think of the kinds of game that might fit alongside some of those.
+
+I think I was likely inspired by [Tsuro](https://boardgamegeek.com/boardgame/16992/tsuro), because at one point I was thinking about having multiple paths traversed simultaneously, which I recognised afterwards as something I would have come across playing Tsuro at MCM ComicCon.
+
+Before the initial implementation, I came up with various variants and different rules with added complexity (other than the simultaneous multi-path traversal), such as collecting keys to pass through doors (which would enable T-junctions to be a valid piece). I eventually took a step back and realised I have a tendancy to underestimate the subjective difficulty of solving puzzles (I generally consider any puzzle where the next move can be determined by just working things out in my head are easy, but I can also solve entire crosswords and codewords in my head, without filling in the grids, so I make puzzles too hard for other people), so those variants are being held back for potential future puzzles (like the unlockable XOR mode I added in [Light Discs](https://pelagicgames.github.io/puzzles/lightdiscs/index.html)).
+
+Once I had settled on the current design, I checked for any existing games with the same premise and found games with similarities, but nothing quite like this one.
+
+The name was originally going to be Crossrail, as a sort of pun (see [Crossrail](https://en.wikipedia.org/wiki/Crossrail)), and then I would have used train tracks, but that was too similar to the [Train Tracks puzzle game](https://traintrackspuzzle.com/), and this also was not how I had originally envisioned the game (I had thought of a character walking a path, rather than any kind of vehicle).
 
 ## Pages
 
 - **Tutorial** explains the rules with small worked examples of allowed and disallowed placements.
 - **Puzzles** groups the levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
-- **Puzzle** (`puzzle.html?level=N`) is the game board. Pieces can be dragged or tapped into place. Holding a dragged piece near the top or bottom of the viewport scrolls the page, so the tray and board can both be reached on small screens. The key under the board appears only when the puzzle has fixed tiles or marked path ends.
+- **Puzzle** (`puzzle.html?level=N`) is the game board. Pieces can be dragged or tapped into place. Swipe an empty space or fixed tile to scroll, or hold a dragged piece near the top or bottom of the viewport to scroll while dragging. The key under the board appears only when the puzzle has fixed tiles or marked path ends. Failed attempts show a separate key for the correction marks present on the board; moving a piece clears those marks and their key. A solved puzzle offers a prominent next-unsolved-puzzle button below the board, as well as the bottom navigation link.
 
 ## Rules
 
 - Each small square is either empty, a straight (│ ─), a right-angled corner (└ ┌ ┐ ┘) or a crossroads (┼). T-junctions and diagonals do not exist.
 - Every 3x3 piece contains at least one path square, and every piece in a puzzle is different.
-- Path squares next to each other must be joined. Paths that run side by side, or that do not line up where two pieces meet, are not allowed.
+- Path squares next to each other must be joined. Path squares that touch without joining (two straights, a straight and a corner, or two corners), or paths that do not line up where two pieces meet, are not allowed.
 - Exactly two path squares lead off the board: the start and the end of the route.
 - The path goes straight over a crossroads. Each crossroads is crossed twice, once in each direction, and every path square must be visited.
 - Fixed pieces (shaded like the board) and marked path ends are clues that make the solution unique.
@@ -46,9 +55,9 @@ To measure complexity, the solver replays the unique solution the way a person w
 
 At each step it counts the *distractors*: placements that are valid locally but not part of the solution. Each step's distractors are weighted by the technique that step needed: ×1 for a single, ×2 for elimination, and ×(3 + log2 options) for a guess. The score is the rounded total.
 
-The bands are calibrated on about 200,000 unique generated puzzles from 50,000 boards (`calibrate` below):
+The bands are calibrated on about 200,000 unique puzzles from 50,000 boards:
 
-| Band | Score | Share of generated puzzles | Typical reasoning |
+| Band | Score | Share of sampled puzzles | Typical reasoning |
 |------|-------|----------------------------|-------------------|
 | Very easy | 0–9 | 44% | Singles, almost no distractors |
 | Easy | 10–39 | 19% | Singles |
@@ -58,27 +67,15 @@ The bands are calibrated on about 200,000 unique generated puzzles from 50,000 b
 
 Each band's share varies by less than ±0.5 percentage points between independent seed batches. Puzzles scored 300 or more effectively all need a guess, and there is a natural gap in the score distribution just below 300.
 
-## Generator and catalogue
+## Puzzle analysis catalogue
 
-The generator and the catalogue output are local tools and are gitignored.
+The analysis script reads the committed levels and writes a gitignored catalogue report.
 
 ```sh
-node crosspath/generate-puzzle-levels.local.js survey 200 1         # quick score distribution
-node crosspath/generate-puzzle-levels.local.js calibrate 5000 10 1  # parallel survey (families/worker, workers, seed)
-node crosspath/generate-puzzle-levels.local.js rebalance 6          # re-band levels, fill gaps from the survey pool
-node crosspath/generate-puzzle-levels.local.js write 6 2026         # regenerate puzzle-levels.js from scratch
-node crosspath/generate-puzzle-catalogue.js                         # rebuild puzzle-catalogue.local.json
+node crosspath/generate-puzzle-catalogue.js
 ```
 
-`calibrate` runs one worker process per CPU by default. It writes the deduplicated pool to `$TMPDIR/crosspath-survey-pool.jsonl` and a gitignored summary to `complexity-survey.local.json`, which includes score quantiles, band shares, the spread between seeds, and the mix of reasoning techniques in each band. The catalogue includes this summary. `rebalance` keeps existing levels whose band still fits, then adds pool puzzles from unused boards to fill the largest score gaps in each band.
-
-The generator works in three stages:
-
-1. It takes a random self-avoiding walk between two edges. The walk may cross itself at right angles to make crossroads.
-2. It discards boards that have an empty piece or duplicate pieces.
-3. It adds clues (fixed pieces or path ends) until the solution is unique, then removes any clue that is not needed.
-
-The catalogue records each level's code, solution and complexity details.
+The `puzzle-catalogue.local.json` report records each level's code, solution and complexity details. If `complexity-survey.local.json` is present, its summary is included in the catalogue.
 
 ## Tests
 
