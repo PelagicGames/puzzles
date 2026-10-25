@@ -19,7 +19,7 @@ The name was originally going to be Crossrail, as a sort of pun (see [Crossrail]
 ## Pages
 
 - **Tutorial** explains the rules with small worked examples of allowed and disallowed placements.
-- **Puzzles** groups the levels into five difficulty bands and tracks completed puzzle codes in local browser storage. If the browser blocks storage, the game still plays but progress is not saved: solved puzzles are remembered only until the page is left, and a focusable "Not saved" pill beside the tally explains why.
+- **Puzzles** groups the levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Puzzle** (`puzzle.html?level=N`) is the game board. Pieces can be dragged or tapped into place. Swipe an empty space or fixed tile to scroll, or hold a dragged piece near the top or bottom of the viewport to scroll while dragging. The key under the board appears only when the puzzle has fixed tiles or marked path ends. Failed attempts show a separate key for the correction marks present on the board; moving a piece clears those marks and their key. A solved puzzle offers a prominent next-unsolved-puzzle button below the board, as well as the bottom navigation link.
 
 ## Rules

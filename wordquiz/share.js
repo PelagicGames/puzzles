@@ -3,8 +3,7 @@
 /**
  * Share overlay for Word Quiz. Builds "ask for help" text for unsolved puzzles and
  * "challenge" text for solved ones, each with a direct link to the puzzle, and
- * turns it into web share links for common apps. Instagram has no web share
- * address, so its button copies the message for pasting into a story or chat.
+ * turns it into web share links for common apps.
  * The DOM part is optional so the message builders can be tested under Node.
  */
 
@@ -60,7 +59,6 @@
     return [
       { id: "whatsapp", label: "WhatsApp", href: `https://wa.me/?text=${encode(full)}` },
       { id: "facebook", label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encode(url)}` },
-      { id: "instagram", label: "Instagram", copy: true, note: "Message copied. Paste it into an Instagram story or chat." },
       { id: "x", label: "X", href: `https://x.com/intent/post?text=${encode(text)}&url=${encode(url)}` },
       { id: "teams", label: "Teams", href: `https://teams.microsoft.com/share?href=${encode(url)}&msgText=${encode(text)}` },
       { id: "telegram", label: "Telegram", href: `https://t.me/share/url?url=${encode(url)}&text=${encode(text)}` },

@@ -12,3 +12,7 @@ This is a generic repository for puzzle game prototypes.
 - **Word Quiz** is a word game: read a dictionary definition with the
   answer blanked out and spell it from wooden letter tiles, then challenge
   friends or ask them for help with a direct link.
+
+Progress is saved in local browser storage. If the browser blocks local
+storage use, the games still play but solves are remembered only for the
+current session.

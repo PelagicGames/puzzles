@@ -2,9 +2,16 @@
 
 # Word Quiz
 
-Read a dictionary definition with the answer blanked out, then spell the word
-from a tray of wooden letter tiles. The tray holds the answer's letters plus
-four extra letters, chosen per puzzle so that a reload shows the same set.
+A quiz game where the player read a dictionary definition and has to work out
+which word matches the definitions, using the letters provided.
+There are some extra letters to make things a bit trickier.
+
+I originally developed this game as a mobile app using
+[Corona SDK](https://en.wikipedia.org/wiki/Solar2D) (now
+[Solar2D](https://solar2d.com/)).
+I never got around to publishing it, because I had not found an appropriate
+source of definiions, and due to feature-creep with social sharing and
+implementing a points system.
 
 ## Playing
 
@@ -12,20 +19,17 @@ four extra letters, chosen per puzzle so that a reload shows the same set.
   word. `puzzle.html?id=<id>` opens a particular puzzle, solved or not, which
   is the link used for sharing.
 - Click a tile to place it in the leftmost empty space, drag it to a chosen
-  space, or type its letter. Click or drag a placed tile to send it back;
+  space, or type its letter. Click or drag a placed tile to send it back.
   Backspace removes the last placed letter.
-- The answer is checked automatically once every space is filled. Wrong
-  answers flash and shake; correct ones are celebrated and recorded.
+- The answer is checked automatically once every space is filled, with success
+  or failure indicated to the user.
 - "Ask for help" (unsolved) and "Challenge a friend" (solved) open a share
-  overlay with a direct link. Instagram has no web share link, so its button
-  copies the message instead; on phones the "Share…" button opens the
-  system share sheet.
+  overlay with a direct link to various different social media sites/apps.
+  On phones the "Share…" button opens the system share sheet.
 
 Solved puzzle IDs are kept in this browser's `localStorage` under
 `wordquiz.solvedPuzzleIds`. "Next word" picks at random from the puzzles not
-yet solved; when none remain the page says so. If the browser blocks storage,
-the game still plays but solves are remembered only until the page is left, and
-a focusable "Not saved" pill beside the tally and progress bar explains why.
+yet solved;, if there are any.
 
 ## Files
 

@@ -7,7 +7,7 @@ Light Discs is a browser puzzle about combining coloured light filters and geome
 ## Pages
 
 - **Tutorial** documents every colour interaction, every available shape, the controls, the success conditions, and XOR composition after that campaign is unlocked.
-- **Puzzles** groups standard and XOR levels into five difficulty bands and tracks completed puzzle codes in local browser storage. If the browser blocks storage, the game still plays but progress is not saved: completions are remembered only until the page is left, and a focusable "Not saved" pill on the menu, catalogue and puzzle pages explains why.
+- **Puzzles** groups standard and XOR levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
 - **Random** generates a new solvable filter puzzle whenever the page loads or Reset is pressed, and displays its copyable level code.
 - **Design** accepts a level code so custom layouts can be edited and tested.
 

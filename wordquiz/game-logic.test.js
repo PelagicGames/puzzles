@@ -175,7 +175,7 @@ function testShare() {
 
   const targets = share.shareTargets(challenge);
   const ids = targets.map(({ id }) => id);
-  ["whatsapp", "facebook", "instagram", "x", "teams", "email", "copy"].forEach((id) => assert.ok(ids.includes(id), id));
+  ["whatsapp", "facebook", "x", "teams", "email", "copy"].forEach((id) => assert.ok(ids.includes(id), id));
   targets.filter(({ href }) => href).forEach(({ id, href }) => {
     assert.ok(href.includes(encodeURIComponent(url)), `${id} link should carry the puzzle URL`);
   });
