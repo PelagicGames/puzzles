@@ -13,3 +13,6 @@ lightdiscs/*-*-levels*.js
 crosspath/puzzle-catalogue.local.json
 crosspath/complexity-survey.local.json
 crosspath/*.local.js
+
+wordquiz/*.local.js
+wordquiz/*.local.json

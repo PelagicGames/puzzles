@@ -4,7 +4,8 @@
  * Controller for puzzle.html: reads the level query, builds the board and tray,
  * handles pointer/keyboard placement, traces checks and records completed codes.
  * Load after rules, rendering, progress and level data. Invalid level indices
- * redirect to the catalogue; only completion state is persisted.
+ * redirect to the catalogue; only completion state is persisted, and only when
+ * browser storage allows it.
  */
 
 (() => {
@@ -37,7 +38,10 @@
   const displayTitle = `${difficulty.label} No. ${bandNumber}`;
   document.title = `${displayTitle} | Crosspath`;
   document.querySelector("#puzzle-title").textContent = displayTitle;
-  document.querySelector("#puzzle-number").textContent = `Puzzle ${levelNumber} of ${levels.length}`;
+  const puzzleNumber = document.querySelector("#puzzle-number");
+  puzzleNumber.textContent = `Puzzle ${levelNumber} of ${levels.length}`;
+  const storageNotice = progress.createStorageNotice();
+  if (storageNotice) puzzleNumber.append(storageNotice);
   document.querySelector("#puzzle-position").textContent = `${bandNumber} / ${bandLevels.length}`;
 
   const puzzle = rules.parseCode(level.code);
@@ -680,12 +684,15 @@
   function celebrate(result) {
     boardWrap.classList.add("is-solved");
     const wasCompleted = progress.isCompleted(level.code);
-    progress.markCompleted(level.code);
+    const saved = progress.markCompleted(level.code);
     const length = result.trace.steps.length;
+    const notes = [];
+    if (!saved) notes.push("Not saved: local browser storage must be enabled to track progress.");
+    else if (!wasCompleted) notes.push("Puzzle recorded as complete.");
     setStatus(
       `Solved! The path runs ${length} squares from ${result.trace.start.key} to ${result.trace.end.key}.`,
       "success",
-      wasCompleted ? [] : ["Puzzle recorded as complete."]
+      notes
     );
     updateNextLink();
   }

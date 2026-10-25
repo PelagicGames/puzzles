@@ -113,6 +113,75 @@ a {
   opacity: 1;
 }
 
+/* Unsaved-progress pill shown below the star ring and in page eyebrows when
+ * browser storage is blocked. Its tooltip is visually hidden until focus (tap
+ * or Tab) reveals it. */
+.storage-notice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  margin-left: 10px;
+  padding: 2px 10px;
+  border: 1px dashed var(--muted);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 500 0.72rem/1.4 "DM Mono", monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.game-menu > .storage-notice {
+  display: flex;
+  width: fit-content;
+  margin: -12px 0 22px;
+}
+
+.storage-notice-icon {
+  color: var(--warm);
+}
+
+.storage-notice:focus {
+  outline: 2px solid var(--light);
+  outline-offset: 2px;
+}
+
+.storage-notice-tip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.storage-notice:focus .storage-notice-tip {
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 48px));
+  height: auto;
+  padding: 8px 11px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+  font: 400 0.85rem/1.45 "Manrope", sans-serif;
+  text-transform: none;
+  white-space: normal;
+}
+
 .eyebrow {
   margin: 0 0 12px;
   color: var(--light);

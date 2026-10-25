@@ -3,7 +3,8 @@
  * Standalone campaign persistence tests: node lightdiscs/puzzle-progress.test.js
  * Reads both catalogues and progress via Node's VM, using a Map-backed localStorage
  * double rather than real browser storage. Checks ordering, completion identities,
- * next-level wrapping and unlock/star counts; only the success log is written.
+ * next-level wrapping and unlock/star counts, plus page-only fallback when storage
+ * is blocked or full; only the success log is written.
  */
 
 const assert = require("assert");
@@ -30,6 +31,13 @@ global.window = {
      */
     setItem(key, value) {
       values.set(key, value);
+    },
+    /**
+     * @param {string} key - Storage key.
+     * @returns {void} Deletes the in-memory entry.
+     */
+    removeItem(key) {
+      values.delete(key);
     }
   }
 };
@@ -42,6 +50,22 @@ global.window = {
 
 const levels = window.LightDiscLevels;
 const progress = window.LightDiscProgress;
+assert.strictEqual(progress.storageAvailable, true);
+assert.strictEqual(progress.createStorageNotice(), null);
+
+/**
+ * @param {Object} sandboxWindow - Window stand-in for an isolated context.
+ * @returns {Object} LightDiscProgress loaded against that window.
+ */
+function loadIsolatedProgress(sandboxWindow) {
+  const context = vm.createContext({ window: sandboxWindow });
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, "puzzle-progress.js"), "utf8"),
+    context,
+    { filename: "puzzle-progress.js" }
+  );
+  return sandboxWindow.LightDiscProgress;
+}
 
 // Difficulty ordering is stable within standard then XOR; each band has six titles.
 assert.deepStrictEqual(
@@ -112,5 +136,44 @@ levels.forEach((level) => progress.markCompleted(level.code, level));
 assert.strictEqual(progress.nextUnsolved(levels, levels[0]), null);
 assert.strictEqual(progress.completedDifficultyCount(levels, "standard"), 5);
 assert.strictEqual(progress.completedDifficultyCount(levels, "xor"), 5);
+
+// Corrupt stored data is still rejected rather than silently discarded.
+values.set(progress.storageKey, "{\"bad\":true}");
+assert.throws(() => progress.completedCodes(), /Invalid puzzle completion data/);
+
+// A throwing localStorage getter reads as empty and keeps completions page-only.
+const blocked = loadIsolatedProgress({
+  get localStorage() {
+    throw new Error("SecurityError: storage is blocked");
+  }
+});
+assert.strictEqual(blocked.storageAvailable, false);
+assert.strictEqual(blocked.completedDifficultyCount(levels, "standard"), 0);
+assert.strictEqual(blocked.xorUnlocked(), false);
+assert.strictEqual(blocked.markCompleted(firstXor.code, firstXor), false);
+assert.strictEqual(blocked.isCompleted(firstXor.code, firstXor), true);
+assert.strictEqual(blocked.isCompleted(firstXor.code), false);
+assert.strictEqual(blocked.nextUnsolved(levels, levels[0]).level.code, ordered[1].level.code);
+assert.match(blocked.storageNoticeText, /local browser storage must be enabled/);
+
+// Writes that fail after a successful probe are also kept for this page only.
+let quotaFull = false;
+const quotaValues = new Map();
+const quota = loadIsolatedProgress({
+  localStorage: {
+    getItem: (key) => (quotaValues.has(key) ? quotaValues.get(key) : null),
+    setItem: (key, value) => {
+      if (quotaFull) throw new Error("QuotaExceededError");
+      quotaValues.set(key, value);
+    },
+    removeItem: (key) => quotaValues.delete(key)
+  }
+});
+assert.strictEqual(quota.storageAvailable, true);
+assert.strictEqual(quota.markCompleted(levels[0].code, levels[0]), true);
+quotaFull = true;
+assert.strictEqual(quota.markCompleted(levels[1].code, levels[1]), false);
+assert.strictEqual(quota.isCompleted(levels[1].code, levels[1]), true);
+assert.strictEqual(quotaValues.get(quota.storageKey), JSON.stringify([levels[0].code]));
 
 console.log("Light Disc progress tests passed.");

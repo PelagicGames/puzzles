@@ -3,12 +3,13 @@
 /**
  * Fills puzzles.html with difficulty sections, puzzle links and completion marks.
  * Load after puzzle-levels.js and puzzle-progress.js. Reads completion storage
- * through CrosspathProgress; does not change saved progress.
+ * through CrosspathProgress; does not change saved progress. Adds the "Not saved"
+ * notice to the tally when browser storage is unavailable.
  */
 
 (() => {
   const levels = window.CrosspathLevels;
-  const { difficulties, isCompleted, completedCount } = window.CrosspathProgress;
+  const { difficulties, isCompleted, completedCount, createStorageNotice } = window.CrosspathProgress;
   const list = document.querySelector("#difficulty-list");
   const descriptions = {
     "very-easy": "Most pieces are fixed in place.",
@@ -18,7 +19,10 @@
     "very-hard": "No clues beyond the pieces themselves."
   };
 
-  document.querySelector("#solved-tally").textContent = `${completedCount(levels)} of ${levels.length} solved`;
+  const tally = document.querySelector("#solved-tally");
+  tally.textContent = `${completedCount(levels)} of ${levels.length} solved`;
+  const notice = createStorageNotice();
+  if (notice) tally.append(notice);
 
   // Display numbers restart in each band; link query indices retain catalogue order.
   difficulties.forEach(({ id, label }) => {

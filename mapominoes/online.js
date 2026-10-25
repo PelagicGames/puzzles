@@ -5,6 +5,7 @@
  * Loaded by online.html after countries, rules, codes, maps and the map renderer.
  * Reads form controls, URL map/signaling options and room credentials in localStorage;
  * writes the page, room credentials, HTTP signalling requests and JSON DataChannels.
+ * Blocked or full browser storage is tolerated: room credentials are then not kept.
  * The signalling service exchanges SDP only; the host validates all gameplay actions.
  */
 (() => {
@@ -1531,11 +1532,15 @@
     if (message.type === "welcome" && typeof message.playerId === "string") {
       myId = message.playerId;
       if (roomSignaling && typeof message.resumeToken === "string") {
-        localStorage.setItem(`mapominoes-room-${roomCode}`, JSON.stringify({
-          playerId: myId,
-          resumeToken: message.resumeToken,
-          name: myName
-        }));
+        try {
+          localStorage.setItem(`mapominoes-room-${roomCode}`, JSON.stringify({
+            playerId: myId,
+            resumeToken: message.resumeToken,
+            name: myName
+          }));
+        } catch {
+          // Blocked or full storage only loses the ability to rejoin after a reload.
+        }
       }
       return;
     }

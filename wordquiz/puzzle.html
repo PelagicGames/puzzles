@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Word Quiz play page: ?id= opens that puzzle; without it a random unsolved word is chosen. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4efe6">
+  <title>Word Quiz</title>
+  <meta name="description" content="Guess the word from its dictionary definition using the letter tiles.">
+  <!-- Static preview text for link unfurls; shared links point at individual puzzles. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Word Quiz: can you name this word?">
+  <meta property="og:description" content="Read the definition, pick the right letter tiles and spell the missing word.">
+  <link rel="icon" href="./assets/wordquiz.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=20261025a">
+</head>
+<body class="page-puzzle">
+  <header class="top-bar">
+    <a class="back-link" href="./index.html">&#8592; Word Quiz</a>
+    <span class="solved-tally" id="solved-tally" aria-live="polite"></span>
+  </header>
+
+  <main class="play-area">
+    <!-- Game view; puzzle.js fills the card, answer spaces and tray. -->
+    <section id="game" class="game" hidden aria-labelledby="clue-heading">
+      <article class="dictionary-card" id="dictionary-card">
+        <div class="card-header">
+          <h1 id="clue-heading" class="card-kicker">What word is this?</h1>
+          <span class="solved-badge" id="solved-badge" hidden>&#10003; Solved before</span>
+        </div>
+        <p class="card-meta"><span class="card-pos" id="clue-pos"></span> &middot; <span id="clue-length"></span></p>
+        <p class="clue" id="clue"></p>
+      </article>
+
+      <div class="answer-row" id="answer-row" role="group" aria-label="Answer spaces"></div>
+      <div class="tray" id="tray" role="group" aria-label="Letter tiles"></div>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+
+      <!-- Shown after a correct answer. -->
+      <div class="success-panel" id="success-panel" hidden>
+        <p class="success-title" id="success-title">Brilliant!</p>
+        <div class="success-actions">
+          <button type="button" class="button button-primary" id="next-button">Next word &#8594;</button>
+          <button type="button" class="button" id="challenge-button">Challenge a friend</button>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <button type="button" class="button" id="shuffle-button" title="Shuffle the tray">&#8635; Shuffle</button>
+        <button type="button" class="button" id="clear-button" title="Return all tiles to the tray">Clear</button>
+        <button type="button" class="button" id="share-button">Ask for help</button>
+        <button type="button" class="button" id="skip-button" title="Try a different word">Another word</button>
+      </div>
+      <p class="keyboard-hint">Click or drag tiles into the spaces, or type the letters. Backspace removes the last letter.</p>
+    </section>
+
+    <!-- Shown when every word in the bank has been solved. -->
+    <section id="all-solved" class="message-panel" hidden aria-labelledby="all-solved-heading">
+      <p class="message-emoji" aria-hidden="true">&#127942;</p>
+      <h1 id="all-solved-heading">You&rsquo;re too clever!</h1>
+      <p>Sorry &ndash; you have solved every one of the <span id="all-solved-count"></span> words we have. More are on the way, so please check back soon.</p>
+      <p>Any word can still be replayed from a shared link.</p>
+      <a class="button button-primary" href="./index.html">Back to the menu</a>
+    </section>
+
+    <!-- Shown for an unknown ?id= value, such as a link to a retired puzzle. -->
+    <section id="not-found" class="message-panel" hidden aria-labelledby="not-found-heading">
+      <p class="message-emoji" aria-hidden="true">&#128269;</p>
+      <h1 id="not-found-heading">Word not found</h1>
+      <p>That link does not match any puzzle. It may have been mistyped or retired.</p>
+      <a class="button button-primary" href="./puzzle.html">Play a random word</a>
+    </section>
+  </main>
+
+  <!-- Share overlay filled by share.js. -->
+  <dialog id="share-dialog" class="share-dialog" aria-labelledby="share-heading">
+    <form method="dialog" class="share-close-form">
+      <button class="share-close" aria-label="Close">&times;</button>
+    </form>
+    <h2 id="share-heading">Share</h2>
+    <pre class="share-preview" id="share-preview"></pre>
+    <button type="button" class="button button-primary share-native" id="share-native" hidden>Share&hellip;</button>
+    <div class="share-targets" id="share-targets"></div>
+    <p class="share-note" id="share-note" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <script src="./puzzle-bank.js?v=20261025a"></script>
+  <script src="./word-check.js?v=20261025a"></script>
+  <script src="./progress.js?v=20261025a"></script>
+  <script src="./share.js?v=20261025a"></script>
+  <script src="./puzzle.js?v=20261025a"></script>
+</body>
+</html>

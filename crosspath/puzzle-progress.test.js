@@ -3,7 +3,8 @@
 /**
  * Run with node crosspath/puzzle-progress.test.js from the repository root.
  * Loads committed levels and progress helpers in Node with in-memory storage;
- * verifies completion and navigation without writing browser or disk state.
+ * verifies completion and navigation without writing browser or disk state, and
+ * that blocked or full storage leaves progress unsaved rather than failing.
  */
 
 const assert = require("assert");
@@ -29,6 +30,13 @@ global.window = {
      */
     setItem(key, value) {
       values.set(key, value);
+    },
+    /**
+     * @param {string} key - Storage key.
+     * @returns {void} Deletes the in-memory entry.
+     */
+    removeItem(key) {
+      values.delete(key);
     }
   }
 };
@@ -39,8 +47,24 @@ global.window = {
   );
 });
 
+/**
+ * @param {Object} sandboxWindow - Window stand-in for an isolated context.
+ * @returns {Object} CrosspathProgress loaded against that window.
+ */
+function loadIsolatedProgress(sandboxWindow) {
+  const context = vm.createContext({ window: sandboxWindow });
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, "puzzle-progress.js"), "utf8"),
+    context,
+    { filename: "puzzle-progress.js" }
+  );
+  return sandboxWindow.CrosspathProgress;
+}
+
 const levels = window.CrosspathLevels;
 const progress = window.CrosspathProgress;
+assert.strictEqual(progress.storageAvailable, true);
+assert.strictEqual(progress.createStorageNotice(), null);
 
 // Difficulty order and an empty store establish the navigation starting point.
 assert.deepStrictEqual(
@@ -67,5 +91,38 @@ assert.strictEqual(progress.nextUnsolved(levels, first.code), null);
 
 values.set(progress.storageKey, "{\"bad\":true}");
 assert.throws(() => progress.completedCodes(), /Invalid puzzle completion data/);
+
+// A throwing localStorage getter reads as empty and keeps completions page-only.
+const blocked = loadIsolatedProgress({
+  get localStorage() {
+    throw new Error("SecurityError: storage is blocked");
+  }
+});
+assert.strictEqual(blocked.storageAvailable, false);
+assert.strictEqual(blocked.completedCount(levels), 0);
+assert.strictEqual(blocked.markCompleted(first.code), false);
+assert.ok(blocked.isCompleted(first.code));
+assert.strictEqual(blocked.nextUnsolved(levels, first.code).level, second);
+assert.match(blocked.storageNoticeText, /local browser storage must be enabled/);
+
+// Writes that fail after a successful probe are also kept for this page only.
+let quotaFull = false;
+const quotaValues = new Map();
+const quota = loadIsolatedProgress({
+  localStorage: {
+    getItem: (key) => (quotaValues.has(key) ? quotaValues.get(key) : null),
+    setItem: (key, value) => {
+      if (quotaFull) throw new Error("QuotaExceededError");
+      quotaValues.set(key, value);
+    },
+    removeItem: (key) => quotaValues.delete(key)
+  }
+});
+assert.strictEqual(quota.storageAvailable, true);
+assert.strictEqual(quota.markCompleted(first.code), true);
+quotaFull = true;
+assert.strictEqual(quota.markCompleted(second.code), false);
+assert.deepStrictEqual([...quota.completedCodes()], [first.code, second.code]);
+assert.strictEqual(quotaValues.get(quota.storageKey), JSON.stringify([first.code]));
 
 console.log("Crosspath progress tests passed.");

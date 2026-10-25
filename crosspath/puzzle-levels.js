@@ -151,6 +151,156 @@
       title: "Puzzle 6",
       difficulty: "very-hard",
       code: "T: 500900000 000c003aa 000ac003a 000000c00 5005063a9 0006aa500 050050690 6ac5033c0 900000000 F: - X: -"
+    },
+    {
+      title: "Puzzle 7",
+      difficulty: "very-easy",
+      code: "T: 3fa05003c 0050056a9 6ac505503 c033c003a 5003ac005 000000aac 0000006c0 fc0390000 c00500900 F: 7@1 3@2 6@3 1@4 2@6 4@7 X: -"
+    },
+    {
+      title: "Puzzle 8",
+      difficulty: "very-easy",
+      code: "T: 050050050 6c03fa050 aaa000aaa 000c003c0 505905005 aac005c05 006005003 0506fa390 505505505 F: 7@1 3@2 2@4 4@5 9@6 5@9 X: -"
+    },
+    {
+      title: "Puzzle 9",
+      difficulty: "very-easy",
+      code: "T: 005005003 c003ac005 aaa000ac0 005c05505 05003a000 006005aaf 005005005 00006aa90 505905005 F: 3@2 2@3 4@6 8@8 9@9 X: W3 S9"
+    },
+    {
+      title: "Puzzle 10",
+      difficulty: "very-easy",
+      code: "T: 6fa390000 03cc053a9 003ac0050 aac003000 000ac003a c003aa000 000000aac 6c03fa050 0066a9500 F: 8@1 5@2 6@5 4@8 2@9 X: -"
+    },
+    {
+      title: "Puzzle 11",
+      difficulty: "very-easy",
+      code: "T: 003000aac aac005005 0006ac503 906003000 06905003c fac905003 0056a9500 005069a90 500500500 F: 3@1 9@4 7@5 5@6 X: -"
+    },
+    {
+      title: "Puzzle 12",
+      difficulty: "very-easy",
+      code: "T: 005005005 005005aa9 3c0050690 900000aac afa050afa 06a050050 05005003a 6fa390006 ac0050050 F: 8@4 4@6 1@7 X: -"
+    },
+    {
+      title: "Puzzle 7",
+      difficulty: "easy",
+      code: "T: 5053af005 06f039000 905005005 0000006ac 006005c05 000000006 06faf9050 afa050050 c055053a9 F: 4@1 6@2 9@9 X: -"
+    },
+    {
+      title: "Puzzle 8",
+      difficulty: "easy",
+      code: "T: 500500fc0 000000aaa 390000000 900000000 0000006aa 500500500 06c6f9f90 050050690 0006c03fa F: 5@1 7@3 9@5 1@6 X: -"
+    },
+    {
+      title: "Puzzle 9",
+      difficulty: "easy",
+      code: "T: 0006c0f90 0506fa390 690900000 6aa500900 ac005003a 0006c03fa 500faa500 000000ac0 050050050 F: 1@5 9@6 7@8 X: -"
+    },
+    {
+      title: "Puzzle 10",
+      difficulty: "easy",
+      code: "T: 900000ac0 ac0050050 050afc039 c005063a9 0066a9500 3fa05003a 3aa000000 0000006c0 690500500 F: 2@3 3@8 X: -"
+    },
+    {
+      title: "Puzzle 11",
+      difficulty: "easy",
+      code: "T: 050050a90 050a90000 0006c03fa 05005003a 050050050 00006caf9 06a050050 000000ac0 aac005003 F: 9@2 4@8 8@9 X: -"
+    },
+    {
+      title: "Puzzle 12",
+      difficulty: "easy",
+      code: "T: f905003aa 005c05505 aac0036c0 03a0006c0 ac003a000 000aac005 006069050 503500900 3fa050a90 F: 4@4 2@6 X: -"
+    },
+    {
+      title: "Puzzle 7",
+      difficulty: "medium",
+      code: "T: c05503500 000ac0050 900000000 06a690500 5035003aa afa050a90 906069050 a900006aa 506505505 F: 8@6 X: -"
+    },
+    {
+      title: "Puzzle 8",
+      difficulty: "medium",
+      code: "T: 005005005 a90000000 005aaf005 aac005aa9 afa05003a aac005069 06faf9050 6af5053a9 006005005 F: - X: N3 W5"
+    },
+    {
+      title: "Puzzle 9",
+      difficulty: "medium",
+      code: "T: 5003c0050 6aa5003c0 05005003a 5005003ac 0056a9900 050050050 690500500 050690500 c003c0050 F: - X: N8 S2"
+    },
+    {
+      title: "Puzzle 10",
+      difficulty: "medium",
+      code: "T: 000006005 3ac0056a9 0006aa500 ac003ac00 06aa90000 003ac003a 005aa9000 5005063a9 c005003ac F: 2@4 1@5 X: -"
+    },
+    {
+      title: "Puzzle 11",
+      difficulty: "medium",
+      code: "T: aac005005 aaa0006aa aaa000000 069050050 006c053a9 a90000000 5063a9000 5003aa000 c00500900 F: 8@7 X: -"
+    },
+    {
+      title: "Puzzle 12",
+      difficulty: "medium",
+      code: "T: 050690500 06caf9050 0000066af 00000006a 905003000 03c005aa9 000c00900 5063a9000 6ac505903 F: 7@3 X: -"
+    },
+    {
+      title: "Puzzle 7",
+      difficulty: "hard",
+      code: "T: 506905069 05005003c 005005aa9 c00fac505 000006005 5005003aa 6af503500 3a9000aaa 000aaa000 F: - X: -"
+    },
+    {
+      title: "Puzzle 8",
+      difficulty: "hard",
+      code: "T: ac0050690 00006c03f aaf005aa9 5063af005 aaf005003 005069050 c05905005 a90000000 000000aac F: - X: -"
+    },
+    {
+      title: "Puzzle 9",
+      difficulty: "hard",
+      code: "T: ac0050afa 905069a90 5003c003a 06a690900 3aa000aaa 0000006ac 000000c00 06a05003a 050690500 F: - X: -"
+    },
+    {
+      title: "Puzzle 10",
+      difficulty: "hard",
+      code: "T: 05003a000 000000aaa 00000006a 505905069 06a050afa 690500900 aac005c05 050a90000 6ac505503 F: 3@1 X: -"
+    },
+    {
+      title: "Puzzle 11",
+      difficulty: "hard",
+      code: "T: 690500500 05003a000 050afa050 000006aa9 050a90000 fc03fc039 000006069 6aa900000 000ac0050 F: - X: W3"
+    },
+    {
+      title: "Puzzle 12",
+      difficulty: "hard",
+      code: "T: 5005003aa 0056a9900 c033c003c 6aa500900 0056a9500 003000000 000000006 aac005005 06a05003c F: 8@3 X: -"
+    },
+    {
+      title: "Puzzle 7",
+      difficulty: "very-hard",
+      code: "T: 3fa050050 0000006c0 500500900 ac0050a90 03a0006aa 000c00500 90006a050 a9000006a 6fa390000 F: - X: -"
+    },
+    {
+      title: "Puzzle 8",
+      difficulty: "very-hard",
+      code: "T: c005063a9 06c6f9f90 3c00506fa 6aa500906 390000000 c00500900 500900000 06905003a 06a050050 F: - X: -"
+    },
+    {
+      title: "Puzzle 9",
+      difficulty: "very-hard",
+      code: "T: 000aaa000 000000006 aac005005 6aa500900 005069a90 6c03fa050 500900000 05005003a 0006ac903 F: - X: -"
+    },
+    {
+      title: "Puzzle 10",
+      difficulty: "very-hard",
+      code: "T: 00006a690 500500506 050050050 00006caf9 0006ac503 03cc053a9 5053a9000 500500900 000c00500 F: - X: -"
+    },
+    {
+      title: "Puzzle 11",
+      difficulty: "very-hard",
+      code: "T: 005069050 06a050690 c00500500 500900000 6ac505903 3c003a000 000000006 03c005aa9 ac003c005 F: - X: -"
+    },
+    {
+      title: "Puzzle 12",
+      difficulty: "very-hard",
+      code: "T: 069050050 06a690506 5053a9000 a90000ac0 aa9000aaa 03c005aa9 05003c005 000000006 006005003 F: - X: -"
     }
   ];
 })();

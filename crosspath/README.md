@@ -19,7 +19,7 @@ The name was originally going to be Crossrail, as a sort of pun (see [Crossrail]
 ## Pages
 
 - **Tutorial** explains the rules with small worked examples of allowed and disallowed placements.
-- **Puzzles** groups the levels into five difficulty bands and tracks completed puzzle codes in local browser storage.
+- **Puzzles** groups the levels into five difficulty bands and tracks completed puzzle codes in local browser storage. If the browser blocks storage, the game still plays but progress is not saved: solved puzzles are remembered only until the page is left, and a focusable "Not saved" pill beside the tally explains why.
 - **Puzzle** (`puzzle.html?level=N`) is the game board. Pieces can be dragged or tapped into place. Swipe an empty space or fixed tile to scroll, or hold a dragged piece near the top or bottom of the viewport to scroll while dragging. The key under the board appears only when the puzzle has fixed tiles or marked path ends. Failed attempts show a separate key for the correction marks present on the board; moving a piece clears those marks and their key. A solved puzzle offers a prominent next-unsolved-puzzle button below the board, as well as the bottom navigation link.
 
 ## Rules
@@ -67,6 +67,30 @@ The bands are calibrated on about 200,000 unique puzzles from 50,000 boards:
 
 Each band's share varies by less than ±0.5 percentage points between independent seed batches. Puzzles scored 300 or more effectively all need a guess, and there is a natural gap in the score distribution just below 300.
 
+## Canonical form and similarity
+
+`puzzle-canonical.js` (`window.CrosspathCanonical`) compares solved boards regardless of how they are turned or mirrored.
+
+Boundary positions are counted clockwise from the top-left corner: N1 to N9, E1 to E9, S9 to S1, then W9 to W1. Cells are ordered in concentric squares from the outside in, each read clockwise from its top-left corner.
+
+Boards are ordered by:
+
+1. the start's boundary position;
+2. the end's boundary position;
+3. the route from start to end, step by step: at the first step where two routes differ, the board whose cell comes first in the concentric-square order comes first.
+
+The **canonical form** is the earliest of a board's sixteen variants (four rotations, each optionally mirrored, travelled in either direction). Its start is therefore as close to N1 as possible and, after that, its end as close to N3.
+
+`distance(a, b)` compares two canonical forms (puzzle codes or solved boards are also accepted). Each part is scaled from 0 to 1 and weighted, most significant first:
+
+| Part | Weight | Measures |
+|------|--------|----------|
+| 3x3 squares | 4 | For each 3x3 square, the difference in path connections across its edge and in crossroads, relative to both boards' totals |
+| Endpoints | 2 | Gaps between the starts and between the ends, around the 36 boundary positions |
+| Path squares | 1 | Cells whose path shape differs, relative to cells used by either board |
+
+A total of 0 means the boards match up to rotation and reflection; 7 is the maximum. Boards at least `DISTINCT_DISTANCE` (1.0) apart count as different puzzles. Levels 31 to 60 were each chosen to be at least this far from every other level, and are published in the orientation they were generated in rather than in canonical form. Of the original thirty levels, only levels 10 and 15 are closer (0.95) and they are unchanged.
+
 ## Puzzle analysis catalogue
 
 The analysis script reads the committed levels and writes a gitignored catalogue report.
@@ -75,11 +99,12 @@ The analysis script reads the committed levels and writes a gitignored catalogue
 node crosspath/generate-puzzle-catalogue.js
 ```
 
-The `puzzle-catalogue.local.json` report records each level's code, solution and complexity details. If `complexity-survey.local.json` is present, its summary is included in the catalogue.
+The `puzzle-catalogue.local.json` report records each level's code, solution, complexity details, canonical start and end, and nearest other level by canonical distance. If `complexity-survey.local.json` is present, its summary is included in the catalogue.
 
 ## Tests
 
 ```sh
 node crosspath/solver.test.js
+node crosspath/puzzle-canonical.test.js
 node crosspath/puzzle-progress.test.js
 ```

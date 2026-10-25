@@ -2,13 +2,14 @@
 /**
  * Main-menu completion ring for index.html. Load after both level catalogues and
  * puzzle-progress.js. Reads local completion storage and appends ten decorative
- * stars plus an accessible total; it does not write progress.
+ * stars plus an accessible total; it does not write progress. Adds the "Not
+ * saved" notice below the ring when browser storage is unavailable.
  */
 
 (() => {
   const starRing = document.querySelector("#completion-stars");
   const levels = window.LightDiscLevels;
-  const { completedDifficultyCount } = window.LightDiscProgress;
+  const { completedDifficultyCount, createStorageNotice } = window.LightDiscProgress;
   const standardStars = completedDifficultyCount(levels, "standard");
   const xorStars = completedDifficultyCount(levels, "xor");
   const earned = standardStars + xorStars;
@@ -33,4 +34,6 @@
     "aria-label",
     `${earned} of 10 campaign stars earned`
   );
+  const notice = createStorageNotice();
+  if (notice) starRing.parentElement.after(notice);
 })();

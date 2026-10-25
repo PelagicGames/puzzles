@@ -109,14 +109,15 @@ nav a:focus-visible {
   outline-offset: 3px;
 }
 
-/* The icon column accommodates both text glyphs and the Crosspath SVG. */
+/* The icon column accommodates both text glyphs and the SVG logos. */
 .link-icon {
   color: var(--muted);
   font-size: 1.5rem;
   line-height: 1;
 }
 
-.crosspath-icon {
+.crosspath-icon,
+.wordquiz-icon {
   width: 1.65rem;
   height: 1.65rem;
 }

@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- Copyright (C) 2026 Pelagic Games -->
+<!-- Word Quiz landing page: progress, the play button, rules and dictionary credit. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4efe6">
+  <title>Word Quiz</title>
+  <meta name="description" content="Guess the word from its dictionary definition using the letter tiles.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Word Quiz">
+  <meta property="og:description" content="Read the definition, pick the right letter tiles and spell the missing word.">
+  <link rel="icon" href="./assets/wordquiz.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=20261025a">
+</head>
+<body class="page-menu">
+  <header class="top-bar">
+    <a class="back-link" href="../index.html">&#8592; All puzzles</a>
+    <span></span>
+  </header>
+
+  <main class="menu">
+    <img class="menu-logo" src="./assets/wordquiz.svg" alt="" aria-hidden="true">
+    <h1>Word Quiz</h1>
+    <p class="tagline">Can you name the word from its definition?</p>
+
+    <!-- menu.js fills the bar and label from saved progress. -->
+    <div class="menu-progress">
+      <div class="progress-bar" role="progressbar" aria-labelledby="progress-label" id="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p class="progress-label" id="progress-label"></p>
+    </div>
+
+    <a class="button button-primary play-button" id="play-button" href="./puzzle.html">Play</a>
+
+    <section class="how-to" aria-labelledby="how-to-heading">
+      <h2 id="how-to-heading">How to play</h2>
+      <ol>
+        <li>Read the dictionary definition. The word itself, and any words formed from it, are blanked out.</li>
+        <li>The spaces show how many letters the word has. The tiles hold its letters plus four that do not belong.</li>
+        <li>Click a tile to put it in the next space, drag it to a particular space, or type on your keyboard. Click or drag a placed tile to send it back.</li>
+        <li>When every space is filled the answer is checked. If it shakes, rearrange and try again.</li>
+        <li>Stuck? Ask a friend for help. Solved it? Challenge them with the same word.</li>
+      </ol>
+    </section>
+
+    <p class="credit">
+      Definitions are adapted from <a href="https://en-word.net/" rel="noopener">Open English WordNet</a>
+      (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC BY 4.0</a>), based on Princeton WordNet.
+      See <a href="./ATTRIBUTION.md">ATTRIBUTION.md</a> for details. Progress is saved in this browser only.
+    </p>
+  </main>
+
+  <script src="./puzzle-bank.js?v=20261025a"></script>
+  <script src="./progress.js?v=20261025a"></script>
+  <script src="./menu.js?v=20261025a"></script>
+</body>
+</html>

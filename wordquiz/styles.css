@@ -1,0 +1,779 @@
+/* Copyright (C) 2026 Pelagic Games */
+
+/*
+ * Word Quiz presentation: a cream dictionary card, recessed answer spaces and
+ * wooden letter tiles, plus the menu page, share overlay and the success and
+ * failure animations. Motion is reduced when the visitor asks for it.
+ */
+
+html {
+  /* Reserving the scrollbar gutter keeps the play-area width, and so the tile size, stable. */
+  scrollbar-gutter: stable;
+}
+
+:root {
+  --paper: #f4efe6;
+  --card: #fffaf0;
+  --ink: #2b2118;
+  --muted: #6f6253;
+  --rule: #d9cdb8;
+  --accent: #2f7f72;
+  --accent-dark: #22605a;
+  --error: #c8402c;
+  --gold: #e7b43c;
+  --wood-light: #f7e3b5;
+  --wood: #e9c88a;
+  --wood-dark: #c99a55;
+  --tile-ink: #3a2812;
+  --gap: 0.4rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Panels set their own display, so the hidden attribute needs reinforcing. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.7), transparent 45%),
+    var(--paper);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Shared buttons and header ------------------------------------------ */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.6rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(43, 33, 24, 0.12);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.button:hover {
+  background: #fdf7ea;
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+.button:focus-visible,
+.tile:focus-visible,
+.share-target:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.button-primary {
+  border-color: var(--accent-dark);
+  background: var(--accent);
+  color: #fff;
+}
+
+.button-primary:hover {
+  background: var(--accent-dark);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.9rem 1rem 0.4rem;
+}
+
+.back-link {
+  color: var(--accent-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.solved-tally {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Unsaved-progress pill beside the play-page tally and under the menu progress
+ * bar when browser storage is blocked. Its tooltip is visually hidden until
+ * focus (tap or Tab) reveals it. */
+.storage-notice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  padding: 0.1rem 0.65rem;
+  border: 1px dashed var(--muted);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.top-bar > .storage-notice {
+  margin: 0 0.6rem 0 auto;
+}
+
+.menu-progress > .storage-notice {
+  margin-top: 0.5rem;
+}
+
+.storage-notice-icon {
+  color: var(--error);
+}
+
+.storage-notice:focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.storage-notice-tip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.storage-notice:focus .storage-notice-tip {
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(16rem, calc(100vw - 2rem));
+  height: auto;
+  padding: 0.5rem 0.7rem;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  border: 1px solid var(--rule);
+  border-radius: 0.5rem;
+  background: var(--card);
+  box-shadow: 0 6px 18px rgba(43, 33, 24, 0.18);
+  color: var(--ink);
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+}
+
+.menu-progress > .storage-notice:focus .storage-notice-tip {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ---- Play page ---------------------------------------------------------- */
+
+.play-area {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem 3rem;
+}
+
+.game {
+  /* puzzle.js sets the tile edge from the play-area width; this is the fallback. */
+  --tile-size: 2.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.dictionary-card {
+  position: relative;
+  width: 100%;
+  padding: 1.2rem 1.4rem 1.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.6rem;
+  background:
+    linear-gradient(to right, transparent 1.6rem, rgba(200, 80, 60, 0.18) 1.6rem, rgba(200, 80, 60, 0.18) calc(1.6rem + 1px), transparent calc(1.6rem + 1px)),
+    var(--card);
+  box-shadow: 0 1px 0 #fff inset, 0 8px 22px rgba(60, 45, 25, 0.12);
+  transition: box-shadow 400ms ease;
+}
+
+.dictionary-card.is-solved {
+  box-shadow: 0 0 0 3px var(--gold), 0 10px 30px rgba(231, 180, 60, 0.35);
+}
+
+.card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-left: 1rem;
+}
+
+.card-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.solved-badge {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #e3f2ec;
+  color: var(--accent-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.card-meta {
+  margin: 0.4rem 0 0.2rem;
+  padding-left: 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.card-pos {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+}
+
+.clue {
+  margin: 0.3rem 0 0;
+  padding-left: 1rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.15rem, 3.6vw, 1.5rem);
+  line-height: 1.45;
+}
+
+.clue-blank {
+  display: inline-block;
+  width: 2.6em;
+  height: 0.9em;
+  margin: 0 0.1em;
+  border-bottom: 2px solid var(--ink);
+  vertical-align: baseline;
+}
+
+.answer-row,
+.tray {
+  display: grid;
+  grid-template-columns: repeat(var(--row-count, 8), var(--tile-size));
+  gap: var(--gap);
+  justify-content: center;
+}
+
+.tray {
+  max-width: 100%;
+  padding: 0.7rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(#8a5a2b, #6e4520);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35), 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+
+.tray.is-drop-target {
+  outline: 3px dashed var(--gold);
+  outline-offset: 3px;
+}
+
+.slot,
+.tray-cell {
+  position: relative;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border-radius: calc(var(--tile-size) * 0.12);
+}
+
+.slot {
+  border: 2px dashed #b9a98f;
+  background: rgba(255, 255, 255, 0.55);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.slot.is-filled {
+  border-style: solid;
+  border-color: transparent;
+  background: transparent;
+}
+
+.slot.is-drop-target {
+  border-color: var(--accent);
+  background: #e3f2ec;
+}
+
+.tray-cell {
+  /* Matches the space border so tiles (inset by the border width) fit both alike. */
+  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* SVG faces scale with the button; shadows and motion remain on the button. */
+.tile {
+  position: absolute;
+  inset: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--tile-size) * 0.12);
+  background: var(--wood);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(120, 75, 25, 0.4),
+    0 2px 3px rgba(40, 25, 10, 0.35);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 180ms ease, box-shadow 120ms ease;
+}
+
+.tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Tints sit above the opaque SVG without obscuring the letter or its grain. */
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.tile:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(120, 75, 25, 0.4),
+    0 4px 8px rgba(40, 25, 10, 0.35);
+}
+
+.tile:disabled {
+  cursor: default;
+}
+
+.tile.is-drag-source {
+  opacity: 0.25;
+}
+
+.drag-ghost {
+  position: fixed;
+  z-index: 50;
+  inset: auto;
+  pointer-events: none;
+  transform: scale(1.12) rotate(-3deg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -3px 0 rgba(120, 75, 25, 0.4),
+    0 10px 18px rgba(40, 25, 10, 0.4);
+  transition: none;
+  cursor: grabbing;
+}
+
+/* Wrong answer: red flash on every placed tile while the row shakes. */
+.answer-row.is-wrong {
+  animation: row-shake 520ms cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.answer-row.is-wrong .tile {
+  animation: tile-error 900ms ease;
+}
+
+.answer-row.is-wrong .tile::after {
+  animation: tile-error-tint 900ms ease;
+}
+
+@keyframes tile-error-tint {
+  0%, 60% { background: rgba(200, 64, 44, 0.4); }
+  100% { background: transparent; }
+}
+
+@keyframes row-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(5px); }
+  30%, 50%, 70% { transform: translateX(-9px) rotate(-1deg); }
+  40%, 60% { transform: translateX(9px) rotate(1deg); }
+}
+
+@keyframes tile-error {
+  0%, 60% {
+    box-shadow: 0 0 0 3px var(--error), 0 0 14px rgba(200, 64, 44, 0.7);
+  }
+}
+
+/* Correct answer: tiles flip in sequence and turn gold. */
+.answer-row.is-correct .tile {
+  animation: tile-win 700ms cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+  animation-delay: calc(var(--order, 0) * 80ms);
+}
+
+.answer-row.is-correct .tile::after {
+  background: rgba(255, 190, 0, 0.35);
+}
+
+@keyframes tile-win {
+  0% { transform: rotateX(0) scale(1); }
+  45% { transform: rotateX(90deg) scale(1.15); }
+  75% { transform: rotateX(0) scale(1.18) translateY(-6px); }
+  100% { transform: rotateX(0) scale(1); }
+}
+
+.game.is-solved .tray {
+  opacity: 0.45;
+  transition: opacity 600ms ease;
+}
+
+.game.is-solved .keyboard-hint {
+  visibility: hidden;
+}
+
+.status {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-error {
+  color: var(--error);
+}
+
+.status-success {
+  color: var(--accent-dark);
+}
+
+.success-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  animation: pop-in 500ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  animation-delay: 300ms;
+}
+
+.success-title {
+  margin: 0;
+  color: var(--accent-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 800;
+}
+
+.success-actions,
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.keyboard-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -2rem;
+  width: 0.55rem;
+  height: 0.9rem;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.25, 0.6, 0.5, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes confetti-fall {
+  from { transform: translate(0, 0) rotate(0); opacity: 1; }
+  85% { opacity: 1; }
+  to { transform: translate(var(--drift), 110vh) rotate(var(--spin)); opacity: 0; }
+}
+
+.message-panel {
+  max-width: 32rem;
+  margin: 2rem auto;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.8rem;
+  background: var(--card);
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(60, 45, 25, 0.12);
+}
+
+.message-panel h1 {
+  margin: 0.2rem 0 0.8rem;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.message-emoji {
+  margin: 0;
+  font-size: 3rem;
+}
+
+/* ---- Share overlay ------------------------------------------------------ */
+
+.share-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1.4rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.share-dialog[open] {
+  animation: pop-in 260ms ease both;
+}
+
+.share-dialog::backdrop {
+  background: rgba(30, 22, 12, 0.55);
+}
+
+.share-dialog h2 {
+  margin: 0 2rem 0.8rem 0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.share-close-form {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  margin: 0;
+}
+
+.share-close {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+.share-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.share-preview {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: #f1e9da;
+  font: 0.9rem/1.4 system-ui, sans-serif;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+}
+
+.share-native {
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.share-targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.share-target {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: var(--brand, #5c5048);
+  color: #fff;
+  font: 600 0.9rem system-ui, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-target:hover {
+  filter: brightness(1.1);
+}
+
+.share-whatsapp { --brand: #1f9e52; }
+.share-facebook { --brand: #1877f2; }
+.share-instagram { background: linear-gradient(45deg, #e88a26, #d12a4a 50%, #a8177a); }
+.share-x { --brand: #111; }
+.share-teams { --brand: #5059c9; }
+.share-telegram { --brand: #229ed9; }
+.share-reddit { --brand: #e0480f; }
+.share-linkedin { --brand: #0a66c2; }
+.share-email { --brand: #6f6253; }
+.share-sms { --brand: #2f7f72; }
+.share-copy { --brand: #3a2812; }
+
+.share-note {
+  min-height: 1.3em;
+  margin: 0.8rem 0 0;
+  color: var(--accent-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ---- Menu page ---------------------------------------------------------- */
+
+.menu {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 3rem;
+  text-align: center;
+}
+
+.menu-logo {
+  width: 7rem;
+  height: 7rem;
+  margin-top: 1rem;
+}
+
+.menu h1 {
+  margin: 0.4rem 0 0.2rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 8vw, 3.4rem);
+}
+
+.tagline {
+  margin: 0 0 1.4rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.menu-progress {
+  max-width: 22rem;
+  margin: 0 auto 1.4rem;
+}
+
+.progress-bar {
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5dac6;
+}
+
+.progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transition: width 600ms ease;
+}
+
+.progress-label {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.play-button {
+  min-width: 12rem;
+  min-height: 3.2rem;
+  font-size: 1.2rem;
+}
+
+.how-to {
+  margin: 2.2rem 0 0;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.8rem;
+  background: var(--card);
+  text-align: left;
+}
+
+.how-to h2 {
+  margin: 0 0 0.6rem;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.how-to ol {
+  margin: 0;
+  padding-left: 1.3rem;
+  line-height: 1.55;
+}
+
+.credit {
+  margin-top: 1.6rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.credit a {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}

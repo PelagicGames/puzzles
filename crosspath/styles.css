@@ -275,6 +275,81 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
+/* Unsaved-progress pill appended to tallies when browser storage is blocked.
+ * Its tooltip is visually hidden until focus (tap or Tab) reveals it. */
+.solved-tally,
+.masthead-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 8px;
+}
+
+.storage-notice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 1px dashed var(--ink-soft);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.storage-notice-icon {
+  color: var(--red);
+}
+
+.storage-notice:focus {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
+}
+
+.storage-notice-tip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.storage-notice:focus .storage-notice-tip {
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  max-width: min(16rem, 80vw);
+  height: auto;
+  padding: 6px 9px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+}
+
 /* ---- Puzzle menu ------------------------------------------------------- */
 
 .difficulty-list {

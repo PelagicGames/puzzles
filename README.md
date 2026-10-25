@@ -9,3 +9,6 @@ This is a generic repository for puzzle game prototypes.
 - **Crosspath** is a newspaper-style tile puzzle: drag nine 3x3 path
   squares into a 9x9 board to make one route from edge to edge, going
   straight over every crossroads.
+- **Word Quiz** is a word game: read a dictionary definition with the
+  answer blanked out and spell it from wooden letter tiles, then challenge
+  friends or ask them for help with a direct link.

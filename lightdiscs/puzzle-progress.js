@@ -2,8 +2,11 @@
 /**
  * Browser completion and campaign ordering API for menus, tutorials and puzzle.js.
  * Load before those controllers; publishes LightDiscProgress. Reads localStorage
- * on demand and writes only through markCompleted. Invalid stored JSON/data and
- * storage access failures propagate to callers rather than silently resetting it.
+ * on demand and writes only through markCompleted. Storage is probed once on
+ * load: when the browser blocks it (or a write fails), reads see no saved keys,
+ * completions are kept in memory for the current page only and
+ * createStorageNotice() supplies a "Not saved" indicator for progress displays.
+ * Invalid stored JSON/data still throws rather than silently resetting progress.
  */
 
 (() => {
@@ -22,6 +25,27 @@
   );
   // Count standard completion keys, rather than completed difficulty bands.
   const xorUnlockCount = 15;
+  const storageNoticeText = "Progress is not being saved: local browser storage must be enabled to track progress.";
+  const storageAvailable = probeStorage();
+  // Completion keys that could not be written; forgotten when the page unloads.
+  const unsavedKeys = [];
+  let noticeCount = 0;
+
+  /**
+   * @returns {boolean} Whether a test key can be written, read back and removed.
+   */
+  function probeStorage() {
+    const probeKey = `${storageKey}.probe`;
+    try {
+      const storage = window.localStorage;
+      storage.setItem(probeKey, "1");
+      const readable = storage.getItem(probeKey) === "1";
+      storage.removeItem(probeKey);
+      return readable;
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * @param {Object|string} levelOrCombination - Level record or combination name.
@@ -44,16 +68,16 @@
 
   /**
    * Read and validate persistent completion data; malformed data throws.
-   * @returns {string[]} Fresh array of stored keys, or empty when never stored.
+   * @returns {string[]} Fresh array of stored keys plus unsaved keys from this
+   * page, or empty when never stored or storage is unavailable.
    */
   function completedCodes() {
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored === null) return [];
-    const parsed = JSON.parse(stored);
+    const stored = storageAvailable ? window.localStorage.getItem(storageKey) : null;
+    const parsed = stored === null ? [] : JSON.parse(stored);
     if (!Array.isArray(parsed) || parsed.some((code) => typeof code !== "string")) {
       throw new Error(`Invalid puzzle completion data in "${storageKey}".`);
     }
-    return parsed;
+    return [...parsed, ...unsavedKeys.filter((key) => !parsed.includes(key))];
   }
 
   /**
@@ -67,17 +91,59 @@
   }
 
   /**
-   * Append a new completion to localStorage; existing keys cause no write.
+   * Append a new completion to localStorage; existing keys cause no write. When
+   * storage is unavailable or the write fails, remember it for this page only.
    * @param {string} code - Canonical level code.
    * @param {Object|string} levelOrCombination - Level or combination.
-   * @returns {void}
+   * @returns {boolean} Whether the completion is held in persistent storage.
    */
   function markCompleted(code, levelOrCombination = "standard") {
     const completed = completedCodes();
     const key = completionKey(code, levelOrCombination);
-    if (completed.includes(key)) return;
+    if (completed.includes(key)) return !unsavedKeys.includes(key);
     completed.push(key);
-    window.localStorage.setItem(storageKey, JSON.stringify(completed));
+    if (storageAvailable) {
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(completed));
+        return true;
+      } catch {
+        // Quota or permission failures fall through to page-only memory.
+      }
+    }
+    unsavedKeys.push(key);
+    return false;
+  }
+
+  /**
+   * Build a focusable "Not saved" pill whose tooltip explains why progress is
+   * not tracked; styled by .storage-notice rules in styles.css.
+   * @returns {HTMLElement|null} New pill, or null when storage is available.
+   */
+  function createStorageNotice() {
+    if (storageAvailable) return null;
+    noticeCount += 1;
+    const notice = document.createElement("span");
+    const icon = document.createElement("span");
+    const label = document.createElement("span");
+    const tip = document.createElement("span");
+    notice.className = "storage-notice";
+    notice.tabIndex = 0;
+    notice.title = storageNoticeText;
+    notice.setAttribute("role", "note");
+    icon.className = "storage-notice-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "\u26a0";
+    label.textContent = "Not saved";
+    tip.id = `storage-notice-tip-${noticeCount}`;
+    tip.className = "storage-notice-tip";
+    tip.setAttribute("role", "tooltip");
+    tip.textContent = storageNoticeText;
+    notice.setAttribute("aria-describedby", tip.id);
+    notice.append(icon, label, tip);
+    notice.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") notice.blur();
+    });
+    return notice;
   }
 
   /**
@@ -158,12 +224,15 @@
     completedDifficultyCount,
     completedStandardCount,
     completionKey,
+    createStorageNotice,
     difficulties,
     isCompleted,
     markCompleted,
     nextUnsolved,
     orderedLevels,
+    storageAvailable,
     storageKey,
+    storageNoticeText,
     xorUnlocked,
     xorUnlockCount
   };

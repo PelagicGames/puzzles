@@ -1,0 +1,16 @@
+<!-- Copyright (C) 2026 Pelagic Games -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f7e3b5"/>
+      <stop offset=".55" stop-color="#e9c88a"/>
+      <stop offset="1" stop-color="#c99a55"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="12" fill="#a87a3e"/>
+  <rect width="100" height="97" rx="12" fill="url(#wood)"/>
+  <path d="M9 18Q30 28 23 56T25 91M40 5Q32 32 43 57T45 94M66 4Q77 30 67 53T73 93M89 12Q80 35 88 63T90 86" fill="none" stroke="#966428" stroke-opacity=".1" stroke-width="1.4"/>
+  <rect x="1" y="1" width="98" height="95" rx="11" fill="none" stroke="#fff" stroke-opacity=".45"/>
+  <path d="M12 94H88" stroke="#785019" stroke-opacity=".25" stroke-linecap="round"/>
+  <text x="50" y="67" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="800" text-anchor="middle" fill="#3a2812">Y</text>
+</svg>

@@ -3,14 +3,17 @@
  * Catalogue selector for puzzles.html, loaded after both catalogues and progress.
  * Reads local completion/unlock state and populates difficulty-list with links,
  * ticks and accessible completion labels. Original catalogue indices become
- * one-based ?level values; no completion or catalogue data is written.
+ * one-based ?level values; no completion or catalogue data is written. Adds the
+ * "Not saved" notice to the header eyebrow when browser storage is unavailable.
  */
 
 (() => {
   const levels = window.LightDiscLevels;
-  const { difficulties, isCompleted, xorUnlocked } =
+  const { createStorageNotice, difficulties, isCompleted, xorUnlocked } =
     window.LightDiscProgress;
   const list = document.querySelector("#difficulty-list");
+  const notice = createStorageNotice();
+  if (notice) document.querySelector(".puzzle-menu-header .eyebrow").append(notice);
 
   // Omit locked XOR groups entirely; build separate difficulty sections per campaign.
   ["standard", "xor"].forEach((combination) => {

@@ -3,7 +3,8 @@
  * Catalogue-puzzle bootstrap for puzzle.html, after helpers, catalogues and
  * puzzle-progress.js. Reads the one-based ?level query, writes titles/body data
  * and navigation, then loads lightdiscs.js only after that configuration exists.
- * Solved events persist completion in localStorage; invalid indices redirect.
+ * Solved events persist completion in localStorage when the browser allows it,
+ * otherwise a "Not saved" notice is shown; invalid indices redirect.
  */
 
 (() => {
@@ -40,6 +41,8 @@
   document.body.dataset.puzzleCode = level.code;
   document.body.dataset.combination = level.combination;
   position.textContent = `${difficultyNumber} / ${difficultyLevels.length}`;
+  const storageNotice = window.LightDiscProgress.createStorageNotice();
+  if (storageNotice) document.querySelector(".page-title .eyebrow").append(storageNotice);
 
   /**
    * Read completion state and show a link only after solving, if another level remains.
