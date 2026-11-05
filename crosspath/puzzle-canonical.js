@@ -191,10 +191,11 @@
 
   /**
    * @param {string} code - Puzzle code with a unique solution.
+   * @param {Object} [options={}] - Crowded mode is passed through to the solver.
    * @returns {number[]} Row-major solved board; throws if the code is not unique.
    */
-  function solvedBoard(code) {
-    const analysis = root.CrosspathSolver.analyseCode(code);
+  function solvedBoard(code, options = {}) {
+    const analysis = root.CrosspathSolver.analyseCode(code, options);
     if (!analysis.unique) throw new Error(`Puzzle has no unique solution: ${code}`);
     return rules.composeBoard(rules.parseCode(code).tiles, analysis.solution);
   }
@@ -238,10 +239,11 @@
 
   /**
    * @param {number[]|string|Object} item - Solved board, puzzle code, or canonicalForm result.
+   * @param {Object} [options={}] - Rules to use when solving a code.
    * @returns {Object} Canonical form of the item.
    */
-  function formOf(item) {
-    if (typeof item === "string") return canonicalForm(solvedBoard(item));
+  function formOf(item, options = {}) {
+    if (typeof item === "string") return canonicalForm(solvedBoard(item, options));
     if (Array.isArray(item)) return canonicalForm(item);
     return item;
   }
@@ -255,11 +257,12 @@
    * The total weights squares, endpoints and cells 4:2:1, so 0 means identical up to symmetry and 7 is the maximum.
    * @param {number[]|string|Object} left - Solved board, puzzle code or canonical form.
    * @param {number[]|string|Object} right - Solved board, puzzle code or canonical form.
+   * @param {Object} [options={}] - Rules to use when solving codes.
    * @returns {{total: number, endpoints: number, squares: number, cells: number}} Distance.
    */
-  function distance(left, right) {
-    const a = formOf(left);
-    const b = formOf(right);
+  function distance(left, right, options = {}) {
+    const a = formOf(left, options);
+    const b = formOf(right, options);
     const endpoints = (boundaryGap(a.start, b.start) + boundaryGap(a.end, b.end)) / PERIMETER;
     const squaresA = squareProfile(a.board);
     const squaresB = squareProfile(b.board);
@@ -286,10 +289,11 @@
   /**
    * @param {number[]|string|Object} left - Solved board, puzzle code or canonical form.
    * @param {number[]|string|Object} right - Solved board, puzzle code or canonical form.
+   * @param {Object} [options={}] - Rules to use when solving codes.
    * @returns {boolean} Whether the two are far enough apart to count as different puzzles.
    */
-  function isDistinct(left, right) {
-    return distance(left, right).total >= DISTINCT_DISTANCE;
+  function isDistinct(left, right, options = {}) {
+    return distance(left, right, options).total >= DISTINCT_DISTANCE;
   }
 
   root.CrosspathCanonical = {

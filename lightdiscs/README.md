@@ -211,7 +211,7 @@ to reach Hard.
 
 Solver and complexity calculations never run in browser pages. Run
 `node lightdiscs/generate-puzzle-analysis.js` from the repository root to create
-the gitignored `lightdiscs/puzzle-analysis.local.json` report. It contains
+the gitignored `lightdiscs/out/puzzle-analysis.json` report. It contains
 complexity details and up to five example solutions for every authored level.
 
 ## Puzzle codes

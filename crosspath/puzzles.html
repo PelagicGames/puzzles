@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
-<!-- Puzzle catalogue grouped by difficulty, with completion marks from local storage. -->
+<!-- Puzzle catalogue grouped by difficulty, with completion marks from local storage; mode=crowded lists crowded puzzles. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -21,16 +21,17 @@
       </div>
     </header>
     <div class="puzzle-heading">
-      <p class="kicker">Puzzles</p>
+      <p class="kicker" id="catalogue-kicker">Puzzles</p>
       <h1>Choose a puzzle</h1>
-      <p class="standfirst">Harder puzzles give fewer clues and offer more plausible-looking places for each piece. Solved puzzles are ticked.</p>
+      <p class="standfirst" id="catalogue-standfirst">Harder puzzles give fewer clues and offer more plausible-looking places for each piece. Solved puzzles are ticked.</p>
     </div>
     <!-- puzzles.js inserts labelled difficulty sections and numbered puzzle links here. -->
     <div class="difficulty-list" id="difficulty-list"></div>
   </main>
   <!-- Catalogue data and completion helpers precede the catalogue-building controller. -->
   <script src="./puzzle-levels.js?v=20261025a"></script>
+  <script src="./crowded-levels.js?v=20261104a"></script>
   <script src="./puzzle-progress.js?v=20261025a"></script>
-  <script src="./puzzles.js?v=20261025a"></script>
+  <script src="./puzzles.js?v=20261104a"></script>
 </body>
 </html>

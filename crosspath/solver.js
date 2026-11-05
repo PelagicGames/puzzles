@@ -33,14 +33,23 @@
     { id: "hard", label: "Hard", minimum: 120 },
     { id: "very-hard", label: "Very hard", minimum: 300 }
   ];
+  // Separate calibration: 250,000 canonical boards, 991,432 crowded-mode clue variants.
+  const CROWDED_COMPLEXITY_BANDS = [
+    { id: "very-easy", label: "Very easy", minimum: 0 },
+    { id: "easy", label: "Easy", minimum: 6 },
+    { id: "medium", label: "Medium", minimum: 23 },
+    { id: "hard", label: "Hard", minimum: 67 },
+    { id: "very-hard", label: "Very hard", minimum: 197 }
+  ];
 
   /**
    * @param {number[]} tileA - First tile's masks.
    * @param {number} dir - Direction from the first tile to the second.
    * @param {number[]} tileB - Neighbouring tile's masks.
-   * @returns {boolean} Whether connections match without disconnected paths touching.
+   * @param {Object} [options={}] - Crowded mode permits disconnected paths touching.
+   * @returns {boolean} Whether connections match under the selected rules.
    */
-  function edgeCompatible(tileA, dir, tileB) {
+  function edgeCompatible(tileA, dir, tileB, { crowded = false } = {}) {
     const opposite = OPPOSITE[dir];
     for (let index = 0; index < 3; index += 1) {
       const a = tileA[SIDE_CELLS[dir][index]];
@@ -48,22 +57,23 @@
       const out = Boolean(a & dir);
       const back = Boolean(b & opposite);
       if (out !== back) return false;
-      if (!out && a && b) return false;
+      if (!crowded && !out && a && b) return false;
     }
     return true;
   }
 
   /**
    * @param {Object} puzzle - Parsed tiles, fixed placements and end markers.
+   * @param {Object} [options={}] - Crowded mode defaults to false.
    * @returns {Object} Compatibility tables, boundary exit costs, fixed slots and
    * unmarked-exit allowance used throughout one search.
    */
-  function prepare(puzzle) {
+  function prepare(puzzle, { crowded = false } = {}) {
     const { tiles, fixed, markers } = puzzle;
     const count = tiles.length;
     const compatible = {};
     [N, E, S, W].forEach((dir) => {
-      compatible[dir] = tiles.map((tileA) => tiles.map((tileB) => edgeCompatible(tileA, dir, tileB)));
+      compatible[dir] = tiles.map((tileA) => tiles.map((tileB) => edgeCompatible(tileA, dir, tileB, { crowded })));
     });
     const markerKeys = new Set(markers.map(rules.formatMarker));
     // boundary[tile][slot] = null when impossible, otherwise the number of unmarked exits it adds.
@@ -170,22 +180,23 @@
   /**
    * @param {Object} puzzle - Parsed puzzle.
    * @param {Array<number|null>} placement - Candidate tile arrangement.
+   * @param {Object} [options={}] - Crowded mode defaults to false.
    * @returns {boolean} Whether the full shared rule check succeeds.
    */
-  function isSolution(puzzle, placement) {
+  function isSolution(puzzle, placement, options = {}) {
     const board = rules.composeBoard(puzzle.tiles, placement);
-    return rules.analyseBoard(board, puzzle.markers).solved;
+    return rules.analyseBoard(board, puzzle.markers, options).solved;
   }
 
   // Exhaustive backtracking over tile-to-slot assignments, stopping after `limit` solutions.
   /**
    * @param {Object} puzzle - Parsed puzzle.
-   * @param {Object} [options={}] - Solution limit, defaulting to two for uniqueness checks.
+   * @param {Object} [options={}] - Solution limit (default two) and crowded mode (default false).
    * @returns {Object} Solution copies, count, attempted-node count and a complete flag
    * which is false when the solution limit stops the search.
    */
-  function solve(puzzle, { limit = 2 } = {}) {
-    const prep = prepare(puzzle);
+  function solve(puzzle, { limit = 2, crowded = false } = {}) {
+    const prep = prepare(puzzle, { crowded });
     const solutions = [];
     let nodes = 0;
     if (!fixedConsistent(prep)) return { solutions, count: 0, complete: true, nodes };
@@ -205,7 +216,7 @@
     function search(depth, unmarked) {
       if (solutions.length >= limit) return;
       if (depth === openSlots.length) {
-        if (isSolution(puzzle, placement)) solutions.push(placement.slice());
+        if (isSolution(puzzle, placement, { crowded })) solutions.push(placement.slice());
         return;
       }
       const slot = openSlots[depth];
@@ -228,11 +239,13 @@
 
   /**
    * @param {number} score - Weighted difficulty score.
+   * @param {Object} [options={}] - Select crowded-mode rather than normal-mode bands.
    * @returns {Object} Highest difficulty band whose lower bound is met.
    */
-  function bandFor(score) {
-    let band = COMPLEXITY_BANDS[0];
-    COMPLEXITY_BANDS.forEach((candidate) => {
+  function bandFor(score, { crowded = false } = {}) {
+    const bands = crowded ? CROWDED_COMPLEXITY_BANDS : COMPLEXITY_BANDS;
+    let band = bands[0];
+    bands.forEach((candidate) => {
       if (score >= candidate.minimum) band = candidate;
     });
     return band;
@@ -295,11 +308,12 @@
   /**
    * @param {Object} puzzle - Parsed puzzle.
    * @param {number[]} solution - Known correct tile indices by slot.
+   * @param {Object} [options={}] - Crowded mode selects its rules, metric and bands.
    * @returns {Object} Weighted score, band and per-step reasoning statistics.
    * Throws when the supplied arrangement cannot supply a locally valid next move.
    */
-  function complexity(puzzle, solution) {
-    const prep = prepare(puzzle);
+  function complexity(puzzle, solution, { crowded = false } = {}) {
+    const prep = prepare(puzzle, { crowded });
     const placement = initialPlacement(prep);
     const steps = [];
     while (placement.some((tile) => tile === null)) {
@@ -339,7 +353,7 @@
     }
     const distractorTotal = steps.reduce((total, { distractors }) => total + distractors, 0);
     const score = Math.round(steps.reduce((total, { weighted }) => total + weighted, 0));
-    const band = bandFor(score);
+    const band = bandFor(score, { crowded });
     /**
      * @param {string} name - Technique identifier.
      * @returns {number} Number of recorded steps using that technique.
@@ -347,6 +361,7 @@
     const techniqueCount = (name) => steps.filter(({ technique }) => technique === name).length;
     return {
       score,
+      ...(crowded ? { crowdedness: rules.crowdedness(rules.composeBoard(puzzle.tiles, solution)) } : {}),
       difficulty: band.id,
       label: band.label,
       placements: steps.length,
@@ -374,10 +389,11 @@
 
   /**
    * @param {string} code - Puzzle code to parse and solve.
+   * @param {Object} [options={}] - Crowded mode defaults to false.
    * @returns {Object} Validation diagnostics, up to two solution descriptions and
    * complexity for a unique solution; malformed codes become diagnostics.
    */
-  function analyseCode(code) {
+  function analyseCode(code, { crowded = false } = {}) {
     const diagnostics = [];
     let puzzle;
     try {
@@ -385,7 +401,7 @@
     } catch (error) {
       return { valid: false, unique: false, solutionCount: 0, diagnostics: [error.message] };
     }
-    const result = solve(puzzle, { limit: 2 });
+    const result = solve(puzzle, { limit: 2, crowded });
     if (result.count === 0) diagnostics.push("No solution.");
     if (result.count > 1) diagnostics.push("More than one solution.");
     const unique = result.count === 1;
@@ -396,7 +412,7 @@
       solution: result.solutions[0] || null,
       solutionText: result.solutions[0] ? describePlacement(result.solutions[0]) : null,
       alternativeText: result.solutions[1] ? describePlacement(result.solutions[1]) : null,
-      complexity: unique ? complexity(puzzle, result.solutions[0]) : null,
+      complexity: unique ? complexity(puzzle, result.solutions[0], { crowded }) : null,
       searchNodes: result.nodes,
       diagnostics
     };
@@ -404,6 +420,7 @@
 
   window.CrosspathSolver = {
     COMPLEXITY_BANDS,
+    CROWDED_COMPLEXITY_BANDS,
     analyseCode,
     bandFor,
     complexity,

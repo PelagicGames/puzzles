@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Copyright (C) 2026 Pelagic Games -->
-<!-- Interactive puzzle page; puzzle.js selects a one-based level from the URL query. -->
+<!-- Interactive puzzle page; puzzle.js selects a one-based level, and mode=crowded selects the crowded catalogue. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -23,7 +23,7 @@
 
     <div class="puzzle-heading">
       <h1 id="puzzle-title">Puzzle</h1>
-      <p class="standfirst">Drag the pieces onto the board to make one path from edge to edge. Pieces cannot be rotated.</p>
+      <p class="standfirst" id="puzzle-standfirst">Drag the pieces onto the board to make one path from edge to edge. Pieces cannot be rotated.</p>
     </div>
 
     <!-- The controller constructs SVG slots, end markers, focus/drop hints and check layers. -->
@@ -71,11 +71,12 @@
       <a id="next-puzzle" href="./puzzle.html" hidden>Next unsolved &#8594;</a>
     </nav>
   </main>
-  <!-- Rules precede rendering; level data and progress must load before the page controller. -->
+  <!-- Rules precede rendering; both catalogues and progress must load before the page controller. -->
   <script src="./crosspath-rules.js"></script>
   <script src="./crosspath-render.js"></script>
   <script src="./puzzle-levels.js?v=20261025a"></script>
+  <script src="./crowded-levels.js?v=20261104a"></script>
   <script src="./puzzle-progress.js?v=20261025a"></script>
-  <script src="./puzzle.js?v=20261025a"></script>
+  <script src="./puzzle.js?v=20261104a"></script>
 </body>
 </html>

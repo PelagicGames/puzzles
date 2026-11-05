@@ -67,6 +67,18 @@ The bands are calibrated on about 200,000 unique puzzles from 50,000 boards:
 
 Each band's share varies by less than ±0.5 percentage points between independent seed batches. Puzzles scored 300 or more effectively all need a guess, and there is a natural gap in the score distribution just below 300.
 
+### Crowded mode and crowdedness
+
+Crowded mode disables only the prohibition on adjacent path squares that do not join. Connections must still line up, and one route must visit all path elements between exactly two exits. All existing levels remain normal-mode puzzles. The main menu's **Crowded Mode** entry opens a separate catalogue (`puzzles.html?mode=crowded`) of 30 crowded puzzles in `crowded-levels.js`, six per difficulty band. Within each band, puzzles run from least to most crowded. Every crowded puzzle has crowdedness of at least 1, so its solution is rejected under normal rules. Completion is stored by puzzle code alongside normal progress.
+
+`CrosspathRules.crowdedness(board)` counts disconnected occupied-cell pairs sharing an edge, once per pair; diagonals do not count. `analyseBoard(board, markers, { crowded: true })` allows those contacts and reports the count as `crowdedness`, while retaining the `touching` diagnostics. A valid normal-mode solution always has crowdedness zero.
+
+Pass `{ crowded: true }` explicitly to `CrosspathSolver.analyseCode`, `solve`, `prepare`, `complexity`, `isSolution`, `edgeCompatible`, and `bandFor` when analysing crowded puzzles. The option is also accepted by `CrosspathCanonical.solvedBoard`, `distance`, and `isDistinct` for puzzle-code inputs. Mode is not encoded in puzzle codes: the same code can have different uniqueness and difficulty under the two rule sets. Existing callers default to normal mode.
+
+Crowded difficulty uses the same weighted replay score but recomputes all available moves and elimination trials with crowded compatibility. Unique crowded analyses include `complexity.crowdedness`. The separate `CROWDED_COMPLEXITY_BANDS` minima are **0, 6, 23, 67, 197**, calibrated on **250,000 distinct canonical boards (50,000 per crowdedness stratum) / 991,432 unique crowded puzzles**, with crowdedness from **0 to 59**. Normal-mode bands are unchanged.
+
+See [the crowded analysis report](./CROWDED-ANALYSIS.md) and [machine-readable results](./crowded-calibration.json) for sampling, held-out validation, reasoning composition, clue-policy sensitivity, and per-crowdedness results. Three existing levels (8, 30 and 45) cease to be unique under crowded rules; normal-mode uniqueness must not be reused.
+
 ## Canonical form and similarity
 
 `puzzle-canonical.js` (`window.CrosspathCanonical`) compares solved boards regardless of how they are turned or mirrored.
@@ -99,7 +111,11 @@ The analysis script reads the committed levels and writes a gitignored catalogue
 node crosspath/generate-puzzle-catalogue.js
 ```
 
-The `puzzle-catalogue.local.json` report records each level's code, solution, complexity details, canonical start and end, and nearest other level by canonical distance. If `complexity-survey.local.json` is present, its summary is included in the catalogue.
+The `crosspath/out/puzzle-catalogue.json` report records each level's code, solution, complexity details, canonical start and end, and nearest other level by canonical distance. If `crosspath/out/complexity-survey.json` is present, its summary is included in the catalogue.
+
+## Crowded catalogue
+
+`crowded-levels.js` holds the Crowded Mode puzzles. Their scores sit away from the crowded band boundaries, and every solved board is at least `DISTINCT_DISTANCE` from the other crowded puzzles and from the normal catalogue.
 
 ## Tests
 
@@ -107,4 +123,6 @@ The `puzzle-catalogue.local.json` report records each level's code, solution, co
 node crosspath/solver.test.js
 node crosspath/puzzle-canonical.test.js
 node crosspath/puzzle-progress.test.js
+node crosspath/crowded.test.js
+node crosspath/crowded-levels.test.js
 ```

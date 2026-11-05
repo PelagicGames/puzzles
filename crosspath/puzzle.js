@@ -3,8 +3,9 @@
 /**
  * Controller for puzzle.html: reads the level query, builds the board and tray,
  * handles pointer/keyboard placement, traces checks and records completed codes.
- * Load after rules, rendering, progress and level data. Invalid level indices
- * redirect to the catalogue; only completion state is persisted, and only when
+ * mode=crowded selects the crowded catalogue and allows disconnected touching paths.
+ * Load after rules, rendering, progress and both catalogues. Invalid level indices
+ * redirect to the matching catalogue; only completion state is persisted, and only when
  * browser storage allows it.
  */
 
@@ -12,15 +13,27 @@
   const rules = window.CrosspathRules;
   const render = window.CrosspathRender;
   const progress = window.CrosspathProgress;
-  const levels = window.CrosspathLevels;
   const { svgElement } = render;
 
-  const requested = Number(new URLSearchParams(window.location.search).get("level") || 1);
+  const query = new URLSearchParams(window.location.search);
+  // Crowded mode lifts the rule against path squares touching without joining.
+  const crowded = query.get("mode") === "crowded";
+  const levels = crowded ? window.CrosspathCrowdedLevels : window.CrosspathLevels;
+  const catalogueHref = crowded ? "./puzzles.html?mode=crowded" : "./puzzles.html";
+  const puzzleHref = (index) => `./puzzle.html?level=${index + 1}${crowded ? "&mode=crowded" : ""}`;
+  const requested = Number(query.get("level") || 1);
   const levelNumber = Number.isInteger(requested) && requested > 0 ? requested : 1;
   const level = levels[levelNumber - 1];
   if (!level) {
-    window.location.replace("./puzzles.html");
+    window.location.replace(catalogueHref);
     return;
+  }
+  document.querySelectorAll(".back-link, .puzzle-navigation > a:first-child").forEach((link) => {
+    link.href = catalogueHref;
+  });
+  if (crowded) {
+    document.querySelector(".back-link").setAttribute("aria-label", "Back to crowded puzzle menu");
+    document.querySelector("#puzzle-standfirst").textContent = "Drag the pieces onto the board to make one path from edge to edge. Pieces cannot be rotated. In crowded mode, path squares may touch without joining.";
   }
 
   // SVG geometry is independent of responsive screen size; the margin holds end markers.
@@ -35,11 +48,11 @@
   const difficulty = progress.difficulties.find(({ id }) => id === level.difficulty);
   const bandLevels = levels.filter(({ difficulty: id }) => id === level.difficulty);
   const bandNumber = bandLevels.findIndex(({ code }) => code === level.code) + 1;
-  const displayTitle = `${difficulty.label} No. ${bandNumber}`;
+  const displayTitle = `${crowded ? "Crowded " : ""}${crowded ? difficulty.label.toLowerCase() : difficulty.label} No. ${bandNumber}`;
   document.title = `${displayTitle} | Crosspath`;
   document.querySelector("#puzzle-title").textContent = displayTitle;
   const puzzleNumber = document.querySelector("#puzzle-number");
-  puzzleNumber.textContent = `Puzzle ${levelNumber} of ${levels.length}`;
+  puzzleNumber.textContent = `${crowded ? "Crowded puzzle" : "Puzzle"} ${levelNumber} of ${levels.length}`;
   const storageNotice = progress.createStorageNotice();
   if (storageNotice) puzzleNumber.append(storageNotice);
   document.querySelector("#puzzle-position").textContent = `${bandNumber} / ${bandLevels.length}`;
@@ -744,7 +757,9 @@
    */
   function checkBoard() {
     const composed = rules.composeBoard(puzzle.tiles, placement);
-    const result = rules.analyseBoard(composed, puzzle.markers);
+    const analysis = rules.analyseBoard(composed, puzzle.markers, { crowded });
+    // Touching pairs are reported for the crowdedness metric but are not errors in crowded mode.
+    const result = crowded ? { ...analysis, touching: [] } : analysis;
     boardWrap.classList.add("is-checking");
     setStatus(result.trace ? "All tiles placed. Tracing the path\u2026" : "All tiles placed. Checking\u2026");
     drawTrace(result, () => {
@@ -762,7 +777,7 @@
     nextLink.hidden = !next;
     solvedNextLink.hidden = !next || !boardWrap.classList.contains("is-solved");
     if (next) {
-      nextLink.href = `./puzzle.html?level=${next.index + 1}`;
+      nextLink.href = puzzleHref(next.index);
       solvedNextLink.href = nextLink.href;
     }
   }

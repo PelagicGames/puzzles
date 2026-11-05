@@ -1,0 +1,2077 @@
+{
+  "_copyright": "Copyright (C) 2026 Pelagic Games",
+  "generatedAt": "2026-11-03T14:55:03.981Z",
+  "boards": 250000,
+  "workers": 5,
+  "seed": 20261103,
+  "seconds": 1446.633,
+  "uniqueCanonicalBoards": 250000,
+  "uniquePuzzles": 991432,
+  "duplicateBoardsDiscarded": 13,
+  "metric": "Orthogonally adjacent occupied-cell pairs with neither side connecting across their shared edge; each pair counted once.",
+  "sampling": "Equal quotas across crowdedness strata, canonical rotation/reflection deduplication before clue generation. One minimal-clue puzzle and random fixed-clue variants up to six fixed tiles per board. Not a population prevalence estimate.",
+  "score": {
+    "puzzles": 991432,
+    "scoreQuantiles": {
+      "0": 0,
+      "1": 899,
+      "0.1": 0,
+      "0.25": 1,
+      "0.5": 14,
+      "0.75": 70,
+      "0.9": 303,
+      "0.95": 393,
+      "0.99": 499
+    },
+    "tiers": {
+      "singles": 735825,
+      "elimination": 134412,
+      "guess": 121195
+    },
+    "averageFixed": 2.6591,
+    "averageMarkers": 0.5042
+  },
+  "minimalClueScore": {
+    "puzzles": 250000,
+    "scoreQuantiles": {
+      "0": 0,
+      "1": 899,
+      "0.1": 43,
+      "0.25": 77,
+      "0.5": 194,
+      "0.75": 369,
+      "0.9": 445,
+      "0.95": 486,
+      "0.99": 595
+    },
+    "tiers": {
+      "singles": 62075,
+      "elimination": 71529,
+      "guess": 116396
+    },
+    "averageFixed": 0.0734,
+    "averageMarkers": 0.5034
+  },
+  "crowdednessRange": [
+    0,
+    59
+  ],
+  "calibration": {
+    "method": "Hard/very-hard cutoffs minimize balanced classification error for non-singles/guess reasoning respectively. Easy/medium split positive singles scores below hard into thirds. Zero scores stay very easy. Last seed held out.",
+    "trainingPuzzles": 792652,
+    "holdoutSeed": 20292779,
+    "minima": [
+      0,
+      6,
+      23,
+      67,
+      197
+    ],
+    "hardBalancedError": 0.0631,
+    "veryHardBalancedError": 0.0197,
+    "allSampleBoundaries": {
+      "minima": [
+        0,
+        6,
+        23,
+        67,
+        196
+      ],
+      "hardBalancedError": 0.0631,
+      "veryHardBalancedError": 0.0196
+    },
+    "minimalClueBoundaries": {
+      "minima": [
+        0,
+        40,
+        51,
+        80,
+        233
+      ],
+      "hardBalancedError": 0.0082,
+      "veryHardBalancedError": 0.0152
+    },
+    "perSeed": [
+      {
+        "seed": 20261103,
+        "minima": [
+          0,
+          5,
+          23,
+          67,
+          202
+        ],
+        "hardBalancedError": 0.0643,
+        "veryHardBalancedError": 0.02
+      },
+      {
+        "seed": 20269022,
+        "minima": [
+          0,
+          6,
+          23,
+          66,
+          199
+        ],
+        "hardBalancedError": 0.0624,
+        "veryHardBalancedError": 0.0187
+      },
+      {
+        "seed": 20276941,
+        "minima": [
+          0,
+          6,
+          23,
+          66,
+          197
+        ],
+        "hardBalancedError": 0.0629,
+        "veryHardBalancedError": 0.0204
+      },
+      {
+        "seed": 20284860,
+        "minima": [
+          0,
+          6,
+          23,
+          67,
+          194
+        ],
+        "hardBalancedError": 0.0626,
+        "veryHardBalancedError": 0.0192
+      },
+      {
+        "seed": 20292779,
+        "minima": [
+          0,
+          5,
+          23,
+          66,
+          193
+        ],
+        "hardBalancedError": 0.0632,
+        "veryHardBalancedError": 0.0193
+      }
+    ]
+  },
+  "bands": [
+    {
+      "id": "very-easy",
+      "minimum": 0,
+      "maximum": 5,
+      "share": 0.4002,
+      "puzzles": 396737,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 5,
+        "0.1": 0,
+        "0.25": 0,
+        "0.5": 0,
+        "0.75": 2,
+        "0.9": 4,
+        "0.95": 4,
+        "0.99": 5
+      },
+      "tiers": {
+        "singles": 396737,
+        "elimination": 0,
+        "guess": 0
+      },
+      "averageFixed": 4.768,
+      "averageMarkers": 0.6363
+    },
+    {
+      "id": "easy",
+      "minimum": 6,
+      "maximum": 22,
+      "share": 0.1644,
+      "puzzles": 162993,
+      "scoreQuantiles": {
+        "0": 6,
+        "1": 22,
+        "0.1": 6,
+        "0.25": 8,
+        "0.5": 12,
+        "0.75": 16,
+        "0.9": 20,
+        "0.95": 21,
+        "0.99": 22
+      },
+      "tiers": {
+        "singles": 156319,
+        "elimination": 6503,
+        "guess": 171
+      },
+      "averageFixed": 2.7578,
+      "averageMarkers": 0.5658
+    },
+    {
+      "id": "medium",
+      "minimum": 23,
+      "maximum": 66,
+      "share": 0.1797,
+      "puzzles": 178136,
+      "scoreQuantiles": {
+        "0": 23,
+        "1": 66,
+        "0.1": 25,
+        "0.25": 31,
+        "0.5": 40,
+        "0.75": 51,
+        "0.9": 59,
+        "0.95": 62,
+        "0.99": 66
+      },
+      "tiers": {
+        "singles": 160346,
+        "elimination": 16899,
+        "guess": 891
+      },
+      "averageFixed": 1.1987,
+      "averageMarkers": 0.822
+    },
+    {
+      "id": "hard",
+      "minimum": 67,
+      "maximum": 196,
+      "share": 0.1286,
+      "puzzles": 127533,
+      "scoreQuantiles": {
+        "0": 67,
+        "1": 196,
+        "0.1": 74,
+        "0.25": 88,
+        "0.5": 123,
+        "0.75": 157,
+        "0.9": 176,
+        "0.95": 184,
+        "0.99": 194
+      },
+      "tiers": {
+        "singles": 22423,
+        "elimination": 102593,
+        "guess": 2517
+      },
+      "averageFixed": 0.6037,
+      "averageMarkers": 0.0668
+    },
+    {
+      "id": "very-hard",
+      "minimum": 197,
+      "maximum": null,
+      "share": 0.1271,
+      "puzzles": 126033,
+      "scoreQuantiles": {
+        "0": 197,
+        "1": 899,
+        "0.1": 254,
+        "0.25": 312,
+        "0.5": 368,
+        "0.75": 431,
+        "0.9": 486,
+        "0.95": 527,
+        "0.99": 645
+      },
+      "tiers": {
+        "singles": 0,
+        "elimination": 8417,
+        "guess": 117616
+      },
+      "averageFixed": 0.0366,
+      "averageMarkers": 0.0022
+    }
+  ],
+  "minimalClueBands": [
+    {
+      "id": "very-easy",
+      "minimum": 0,
+      "maximum": 5,
+      "share": 0.0004,
+      "puzzles": 101,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 5,
+        "0.1": 0,
+        "0.25": 1,
+        "0.5": 3,
+        "0.75": 4,
+        "0.9": 5,
+        "0.95": 5,
+        "0.99": 5
+      },
+      "tiers": {
+        "singles": 101,
+        "elimination": 0,
+        "guess": 0
+      },
+      "averageFixed": 1.1782,
+      "averageMarkers": 1.9802
+    },
+    {
+      "id": "easy",
+      "minimum": 6,
+      "maximum": 22,
+      "share": 0.0061,
+      "puzzles": 1536,
+      "scoreQuantiles": {
+        "0": 6,
+        "1": 22,
+        "0.1": 10,
+        "0.25": 15,
+        "0.5": 19,
+        "0.75": 21,
+        "0.9": 22,
+        "0.95": 22,
+        "0.99": 22
+      },
+      "tiers": {
+        "singles": 1536,
+        "elimination": 0,
+        "guess": 0
+      },
+      "averageFixed": 0.9147,
+      "averageMarkers": 1.9349
+    },
+    {
+      "id": "medium",
+      "minimum": 23,
+      "maximum": 66,
+      "share": 0.2326,
+      "puzzles": 58145,
+      "scoreQuantiles": {
+        "0": 23,
+        "1": 66,
+        "0.1": 32,
+        "0.25": 38,
+        "0.5": 46,
+        "0.75": 53,
+        "0.9": 59,
+        "0.95": 62,
+        "0.99": 65
+      },
+      "tiers": {
+        "singles": 57793,
+        "elimination": 246,
+        "guess": 106
+      },
+      "averageFixed": 0.0683,
+      "averageMarkers": 1.9626
+    },
+    {
+      "id": "hard",
+      "minimum": 67,
+      "maximum": 196,
+      "share": 0.2657,
+      "puzzles": 66422,
+      "scoreQuantiles": {
+        "0": 67,
+        "1": 196,
+        "0.1": 97,
+        "0.25": 133,
+        "0.5": 154,
+        "0.75": 171,
+        "0.9": 183,
+        "0.95": 189,
+        "0.99": 195
+      },
+      "tiers": {
+        "singles": 2645,
+        "elimination": 62924,
+        "guess": 853
+      },
+      "averageFixed": 0.1579,
+      "averageMarkers": 0.1251
+    },
+    {
+      "id": "very-hard",
+      "minimum": 197,
+      "maximum": null,
+      "share": 0.4952,
+      "puzzles": 123796,
+      "scoreQuantiles": {
+        "0": 197,
+        "1": 899,
+        "0.1": 264,
+        "0.25": 314,
+        "0.5": 370,
+        "0.75": 432,
+        "0.9": 487,
+        "0.95": 528,
+        "0.99": 647
+      },
+      "tiers": {
+        "singles": 0,
+        "elimination": 8359,
+        "guess": 115437
+      },
+      "averageFixed": 0.0191,
+      "averageMarkers": 0.0022
+    }
+  ],
+  "holdoutBands": [
+    {
+      "id": "very-easy",
+      "minimum": 0,
+      "maximum": 5,
+      "share": 0.4001,
+      "puzzles": 79539,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 5,
+        "0.1": 0,
+        "0.25": 0,
+        "0.5": 0,
+        "0.75": 2,
+        "0.9": 4,
+        "0.95": 4,
+        "0.99": 5
+      },
+      "tiers": {
+        "singles": 79539,
+        "elimination": 0,
+        "guess": 0
+      },
+      "averageFixed": 4.7684,
+      "averageMarkers": 0.6322
+    },
+    {
+      "id": "easy",
+      "minimum": 6,
+      "maximum": 22,
+      "share": 0.1651,
+      "puzzles": 32813,
+      "scoreQuantiles": {
+        "0": 6,
+        "1": 22,
+        "0.1": 6,
+        "0.25": 8,
+        "0.5": 12,
+        "0.75": 17,
+        "0.9": 20,
+        "0.95": 21,
+        "0.99": 22
+      },
+      "tiers": {
+        "singles": 31474,
+        "elimination": 1305,
+        "guess": 34
+      },
+      "averageFixed": 2.7541,
+      "averageMarkers": 0.5646
+    },
+    {
+      "id": "medium",
+      "minimum": 23,
+      "maximum": 66,
+      "share": 0.1796,
+      "puzzles": 35694,
+      "scoreQuantiles": {
+        "0": 23,
+        "1": 66,
+        "0.1": 26,
+        "0.25": 31,
+        "0.5": 40,
+        "0.75": 51,
+        "0.9": 59,
+        "0.95": 62,
+        "0.99": 66
+      },
+      "tiers": {
+        "singles": 32139,
+        "elimination": 3384,
+        "guess": 171
+      },
+      "averageFixed": 1.1997,
+      "averageMarkers": 0.8188
+    },
+    {
+      "id": "hard",
+      "minimum": 67,
+      "maximum": 196,
+      "share": 0.1281,
+      "puzzles": 25454,
+      "scoreQuantiles": {
+        "0": 67,
+        "1": 196,
+        "0.1": 74,
+        "0.25": 88,
+        "0.5": 123,
+        "0.75": 157,
+        "0.9": 176,
+        "0.95": 184,
+        "0.99": 194
+      },
+      "tiers": {
+        "singles": 4519,
+        "elimination": 20427,
+        "guess": 508
+      },
+      "averageFixed": 0.6029,
+      "averageMarkers": 0.0664
+    },
+    {
+      "id": "very-hard",
+      "minimum": 197,
+      "maximum": null,
+      "share": 0.1272,
+      "puzzles": 25280,
+      "scoreQuantiles": {
+        "0": 197,
+        "1": 842,
+        "0.1": 255,
+        "0.25": 312,
+        "0.5": 369,
+        "0.75": 432,
+        "0.9": 485,
+        "0.95": 526,
+        "0.99": 645
+      },
+      "tiers": {
+        "singles": 0,
+        "elimination": 1652,
+        "guess": 23628
+      },
+      "averageFixed": 0.0393,
+      "averageMarkers": 0.0021
+    }
+  ],
+  "strata": [
+    {
+      "id": "0",
+      "minimum": 0,
+      "maximum": 0,
+      "boards": 50000,
+      "puzzles": 196661,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 899,
+        "0.1": 0,
+        "0.25": 1,
+        "0.5": 17,
+        "0.75": 89,
+        "0.9": 401,
+        "0.95": 461,
+        "0.99": 575
+      },
+      "tiers": {
+        "singles": 138905,
+        "elimination": 24290,
+        "guess": 33466
+      },
+      "averageFixed": 2.6789,
+      "averageMarkers": 0.5073,
+      "calibration": {
+        "minima": [
+          0,
+          5,
+          21,
+          64,
+          182
+        ],
+        "hardBalancedError": 0.071,
+        "veryHardBalancedError": 0.0195
+      },
+      "bands": [
+        {
+          "id": "very-easy",
+          "minimum": 0,
+          "maximum": 5,
+          "share": 0.3753,
+          "puzzles": 73802,
+          "scoreQuantiles": {
+            "0": 0,
+            "1": 5,
+            "0.1": 0,
+            "0.25": 0,
+            "0.5": 0,
+            "0.75": 2,
+            "0.9": 4,
+            "0.95": 5,
+            "0.99": 5
+          },
+          "tiers": {
+            "singles": 73802,
+            "elimination": 0,
+            "guess": 0
+          },
+          "averageFixed": 4.8623,
+          "averageMarkers": 0.6578
+        },
+        {
+          "id": "easy",
+          "minimum": 6,
+          "maximum": 22,
+          "share": 0.1621,
+          "puzzles": 31882,
+          "scoreQuantiles": {
+            "0": 6,
+            "1": 22,
+            "0.1": 6,
+            "0.25": 8,
+            "0.5": 12,
+            "0.75": 16,
+            "0.9": 20,
+            "0.95": 21,
+            "0.99": 22
+          },
+          "tiers": {
+            "singles": 30498,
+            "elimination": 1380,
+            "guess": 4
+          },
+          "averageFixed": 2.9755,
+          "averageMarkers": 0.5827
+        },
+        {
+          "id": "medium",
+          "minimum": 23,
+          "maximum": 66,
+          "share": 0.178,
+          "puzzles": 35003,
+          "scoreQuantiles": {
+            "0": 23,
+            "1": 66,
+            "0.1": 26,
+            "0.25": 31,
+            "0.5": 41,
+            "0.75": 52,
+            "0.9": 60,
+            "0.95": 63,
+            "0.99": 66
+          },
+          "tiers": {
+            "singles": 30034,
+            "elimination": 4768,
+            "guess": 201
+          },
+          "averageFixed": 1.3983,
+          "averageMarkers": 0.8366
+        },
+        {
+          "id": "hard",
+          "minimum": 67,
+          "maximum": 196,
+          "share": 0.1145,
+          "puzzles": 22508,
+          "scoreQuantiles": {
+            "0": 67,
+            "1": 196,
+            "0.1": 73,
+            "0.25": 85,
+            "0.5": 105,
+            "0.75": 131,
+            "0.9": 165,
+            "0.95": 179,
+            "0.99": 193
+          },
+          "tiers": {
+            "singles": 4571,
+            "elimination": 17018,
+            "guess": 919
+          },
+          "averageFixed": 0.9685,
+          "averageMarkers": 0.1435
+        },
+        {
+          "id": "very-hard",
+          "minimum": 197,
+          "maximum": null,
+          "share": 0.1702,
+          "puzzles": 33466,
+          "scoreQuantiles": {
+            "0": 197,
+            "1": 899,
+            "0.1": 297,
+            "0.25": 361,
+            "0.5": 419,
+            "0.75": 472,
+            "0.9": 535,
+            "0.95": 588,
+            "0.99": 694
+          },
+          "tiers": {
+            "singles": 0,
+            "elimination": 1124,
+            "guess": 32342
+          },
+          "averageFixed": 0.0709,
+          "averageMarkers": 0.0038
+        }
+      ]
+    },
+    {
+      "id": "1-9",
+      "minimum": 1,
+      "maximum": 9,
+      "boards": 50000,
+      "puzzles": 197956,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 865,
+        "0.1": 0,
+        "0.25": 1,
+        "0.5": 16,
+        "0.75": 84,
+        "0.9": 381,
+        "0.95": 439,
+        "0.99": 526
+      },
+      "tiers": {
+        "singles": 140062,
+        "elimination": 25282,
+        "guess": 32612
+      },
+      "averageFixed": 2.6728,
+      "averageMarkers": 0.5088,
+      "calibration": {
+        "minima": [
+          0,
+          5,
+          22,
+          66,
+          182
+        ],
+        "hardBalancedError": 0.0866,
+        "veryHardBalancedError": 0.0141
+      },
+      "bands": [
+        {
+          "id": "very-easy",
+          "minimum": 0,
+          "maximum": 5,
+          "share": 0.3753,
+          "puzzles": 74302,
+          "scoreQuantiles": {
+            "0": 0,
+            "1": 5,
+            "0.1": 0,
+            "0.25": 0,
+            "0.5": 0,
+            "0.75": 2,
+            "0.9": 4,
+            "0.95": 4,
+            "0.99": 5
+          },
+          "tiers": {
+            "singles": 74302,
+            "elimination": 0,
+            "guess": 0
+          },
+          "averageFixed": 4.8629,
+          "averageMarkers": 0.6555
+        },
+        {
+          "id": "easy",
+          "minimum": 6,
+          "maximum": 22,
+          "share": 0.1646,
+          "puzzles": 32588,
+          "scoreQuantiles": {
+            "0": 6,
+            "1": 22,
+            "0.1": 6,
+            "0.25": 8,
+            "0.5": 12,
+            "0.75": 16,
+            "0.9": 20,
+            "0.95": 21,
+            "0.99": 22
+          },
+          "tiers": {
+            "singles": 30119,
+            "elimination": 2457,
+            "guess": 12
+          },
+          "averageFixed": 2.9794,
+          "averageMarkers": 0.572
+        },
+        {
+          "id": "medium",
+          "minimum": 23,
+          "maximum": 66,
+          "share": 0.1817,
+          "puzzles": 35978,
+          "scoreQuantiles": {
+            "0": 23,
+            "1": 66,
+            "0.1": 26,
+            "0.25": 30,
+            "0.5": 41,
+            "0.75": 52,
+            "0.9": 60,
+            "0.95": 63,
+            "0.99": 66
+          },
+          "tiers": {
+            "singles": 30532,
+            "elimination": 5332,
+            "guess": 114
+          },
+          "averageFixed": 1.3585,
+          "averageMarkers": 0.8434
+        },
+        {
+          "id": "hard",
+          "minimum": 67,
+          "maximum": 196,
+          "share": 0.1105,
+          "puzzles": 21878,
+          "scoreQuantiles": {
+            "0": 67,
+            "1": 196,
+            "0.1": 73,
+            "0.25": 83,
+            "0.5": 101,
+            "0.75": 127,
+            "0.9": 164,
+            "0.95": 179,
+            "0.99": 193
+          },
+          "tiers": {
+            "singles": 5109,
+            "elimination": 16195,
+            "guess": 574
+          },
+          "averageFixed": 0.9281,
+          "averageMarkers": 0.1342
+        },
+        {
+          "id": "very-hard",
+          "minimum": 197,
+          "maximum": null,
+          "share": 0.1678,
+          "puzzles": 33210,
+          "scoreQuantiles": {
+            "0": 197,
+            "1": 865,
+            "0.1": 305,
+            "0.25": 349,
+            "0.5": 400,
+            "0.75": 449,
+            "0.9": 498,
+            "0.95": 538,
+            "0.99": 653
+          },
+          "tiers": {
+            "singles": 0,
+            "elimination": 1298,
+            "guess": 31912
+          },
+          "averageFixed": 0.045,
+          "averageMarkers": 0.0028
+        }
+      ]
+    },
+    {
+      "id": "10-19",
+      "minimum": 10,
+      "maximum": 19,
+      "boards": 50000,
+      "puzzles": 197817,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 833,
+        "0.1": 0,
+        "0.25": 1,
+        "0.5": 14,
+        "0.75": 72,
+        "0.9": 329,
+        "0.95": 385,
+        "0.99": 466
+      },
+      "tiers": {
+        "singles": 146654,
+        "elimination": 22780,
+        "guess": 28383
+      },
+      "averageFixed": 2.6635,
+      "averageMarkers": 0.5087,
+      "calibration": {
+        "minima": [
+          0,
+          6,
+          23,
+          69,
+          206
+        ],
+        "hardBalancedError": 0.0699,
+        "veryHardBalancedError": 0.0147
+      },
+      "bands": [
+        {
+          "id": "very-easy",
+          "minimum": 0,
+          "maximum": 5,
+          "share": 0.3946,
+          "puzzles": 78056,
+          "scoreQuantiles": {
+            "0": 0,
+            "1": 5,
+            "0.1": 0,
+            "0.25": 0,
+            "0.5": 0,
+            "0.75": 2,
+            "0.9": 4,
+            "0.95": 4,
+            "0.99": 5
+          },
+          "tiers": {
+            "singles": 78056,
+            "elimination": 0,
+            "guess": 0
+          },
+          "averageFixed": 4.797,
+          "averageMarkers": 0.6474
+        },
+        {
+          "id": "easy",
+          "minimum": 6,
+          "maximum": 22,
+          "share": 0.1638,
+          "puzzles": 32404,
+          "scoreQuantiles": {
+            "0": 6,
+            "1": 22,
+            "0.1": 6,
+            "0.25": 8,
+            "0.5": 12,
+            "0.75": 16,
+            "0.9": 20,
+            "0.95": 21,
+            "0.99": 22
+          },
+          "tiers": {
+            "singles": 30769,
+            "elimination": 1612,
+            "guess": 23
+          },
+          "averageFixed": 2.8201,
+          "averageMarkers": 0.5651
+        },
+        {
+          "id": "medium",
+          "minimum": 23,
+          "maximum": 66,
+          "share": 0.1813,
+          "puzzles": 35863,
+          "scoreQuantiles": {
+            "0": 23,
+            "1": 66,
+            "0.1": 25,
+            "0.25": 30,
+            "0.5": 41,
+            "0.75": 51,
+            "0.9": 59,
+            "0.95": 63,
+            "0.99": 66
+          },
+          "tiers": {
+            "singles": 32259,
+            "elimination": 3483,
+            "guess": 121
+          },
+          "averageFixed": 1.2211,
+          "averageMarkers": 0.841
+        },
+        {
+          "id": "hard",
+          "minimum": 67,
+          "maximum": 196,
+          "share": 0.1109,
+          "puzzles": 21933,
+          "scoreQuantiles": {
+            "0": 67,
+            "1": 196,
+            "0.1": 73,
+            "0.25": 82,
+            "0.5": 103,
+            "0.75": 151,
+            "0.9": 178,
+            "0.95": 186,
+            "0.99": 194
+          },
+          "tiers": {
+            "singles": 5570,
+            "elimination": 15958,
+            "guess": 405
+          },
+          "averageFixed": 0.7593,
+          "averageMarkers": 0.0726
+        },
+        {
+          "id": "very-hard",
+          "minimum": 197,
+          "maximum": null,
+          "share": 0.1494,
+          "puzzles": 29561,
+          "scoreQuantiles": {
+            "0": 197,
+            "1": 833,
+            "0.1": 282,
+            "0.25": 316,
+            "0.5": 356,
+            "0.75": 404,
+            "0.9": 449,
+            "0.95": 478,
+            "0.99": 563
+          },
+          "tiers": {
+            "singles": 0,
+            "elimination": 1727,
+            "guess": 27834
+          },
+          "averageFixed": 0.0211,
+          "averageMarkers": 0.0014
+        }
+      ]
+    },
+    {
+      "id": "20-39",
+      "minimum": 20,
+      "maximum": 39,
+      "boards": 50000,
+      "puzzles": 199225,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 680,
+        "0.1": 0,
+        "0.25": 0,
+        "0.5": 12,
+        "0.75": 60,
+        "0.9": 190,
+        "0.95": 310,
+        "0.99": 391
+      },
+      "tiers": {
+        "singles": 153591,
+        "elimination": 28093,
+        "guess": 17541
+      },
+      "averageFixed": 2.6453,
+      "averageMarkers": 0.4902,
+      "calibration": {
+        "minima": [
+          0,
+          6,
+          24,
+          73,
+          217
+        ],
+        "hardBalancedError": 0.0439,
+        "veryHardBalancedError": 0.0205
+      },
+      "bands": [
+        {
+          "id": "very-easy",
+          "minimum": 0,
+          "maximum": 5,
+          "share": 0.419,
+          "puzzles": 83478,
+          "scoreQuantiles": {
+            "0": 0,
+            "1": 5,
+            "0.1": 0,
+            "0.25": 0,
+            "0.5": 0,
+            "0.75": 2,
+            "0.9": 4,
+            "0.95": 4,
+            "0.99": 5
+          },
+          "tiers": {
+            "singles": 83478,
+            "elimination": 0,
+            "guess": 0
+          },
+          "averageFixed": 4.7049,
+          "averageMarkers": 0.6077
+        },
+        {
+          "id": "easy",
+          "minimum": 6,
+          "maximum": 22,
+          "share": 0.1659,
+          "puzzles": 33061,
+          "scoreQuantiles": {
+            "0": 6,
+            "1": 22,
+            "0.1": 6,
+            "0.25": 8,
+            "0.5": 12,
+            "0.75": 17,
+            "0.9": 20,
+            "0.95": 21,
+            "0.99": 22
+          },
+          "tiers": {
+            "singles": 32340,
+            "elimination": 661,
+            "guess": 60
+          },
+          "averageFixed": 2.5844,
+          "averageMarkers": 0.5503
+        },
+        {
+          "id": "medium",
+          "minimum": 23,
+          "maximum": 66,
+          "share": 0.1785,
+          "puzzles": 35564,
+          "scoreQuantiles": {
+            "0": 23,
+            "1": 66,
+            "0.1": 25,
+            "0.25": 30,
+            "0.5": 39,
+            "0.75": 49,
+            "0.9": 58,
+            "0.95": 62,
+            "0.99": 66
+          },
+          "tiers": {
+            "singles": 33498,
+            "elimination": 1869,
+            "guess": 197
+          },
+          "averageFixed": 1.0646,
+          "averageMarkers": 0.7925
+        },
+        {
+          "id": "hard",
+          "minimum": 67,
+          "maximum": 196,
+          "share": 0.1408,
+          "puzzles": 28043,
+          "scoreQuantiles": {
+            "0": 67,
+            "1": 196,
+            "0.1": 75,
+            "0.25": 94,
+            "0.5": 146,
+            "0.75": 166,
+            "0.9": 180,
+            "0.95": 186,
+            "0.99": 194
+          },
+          "tiers": {
+            "singles": 4275,
+            "elimination": 23460,
+            "guess": 308
+          },
+          "averageFixed": 0.3866,
+          "averageMarkers": 0.0191
+        },
+        {
+          "id": "very-hard",
+          "minimum": 197,
+          "maximum": null,
+          "share": 0.0958,
+          "puzzles": 19079,
+          "scoreQuantiles": {
+            "0": 197,
+            "1": 680,
+            "0.1": 232,
+            "0.25": 283,
+            "0.5": 312,
+            "0.75": 350,
+            "0.9": 394,
+            "0.95": 424,
+            "0.99": 482
+          },
+          "tiers": {
+            "singles": 0,
+            "elimination": 2103,
+            "guess": 16976
+          },
+          "averageFixed": 0.0058,
+          "averageMarkers": 0.0005
+        }
+      ]
+    },
+    {
+      "id": "40+",
+      "minimum": 40,
+      "maximum": 144,
+      "boards": 50000,
+      "puzzles": 199773,
+      "scoreQuantiles": {
+        "0": 0,
+        "1": 677,
+        "0.1": 0,
+        "0.25": 0,
+        "0.5": 10,
+        "0.75": 53,
+        "0.9": 161,
+        "0.95": 205,
+        "0.99": 325
+      },
+      "tiers": {
+        "singles": 156613,
+        "elimination": 33967,
+        "guess": 9193
+      },
+      "averageFixed": 2.6353,
+      "averageMarkers": 0.5062,
+      "calibration": {
+        "minima": [
+          0,
+          6,
+          24,
+          71,
+          209
+        ],
+        "hardBalancedError": 0.034,
+        "veryHardBalancedError": 0.0395
+      },
+      "bands": [
+        {
+          "id": "very-easy",
+          "minimum": 0,
+          "maximum": 5,
+          "share": 0.436,
+          "puzzles": 87099,
+          "scoreQuantiles": {
+            "0": 0,
+            "1": 5,
+            "0.1": 0,
+            "0.25": 0,
+            "0.5": 0,
+            "0.75": 2,
+            "0.9": 4,
+            "0.95": 4,
+            "0.99": 5
+          },
+          "tiers": {
+            "singles": 87099,
+            "elimination": 0,
+            "guess": 0
+          },
+          "averageFixed": 4.6416,
+          "averageMarkers": 0.6194
+        },
+        {
+          "id": "easy",
+          "minimum": 6,
+          "maximum": 22,
+          "share": 0.1655,
+          "puzzles": 33058,
+          "scoreQuantiles": {
+            "0": 6,
+            "1": 22,
+            "0.1": 6,
+            "0.25": 8,
+            "0.5": 12,
+            "0.75": 17,
+            "0.9": 20,
+            "0.95": 21,
+            "0.99": 22
+          },
+          "tiers": {
+            "singles": 32593,
+            "elimination": 393,
+            "guess": 72
+          },
+          "averageFixed": 2.4417,
+          "averageMarkers": 0.5597
+        },
+        {
+          "id": "medium",
+          "minimum": 23,
+          "maximum": 66,
+          "share": 0.1788,
+          "puzzles": 35728,
+          "scoreQuantiles": {
+            "0": 23,
+            "1": 66,
+            "0.1": 25,
+            "0.25": 31,
+            "0.5": 38,
+            "0.75": 48,
+            "0.9": 57,
+            "0.95": 62,
+            "0.99": 66
+          },
+          "tiers": {
+            "singles": 34023,
+            "elimination": 1447,
+            "guess": 258
+          },
+          "averageFixed": 0.9535,
+          "averageMarkers": 0.7963
+        },
+        {
+          "id": "hard",
+          "minimum": 67,
+          "maximum": 196,
+          "share": 0.166,
+          "puzzles": 33171,
+          "scoreQuantiles": {
+            "0": 67,
+            "1": 196,
+            "0.1": 79,
+            "0.25": 122,
+            "0.5": 146,
+            "0.75": 163,
+            "0.9": 177,
+            "0.95": 184,
+            "0.99": 193
+          },
+          "tiers": {
+            "singles": 2898,
+            "elimination": 29962,
+            "guess": 311
+          },
+          "averageFixed": 0.2228,
+          "averageMarkers": 0.0066
+        },
+        {
+          "id": "very-hard",
+          "minimum": 197,
+          "maximum": null,
+          "share": 0.0536,
+          "puzzles": 10717,
+          "scoreQuantiles": {
+            "0": 197,
+            "1": 677,
+            "0.1": 210,
+            "0.25": 248,
+            "0.5": 284,
+            "0.75": 313,
+            "0.9": 349,
+            "0.95": 375,
+            "0.99": 431
+          },
+          "tiers": {
+            "singles": 0,
+            "elimination": 2165,
+            "guess": 8552
+          },
+          "averageFixed": 0.0013,
+          "averageMarkers": 0.0001
+        }
+      ]
+    }
+  ],
+  "existingLevels": [
+    {
+      "level": 1,
+      "title": "Puzzle 1",
+      "normalDifficulty": "very-easy",
+      "normalScore": 0,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 0,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 2,
+      "title": "Puzzle 2",
+      "normalDifficulty": "very-easy",
+      "normalScore": 0,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 0,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 3,
+      "title": "Puzzle 3",
+      "normalDifficulty": "very-easy",
+      "normalScore": 1,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 1,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 4,
+      "title": "Puzzle 4",
+      "normalDifficulty": "very-easy",
+      "normalScore": 6,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 6,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 5,
+      "title": "Puzzle 5",
+      "normalDifficulty": "very-easy",
+      "normalScore": 8,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 8,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 6,
+      "title": "Puzzle 6",
+      "normalDifficulty": "very-easy",
+      "normalScore": 9,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 9,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 7,
+      "title": "Puzzle 1",
+      "normalDifficulty": "easy",
+      "normalScore": 13,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 13,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 8,
+      "title": "Puzzle 2",
+      "normalDifficulty": "easy",
+      "normalScore": 24,
+      "crowdedSolutionCountAtMostTwo": 2,
+      "crowdedUnique": false,
+      "crowdedScore": null,
+      "crowdedDifficulty": null,
+      "crowdedness": 0,
+      "nextMoveReplayChanged": null
+    },
+    {
+      "level": 9,
+      "title": "Puzzle 3",
+      "normalDifficulty": "easy",
+      "normalScore": 27,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 27,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 10,
+      "title": "Puzzle 4",
+      "normalDifficulty": "easy",
+      "normalScore": 33,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 72,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 11,
+      "title": "Puzzle 5",
+      "normalDifficulty": "easy",
+      "normalScore": 33,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 33,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 12,
+      "title": "Puzzle 6",
+      "normalDifficulty": "easy",
+      "normalScore": 37,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 42,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 13,
+      "title": "Puzzle 1",
+      "normalDifficulty": "medium",
+      "normalScore": 52,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 48,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 14,
+      "title": "Puzzle 2",
+      "normalDifficulty": "medium",
+      "normalScore": 64,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 64,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 15,
+      "title": "Puzzle 3",
+      "normalDifficulty": "medium",
+      "normalScore": 76,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 74,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 16,
+      "title": "Puzzle 4",
+      "normalDifficulty": "medium",
+      "normalScore": 87,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 87,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 17,
+      "title": "Puzzle 5",
+      "normalDifficulty": "medium",
+      "normalScore": 106,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 167,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 18,
+      "title": "Puzzle 6",
+      "normalDifficulty": "medium",
+      "normalScore": 114,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 160,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 19,
+      "title": "Puzzle 1",
+      "normalDifficulty": "hard",
+      "normalScore": 135,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 223,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 20,
+      "title": "Puzzle 2",
+      "normalDifficulty": "hard",
+      "normalScore": 151,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 151,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 21,
+      "title": "Puzzle 3",
+      "normalDifficulty": "hard",
+      "normalScore": 170,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 170,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 22,
+      "title": "Puzzle 4",
+      "normalDifficulty": "hard",
+      "normalScore": 189,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 155,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 23,
+      "title": "Puzzle 5",
+      "normalDifficulty": "hard",
+      "normalScore": 227,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 395,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 24,
+      "title": "Puzzle 6",
+      "normalDifficulty": "hard",
+      "normalScore": 263,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 314,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 25,
+      "title": "Puzzle 1",
+      "normalDifficulty": "very-hard",
+      "normalScore": 313,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 353,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 26,
+      "title": "Puzzle 2",
+      "normalDifficulty": "very-hard",
+      "normalScore": 363,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 441,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 27,
+      "title": "Puzzle 3",
+      "normalDifficulty": "very-hard",
+      "normalScore": 407,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 477,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 28,
+      "title": "Puzzle 4",
+      "normalDifficulty": "very-hard",
+      "normalScore": 445,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 446,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 29,
+      "title": "Puzzle 5",
+      "normalDifficulty": "very-hard",
+      "normalScore": 478,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 599,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 30,
+      "title": "Puzzle 6",
+      "normalDifficulty": "very-hard",
+      "normalScore": 573,
+      "crowdedSolutionCountAtMostTwo": 2,
+      "crowdedUnique": false,
+      "crowdedScore": null,
+      "crowdedDifficulty": null,
+      "crowdedness": 0,
+      "nextMoveReplayChanged": null
+    },
+    {
+      "level": 31,
+      "title": "Puzzle 7",
+      "normalDifficulty": "very-easy",
+      "normalScore": 0,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 1,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 32,
+      "title": "Puzzle 8",
+      "normalDifficulty": "very-easy",
+      "normalScore": 2,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 2,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 33,
+      "title": "Puzzle 9",
+      "normalDifficulty": "very-easy",
+      "normalScore": 3,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 3,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 34,
+      "title": "Puzzle 10",
+      "normalDifficulty": "very-easy",
+      "normalScore": 4,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 4,
+      "crowdedDifficulty": "very-easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 35,
+      "title": "Puzzle 11",
+      "normalDifficulty": "very-easy",
+      "normalScore": 5,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 6,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 36,
+      "title": "Puzzle 12",
+      "normalDifficulty": "very-easy",
+      "normalScore": 7,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 8,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 37,
+      "title": "Puzzle 7",
+      "normalDifficulty": "easy",
+      "normalScore": 12,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 16,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 38,
+      "title": "Puzzle 8",
+      "normalDifficulty": "easy",
+      "normalScore": 16,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 16,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 39,
+      "title": "Puzzle 9",
+      "normalDifficulty": "easy",
+      "normalScore": 19,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 19,
+      "crowdedDifficulty": "easy",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 40,
+      "title": "Puzzle 10",
+      "normalDifficulty": "easy",
+      "normalScore": 21,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 32,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 41,
+      "title": "Puzzle 11",
+      "normalDifficulty": "easy",
+      "normalScore": 30,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 31,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 42,
+      "title": "Puzzle 12",
+      "normalDifficulty": "easy",
+      "normalScore": 35,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 36,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 43,
+      "title": "Puzzle 7",
+      "normalDifficulty": "medium",
+      "normalScore": 47,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 51,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 44,
+      "title": "Puzzle 8",
+      "normalDifficulty": "medium",
+      "normalScore": 58,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 58,
+      "crowdedDifficulty": "medium",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 45,
+      "title": "Puzzle 9",
+      "normalDifficulty": "medium",
+      "normalScore": 70,
+      "crowdedSolutionCountAtMostTwo": 2,
+      "crowdedUnique": false,
+      "crowdedScore": null,
+      "crowdedDifficulty": null,
+      "crowdedness": 0,
+      "nextMoveReplayChanged": null
+    },
+    {
+      "level": 46,
+      "title": "Puzzle 10",
+      "normalDifficulty": "medium",
+      "normalScore": 81,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 81,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 47,
+      "title": "Puzzle 11",
+      "normalDifficulty": "medium",
+      "normalScore": 96,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 99,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 48,
+      "title": "Puzzle 12",
+      "normalDifficulty": "medium",
+      "normalScore": 100,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 104,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 49,
+      "title": "Puzzle 7",
+      "normalDifficulty": "hard",
+      "normalScore": 161,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 161,
+      "crowdedDifficulty": "hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 50,
+      "title": "Puzzle 8",
+      "normalDifficulty": "hard",
+      "normalScore": 208,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 406,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 51,
+      "title": "Puzzle 9",
+      "normalDifficulty": "hard",
+      "normalScore": 233,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 376,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 52,
+      "title": "Puzzle 10",
+      "normalDifficulty": "hard",
+      "normalScore": 247,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 252,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 53,
+      "title": "Puzzle 11",
+      "normalDifficulty": "hard",
+      "normalScore": 275,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 277,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 54,
+      "title": "Puzzle 12",
+      "normalDifficulty": "hard",
+      "normalScore": 289,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 289,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": false
+    },
+    {
+      "level": 55,
+      "title": "Puzzle 7",
+      "normalDifficulty": "very-hard",
+      "normalScore": 339,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 443,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 56,
+      "title": "Puzzle 8",
+      "normalDifficulty": "very-hard",
+      "normalScore": 386,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 354,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 57,
+      "title": "Puzzle 9",
+      "normalDifficulty": "very-hard",
+      "normalScore": 497,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 500,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 58,
+      "title": "Puzzle 10",
+      "normalDifficulty": "very-hard",
+      "normalScore": 522,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 602,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 59,
+      "title": "Puzzle 11",
+      "normalDifficulty": "very-hard",
+      "normalScore": 531,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 536,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    },
+    {
+      "level": 60,
+      "title": "Puzzle 12",
+      "normalDifficulty": "very-hard",
+      "normalScore": 532,
+      "crowdedSolutionCountAtMostTwo": 1,
+      "crowdedUnique": true,
+      "crowdedScore": 526,
+      "crowdedDifficulty": "very-hard",
+      "crowdedness": 0,
+      "nextMoveReplayChanged": true
+    }
+  ]
+}

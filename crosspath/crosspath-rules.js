@@ -328,10 +328,11 @@
   /**
    * @param {Array<number|null>} board - Row-major cell masks.
    * @param {Object[]} [markers=[]] - Required boundary ends.
+   * @param {Object} [options={}] - Crowded mode permits disconnected touching paths.
    * @returns {Object} Solved/completeness flags, trace, connection diagnostics,
-   * unvisited units and issue codes, without changing the board.
+   * crowdedness, unvisited units and issue codes, without changing the board.
    */
-  function analyseBoard(board, markers = []) {
+  function analyseBoard(board, markers = [], { crowded = false } = {}) {
     const complete = board.every((mask) => mask !== null);
     const exits = findExits(board);
     const markerKeys = markers.map(formatMarker);
@@ -358,7 +359,7 @@
     if (missingMarkers.length) issues.push("missing-marked-end");
     if (extraExits.length) issues.push("unmarked-end");
     if (mismatches.length) issues.push("broken-connection");
-    if (touching.length) issues.push("touching-paths");
+    if (touching.length && !crowded) issues.push("touching-paths");
     if (!trace || trace.end.type !== "exit") issues.push("path-not-complete");
     if (unvisited.length) issues.push("unvisited-elements");
     return {
@@ -369,11 +370,20 @@
       extraExits,
       mismatches,
       touching,
+      crowdedness: touching.length,
       trace,
       unvisited,
       unitCount: units.length,
       issues
     };
+  }
+
+  /**
+   * @param {Array<number|null>} board - Row-major cell masks.
+   * @returns {number} Disconnected occupied-cell pairs sharing an edge, counted once.
+   */
+  function crowdedness(board) {
+    return connectionProblems(board).touching.length;
   }
 
   window.CrosspathRules = {
@@ -392,6 +402,7 @@
     analyseBoard,
     boundaryKey,
     composeBoard,
+    crowdedness,
     findExits,
     formatCode,
     formatMarker,

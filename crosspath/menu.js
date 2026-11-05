@@ -1,13 +1,14 @@
 // Copyright (C) 2026 Pelagic Games
 
 /**
- * Fills the solved tally on Crosspath's index.html after level data and progress
- * helpers load. Reads completion state without changing storage, and adds the
- * "Not saved" notice when browser storage is unavailable.
+ * Fills the solved tally on Crosspath's index.html, counting normal and crowded
+ * puzzles, after both catalogues and the progress helpers load. Reads completion
+ * state without changing storage, and adds the "Not saved" notice when browser
+ * storage is unavailable.
  */
 
 (() => {
-  const levels = window.CrosspathLevels;
+  const levels = [...window.CrosspathLevels, ...window.CrosspathCrowdedLevels];
   const solved = window.CrosspathProgress.completedCount(levels);
   const tally = document.querySelector("#solved-tally");
   tally.textContent = `${solved} of ${levels.length} solved`;

@@ -2,13 +2,15 @@
 
 /**
  * Fills puzzles.html with difficulty sections, puzzle links and completion marks.
- * Load after puzzle-levels.js and puzzle-progress.js. Reads completion storage
- * through CrosspathProgress; does not change saved progress. Adds the "Not saved"
- * notice to the tally when browser storage is unavailable.
+ * The mode=crowded query lists the crowded catalogue instead of the normal one.
+ * Load after puzzle-levels.js, crowded-levels.js and puzzle-progress.js. Reads
+ * completion storage through CrosspathProgress; does not change saved progress.
+ * Adds the "Not saved" notice to the tally when browser storage is unavailable.
  */
 
 (() => {
-  const levels = window.CrosspathLevels;
+  const crowded = new URLSearchParams(window.location.search).get("mode") === "crowded";
+  const levels = crowded ? window.CrosspathCrowdedLevels : window.CrosspathLevels;
   const { difficulties, isCompleted, completedCount, createStorageNotice } = window.CrosspathProgress;
   const list = document.querySelector("#difficulty-list");
   const descriptions = {
@@ -18,6 +20,12 @@
     hard: "Little help; many tempting placements.",
     "very-hard": "No clues beyond the pieces themselves."
   };
+
+  if (crowded) {
+    document.title = "Crowded Mode | Crosspath";
+    document.querySelector("#catalogue-kicker").textContent = "Crowded Mode";
+    document.querySelector("#catalogue-standfirst").textContent = "Path squares may touch without joining. Within each difficulty, puzzles run from least to most crowded. Solved puzzles are ticked.";
+  }
 
   const tally = document.querySelector("#solved-tally");
   tally.textContent = `${completedCount(levels)} of ${levels.length} solved`;
@@ -46,8 +54,8 @@
       const link = document.createElement("a");
       link.className = "puzzle-selector";
       link.classList.toggle("is-completed", completed);
-      link.href = `./puzzle.html?level=${index + 1}`;
-      link.setAttribute("aria-label", `${label} puzzle ${bandIndex + 1}, ${completed ? "solved" : "not solved"}`);
+      link.href = `./puzzle.html?level=${index + 1}${crowded ? "&mode=crowded" : ""}`;
+      link.setAttribute("aria-label", `${crowded ? "Crowded " : ""}${crowded ? label.toLowerCase() : label} puzzle ${bandIndex + 1}, ${completed ? "solved" : "not solved"}`);
       const number = document.createElement("span");
       number.textContent = String(bandIndex + 1);
       const tick = document.createElement("span");

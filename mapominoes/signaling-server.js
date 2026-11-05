@@ -261,9 +261,8 @@ function serveStatic(response, url) {
   const requestedPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
   const segments = requestedPath.split("/").filter(Boolean);
   const fileName = segments[segments.length - 1] || "";
-  if (segments.some((segment) => segment.startsWith("."))
+  if (segments.some((segment) => segment.startsWith(".") || segment === "out")
     || fileName === "signaling-server.js"
-    || fileName.includes(".local.")
     || fileName.startsWith("generate-")) {
     response.writeHead(403);
     response.end("Forbidden");
