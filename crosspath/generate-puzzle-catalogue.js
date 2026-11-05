@@ -16,7 +16,7 @@ const path = require("path");
 const vm = require("vm");
 
 global.window = global.window || {};
-["crosspath-rules.js", "solver.js", "puzzle-levels.js", "puzzle-canonical.js"].forEach((file) => {
+["crosspath-rules.js", "solver.js", "puzzle-levels.js", "crowded-levels.js", "puzzle-canonical.js"].forEach((file) => {
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, file), "utf8"), { filename: file });
 });
 
@@ -24,27 +24,31 @@ const rules = window.CrosspathRules;
 const canonical = window.CrosspathCanonical;
 // Optional complexity survey summary included alongside per-level analysis.
 const surveyPath = path.join(__dirname, "out", "complexity-survey.json");
-const puzzles = window.CrosspathLevels.map(({ title, difficulty, code }, index) => {
-  const analysis = window.CrosspathSolver.analyseCode(code);
-  const parsed = rules.parseCode(code);
-  return {
-    level: index + 1,
-    title,
-    difficulty,
-    code,
-    valid: analysis.valid,
-    fixedTiles: parsed.fixed.length,
-    markedEnds: parsed.markers.length,
-    solution: analysis.solutionText,
-    solutionGrid: analysis.solution
-      ? [0, 1, 2].map((row) => analysis.solution.slice(row * 3, row * 3 + 3).map((tile) => tile + 1).join(" "))
-      : null,
-    complexity: analysis.complexity,
-    computedDifficultyMatches: analysis.complexity ? analysis.complexity.difficulty === difficulty : false,
-    searchNodes: analysis.searchNodes,
-    diagnostics: analysis.diagnostics
-  };
-});
+function analyseLevels(levels, options = {}) {
+  return levels.map(({ title, difficulty, code }, index) => {
+    const analysis = window.CrosspathSolver.analyseCode(code, options);
+    const parsed = rules.parseCode(code);
+    return {
+      level: index + 1,
+      title,
+      difficulty,
+      code,
+      valid: analysis.valid,
+      fixedTiles: parsed.fixed.length,
+      markedEnds: parsed.markers.length,
+      solution: analysis.solutionText,
+      solutionGrid: analysis.solution
+        ? [0, 1, 2].map((row) => analysis.solution.slice(row * 3, row * 3 + 3).map((tile) => tile + 1).join(" "))
+        : null,
+      complexity: analysis.complexity,
+      computedDifficultyMatches: analysis.complexity ? analysis.complexity.difficulty === difficulty : false,
+      searchNodes: analysis.searchNodes,
+      diagnostics: analysis.diagnostics
+    };
+  });
+}
+const puzzles = analyseLevels(window.CrosspathLevels);
+const crowdedPuzzles = analyseLevels(window.CrosspathCrowdedLevels, { crowded: true });
 
 // Nearest other level by canonical distance; levels closer than the distinct distance are flagged.
 const forms = puzzles.map(({ valid, code }) => (valid ? canonical.canonicalForm(canonical.solvedBoard(code)) : null));
@@ -74,15 +78,21 @@ const report = {
   _copyright: "Copyright (C) 2026 Pelagic Games",
   generatedAt: new Date().toISOString(),
   bands: window.CrosspathSolver.COMPLEXITY_BANDS,
+  crowdedBands: window.CrosspathSolver.CROWDED_COMPLEXITY_BANDS,
+  scoreModel: "forced-progress-v2",
+  legacyScoreModel: "legacy-distractors",
+  refinedScoreModel: "forced-progress-v2",
+  normalCatalogueStatus: "Historical labels retained; computed difficulty uses shared v2 boundaries.",
   distinctDistance: canonical.DISTINCT_DISTANCE,
-  calibration: fs.existsSync(surveyPath) ? JSON.parse(fs.readFileSync(surveyPath, "utf8")) : null,
-  puzzles
+  legacyCalibration: fs.existsSync(surveyPath) ? JSON.parse(fs.readFileSync(surveyPath, "utf8")) : null,
+  puzzles,
+  crowdedPuzzles
 };
 const outputPath = path.join(__dirname, "out", "puzzle-catalogue.json");
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
-const invalid = puzzles.filter(({ valid }) => !valid);
-console.log(`Wrote catalogue for ${puzzles.length} puzzles to ${outputPath}`);
+const invalid = [...puzzles, ...crowdedPuzzles].filter(({ valid }) => !valid);
+console.log(`Wrote catalogue for ${puzzles.length} normal and ${crowdedPuzzles.length} crowded puzzles to ${outputPath}`);
 if (invalid.length) {
   console.log(`Invalid puzzles: ${invalid.map(({ level }) => level).join(", ")}`);
   process.exitCode = 1;

@@ -125,4 +125,50 @@ assert.strictEqual(quota.markCompleted(second.code), false);
 assert.deepStrictEqual([...quota.completedCodes()], [first.code, second.code]);
 assert.strictEqual(quotaValues.get(quota.storageKey), JSON.stringify([first.code]));
 
+function renderCatalogue(crowded) {
+  const storage = new Map();
+  const createElement = () => ({
+    children: [],
+    attributes: {},
+    classList: { toggle() {} },
+    append(...children) { this.children.push(...children); },
+    setAttribute(name, value) { this.attributes[name] = value; }
+  });
+  const nodes = Object.fromEntries(
+    ["#difficulty-list", "#solved-tally", "#catalogue-kicker", "#catalogue-standfirst"]
+      .map((selector) => [selector, createElement()])
+  );
+  const context = vm.createContext({
+    URLSearchParams,
+    window: {
+      location: { search: crowded ? "?mode=crowded" : "" },
+      localStorage: {
+        getItem: (key) => storage.has(key) ? storage.get(key) : null,
+        setItem: (key, value) => storage.set(key, value),
+        removeItem: (key) => storage.delete(key)
+      }
+    },
+    document: { createElement, querySelector: (selector) => nodes[selector] }
+  });
+  ["puzzle-levels.js", "crowded-levels.js", "puzzle-progress.js", "puzzles.js"].forEach((file) => {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, file), "utf8"), context, { filename: file });
+  });
+  return nodes["#difficulty-list"].children;
+}
+
+const normalSections = renderCatalogue(false);
+const crowdedSections = renderCatalogue(true);
+assert.strictEqual(normalSections.length, 5);
+assert.strictEqual(crowdedSections.length, 5);
+normalSections.forEach((section) => assert.strictEqual(section.children[2].children.length, 12));
+crowdedSections.forEach((section) => assert.strictEqual(section.children[2].children.length, 6));
+normalSections.forEach((section, index) => {
+  assert.strictEqual(section.children[1].textContent, crowdedSections[index].children[1].textContent,
+    "difficulty descriptions are shared across modes");
+});
+assert.strictEqual(crowdedSections[4].children[1].textContent,
+  "The most demanding puzzles, with substantial ambiguity.");
+assert.strictEqual(crowdedSections[0].children[2].children[0].href, "./puzzle.html?level=1&mode=crowded");
+assert.strictEqual(crowdedSections[4].children[2].children[5].href, "./puzzle.html?level=30&mode=crowded");
+
 console.log("Crosspath progress tests passed.");

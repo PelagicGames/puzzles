@@ -55,14 +55,14 @@
     {
       title: "Puzzle 3",
       difficulty: "easy",
-      crowdedness: 14,
-      code: "T: 005003aac 005ac3a90 500500500 569f90500 00006a03c 06caff695 5055033aa 500fac3a9 500500506 F: 5@2 6@3 X: N1 E2"
+      crowdedness: 10,
+      code: "T: 0000006ac 000c00900 690500500 ac0afa050 6ac905069 006003000 50596903a 5003aaaaa 03a000000 F: - X: E4 W8"
     },
     {
       title: "Puzzle 4",
       difficulty: "easy",
-      crowdedness: 26,
-      code: "T: 56c553550 50056c955 53f5053a9 556555555 055af9c50 90506f053 550f90900 6c0f90506 a906aa3aa F: 2@3 3@7 X: -"
+      crowdedness: 20,
+      code: "T: c00fc053a af903c005 3966a9506 0060696fa 005005aa9 ac0afc055 56f53f3a9 aaf005aa9 a9606fa95 F: 5@9 X: -"
     },
     {
       title: "Puzzle 5",
@@ -73,62 +73,62 @@
     {
       title: "Puzzle 6",
       difficulty: "easy",
-      crowdedness: 40,
-      code: "T: 00000006a 056693506 c56ff9956 96c695969 6ac3c5af9 6fc539900 03c6c5539 505569396 6f953c903 F: 5@2 6@9 X: N8 S3"
+      crowdedness: 42,
+      code: "T: 000006003 6c5ff993a a95c053a9 6c693faa9 5503fa03a c56939aac 3f96fc955 03a6aa56a aac6c5555 F: - X: N2 N5"
     },
     {
       title: "Puzzle 1",
       difficulty: "medium",
-      crowdedness: 4,
-      code: "T: 000c06505 050afa050 000000ac0 0006aa500 003000000 faf905aa9 3aa06a03a c003ac003 a90000000 F: - X: N3 E5"
+      crowdedness: 3,
+      code: "T: fc0390000 00000006a 03c005aa9 6aa500500 055af9050 c00500500 000000aaa 06c055055 5003aa000 F: 9@5 X: -"
     },
     {
       title: "Puzzle 2",
       difficulty: "medium",
-      crowdedness: 7,
-      code: "T: 6ac505fa9 000000aaa 900000000 0000006aa 53c905069 069a96aa9 00006a03a 000000006 500500fc0 F: - X: W4 S8"
+      crowdedness: 9,
+      code: "T: 06a050690 aaa000000 3ac005aa9 5005003aa 500500500 a900006aa 000000c00 aaa06a050 aacaa9000 F: 8@2 X: -"
     },
     {
       title: "Puzzle 3",
       difficulty: "medium",
-      crowdedness: 12,
-      code: "T: 53a900000 aac005c69 03c005003 5003aa000 000000aaa 93c005069 6903acaa9 00006a050 003aac6c3 F: 8@4 6@6 X: -"
+      crowdedness: 17,
+      code: "T: c69550550 000c003ac 00506903a 06c053afc 000000aaa 050a96005 03faa9000 00000006a 53a3acaa9 F: 6@4 X: -"
     },
     {
       title: "Puzzle 4",
       difficulty: "medium",
-      crowdedness: 21,
-      code: "T: 3af06903a 500900000 06ca93000 aac005003 00006a6fc 000ac0a90 93c6c393a 5553ff695 006c69550 F: - X: N7 E6"
+      crowdedness: 20,
+      code: "T: 039000000 6c5539900 0036c0556 c3c505905 000c06969 6af3c5055 c6c393006 539fc093a 000006003 F: - X: -"
     },
     {
       title: "Puzzle 5",
       difficulty: "medium",
-      crowdedness: 33,
-      code: "T: 3f96fa3fc 390ac6039 9006c093c 6aa3acc6f 5003c003c 69596f039 6a95063a9 6c59556f9 00006c693 F: - X: N7 E8"
+      crowdedness: 32,
+      code: "T: 3c06fc393 6c0556555 553556539 5003ac6a9 3a9c00500 55053a900 afaa906c0 fac56953c 000c003c0 F: - X: -"
     },
     {
       title: "Puzzle 6",
       difficulty: "medium",
-      crowdedness: 44,
-      code: "T: 955c53f90 695969c3c 3a9ac0690 3acac5039 56a53a3c6 06c6f953a 6c03fac56 3c06fa390 695569390 F: 6@1 3@6 X: -"
+      crowdedness: 40,
+      code: "T: 0006ac969 6c5955693 c56553956 56c395003 3f9050a90 6f955093a 00006c695 905ac5c55 3aa06c693 F: - X: -"
     },
     {
       title: "Puzzle 1",
       difficulty: "hard",
-      crowdedness: 4,
-      code: "T: 5053a9000 ac56f953c 050050050 050050a90 06a690500 005005003 000000aaa 00000006a 5005003ac F: 5@1 X: -"
+      crowdedness: 2,
+      code: "T: 005aaf005 ac0a90000 000000c00 06caf9050 06c03f005 aaf003000 6aa5003ac 5003aa000 03caa9000 F: - X: -"
     },
     {
       title: "Puzzle 2",
       difficulty: "hard",
-      crowdedness: 7,
-      code: "T: 039000000 050050afc 5005003c6 a95005aa9 aac003000 6aa3c0050 000000c00 00006c055 6ff395003 F: 4@9 X: -"
+      crowdedness: 9,
+      code: "T: 900000000 c69ffc395 000aaa000 0006aa500 006003000 6a93c0a90 ac06903aa 000000aaa 000aac005 F: - X: -"
     },
     {
       title: "Puzzle 3",
       difficulty: "hard",
-      crowdedness: 16,
-      code: "T: 900000000 af96fc939 500500500 05305003a 00500306c 000aacaaf 0056af503 000000aac 6a9fac3c5 F: 4@8 X: -"
+      crowdedness: 11,
+      code: "T: 5005003aa 06c053a90 56995003a 06c695503 500500500 005005003 050050a96 00006cc55 3f903cc05 F: - X: -"
     },
     {
       title: "Puzzle 4",
@@ -139,14 +139,14 @@
     {
       title: "Puzzle 5",
       difficulty: "hard",
-      crowdedness: 34,
-      code: "T: 03a6aafaa 3c56f953a 000ac0050 06c03f069 fac905aa9 55055053c c3cfc5955 6953c5039 3c605303a F: - X: -"
+      crowdedness: 36,
+      code: "T: 0006ac569 f963c5039 000000c00 6a93ac003 06a696569 aacac5055 3ac003000 53a56c395 a956c5539 F: - X: -"
     },
     {
       title: "Puzzle 6",
       difficulty: "hard",
-      crowdedness: 40,
-      code: "T: 539900ac0 6c53f96fc c6c555395 5553f9050 6c6939aac 06c6933aa 6aa50056c ac5055039 6ac5033aa F: 6@8 X: -"
+      crowdedness: 46,
+      code: "T: 3aa6aa3ac c6af96569 6c353a56c c53ffc393 55555353a c00500900 c0096c6f9 55093aac6 550950a90 F: - X: -"
     },
     {
       title: "Puzzle 1",
@@ -157,32 +157,32 @@
     {
       title: "Puzzle 2",
       difficulty: "very-hard",
-      crowdedness: 5,
-      code: "T: c00900aaa 000c00900 000000ac0 05503faaf 050050050 050050a90 6aa50696f 005003000 000c003aa F: - X: -"
+      crowdedness: 8,
+      code: "T: ac0a90000 000000006 000000c00 aac0056a9 6affaf3a9 006003000 5003aa000 faa900000 3c06fc939 F: - X: -"
     },
     {
       title: "Puzzle 3",
       difficulty: "very-hard",
-      crowdedness: 15,
-      code: "T: 3c5055039 06c695505 395c053a9 000ac0050 6fa55053c 905005005 6c03fa050 69056c555 003000000 F: - X: -"
+      crowdedness: 13,
+      code: "T: 6aa3aa000 00600306a c005003aa 000aac005 ac0c3a500 005005005 6a9500900 056055a95 900c00900 F: - X: -"
     },
     {
       title: "Puzzle 4",
       difficulty: "very-hard",
-      crowdedness: 27,
-      code: "T: 6aa96a056 6ff393aaa c0096ca95 50056c553 006003000 53c5053a9 c03900aac aa9ac0690 6ac503500 F: - X: -"
+      crowdedness: 26,
+      code: "T: 06a6fc539 a95005005 00000006c c6f5393c0 56a53c3c5 0556f9390 c6c3f903c 6fc555539 003000000 F: - X: -"
     },
     {
       title: "Puzzle 5",
       difficulty: "very-hard",
-      crowdedness: 31,
-      code: "T: 039000000 6c65533fa c3a96ca93 6aa96a03a 6963c5039 c00500900 ac6c39900 c005003c0 c005003c6 F: - X: -"
+      crowdedness: 32,
+      code: "T: 06aafc039 3c66f953c c6c393000 505969690 c003c0c3a 3c36fc393 0006c6539 c00506505 56c395aa9 F: - X: -"
     },
     {
       title: "Puzzle 6",
       difficulty: "very-hard",
-      crowdedness: 40,
-      code: "T: 6c33fca95 aacc053a9 aa906aa96 06caf9a90 5393ac003 6aa500500 3c669556f aac6a93aa c6a556395 F: - X: -"
+      crowdedness: 43,
+      code: "T: ac003a06c 6c55393ac 56f3936aa c6a55053c c3c5053a9 6aa3c003c c55f95969 56a53c3a9 6c5939000 F: - X: -"
     }
   ];
 })();

@@ -109,6 +109,10 @@ solver.CROWDED_COMPLEXITY_BANDS.forEach((band, index) => {
   if (index > 0) assert.strictEqual(solver.bandFor(band.minimum - 1, crowded).id,
     solver.CROWDED_COMPLEXITY_BANDS[index - 1].id);
 });
-assert.strictEqual(solver.bandFor(197).id, "hard", "normal-mode thresholds stay unchanged");
-assert.strictEqual(solver.bandFor(197, crowded).id, "very-hard");
+assert.strictEqual(solver.CROWDED_COMPLEXITY_BANDS, solver.COMPLEXITY_BANDS, "modes share score boundaries");
+assert.deepStrictEqual(solver.COMPLEXITY_BANDS.map(({ minimum }) => minimum), [0, 8, 14, 66, 112]);
+solver.COMPLEXITY_BANDS.forEach(({ minimum }, index) => {
+  assert.strictEqual(solver.bandFor(minimum).id, solver.bandFor(minimum, crowded).id);
+  if (index) assert.strictEqual(solver.bandFor(minimum - 1).id, solver.bandFor(minimum - 1, crowded).id);
+});
 console.log("Crosspath crowded tests passed (metric, rules, symmetry, exhaustive solver parity, replay, band edges).");

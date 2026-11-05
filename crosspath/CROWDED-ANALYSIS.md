@@ -2,9 +2,11 @@
 
 # Crowded-mode calibration
 
+This document records the **historical legacy distractor-score calibration**. The primary solver score now uses forced-progress v2 and shared normal-derived boundaries; the thresholds and sample results below apply only to `complexity.legacy`. The crowded catalogue has been refreshed, while normal catalogue labels remain historical. See [README.md](./README.md#forced-progress-difficulty-analysis) for the current summary and boundaries.
+
 ## Result
 
-The crowded-mode difficulty boundaries implemented in [solver.js](./solver.js) are:
+The legacy crowded-mode difficulty boundaries retained for comparisons in [solver.js](./solver.js) are:
 
 | Band | Normal-mode score | Crowded-mode score | Sample puzzles | Sample share | Strongest reasoning |
 |------|-------------------|--------------------|----------------|--------------|---------------------|
@@ -14,7 +16,7 @@ The crowded-mode difficulty boundaries implemented in [solver.js](./solver.js) a
 | Hard | 120-299 | 67-196 | 127,533 | 12.86% | 80.44% elimination; 17.58% singles; 1.97% trial placements |
 | Very hard | 300+ | 197+ | 126,033 | 12.71% | 93.32% trial placements; 6.68% elimination |
 
-The sample, share and reasoning columns describe this crowded-mode sample only. Normal-mode boundaries are unchanged; they come from the earlier normal-mode calibration described in [README.md](./README.md), so the two score columns were set by different methods. Published levels and the playable UI are unchanged. Crowded mode must be requested explicitly in the analysis APIs.
+The sample, share and reasoning columns describe this historical crowded-mode sample only. The legacy normal boundaries came from the earlier normal-mode calibration described in [README.md](./README.md), so the two score columns were set by different methods. These are not the current primary-score boundaries. Crowded mode must still be requested explicitly in the analysis APIs.
 
 These are empirical difficulty estimates, not guarantees about which technique a person must use. In particular, "very hard" in this calibration is not synonymous with needing a trial placement.
 

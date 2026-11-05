@@ -45,27 +45,22 @@ T: <nine tiles> F: <tile@slot ...|-> X: <ends ...|->
 
 ## Solver and complexity
 
-`solver.js` (`window.CrosspathSolver`) backtracks over the slots. It uses precomputed edge compatibility between pieces and prunes on boundary exits. `analyseCode(code)` searches for up to two solutions, and the puzzle is valid only if exactly one is found.
+The solver checks that a puzzle has exactly one solution, then estimates difficulty by replaying forced placements, elimination, and trial placements.
 
-To measure complexity, the solver replays the unique solution the way a person would. At each step it uses the simplest technique that finds the next placement:
+### Forced-progress difficulty analysis
 
-1. **Single**: a slot that only one piece fits, or a piece that fits only one slot.
-2. **Elimination**: try each candidate placement and rule out any that leave a slot or piece with no options, then look for a single again.
-3. **Guess**: make the least ambiguous trial placement.
+The current score gives every move a small cost, limits distraction costs, rewards readily available forced moves, and weights ambiguous reasoning more heavily. Crowdedness is separate from difficulty.
 
-At each step it counts the *distractors*: placements that are valid locally but not part of the solution. Each step's distractors are weighted by the technique that step needed: ×1 for a single, ×2 for elimination, and ×(3 + log2 options) for a guess. The score is the rounded total.
+Rejected approaches:
 
-The bands are calibrated on about 200,000 unique puzzles from 50,000 boards:
+- **Linear distractor totals** overstated difficulty even when each move was obvious.
+- **Zero-cost forced moves** erased distinctions among most easier puzzles.
+- **Technique-led band fitting** left Very hard oversized; percentile anchoring provides the chosen progression.
+- **Separate mode thresholds and label-preserving tweaks** were dropped in favour of one shared scale, without fitting existing labels.
 
-| Band | Score | Share of sampled puzzles | Typical reasoning |
-|------|-------|----------------------------|-------------------|
-| Very easy | 0–9 | 44% | Singles, almost no distractors |
-| Easy | 10–39 | 19% | Singles |
-| Medium | 40–119 | 17% | Singles with long scans, or light elimination |
-| Hard | 120–299 | 6% | Elimination (91%) |
-| Very hard | 300+ | 14% | At least one trial placement (99.6%) |
+Both modes use shared band minima **0, 8, 14, 66, 112** (Very easy through Very hard), fitted to normal-mode samples. Target shares are **45%, 25%, 15%, 10%, 5%**; equal scores stay together, so actual shares vary. These are empirical estimates, not guarantees about required techniques.
 
-Each band's share varies by less than ±0.5 percentage points between independent seed batches. Puzzles scored 300 or more effectively all need a guess, and there is a natural gap in the score distribution just below 300.
+The crowded catalogue matches the new evaluation; normal catalogue labels remain historical. Legacy comparisons remain available in the analysis.
 
 ### Crowded mode and crowdedness
 
@@ -75,7 +70,7 @@ Crowded mode disables only the prohibition on adjacent path squares that do not 
 
 Pass `{ crowded: true }` explicitly to `CrosspathSolver.analyseCode`, `solve`, `prepare`, `complexity`, `isSolution`, `edgeCompatible`, and `bandFor` when analysing crowded puzzles. The option is also accepted by `CrosspathCanonical.solvedBoard`, `distance`, and `isDistinct` for puzzle-code inputs. Mode is not encoded in puzzle codes: the same code can have different uniqueness and difficulty under the two rule sets. Existing callers default to normal mode.
 
-Crowded difficulty uses the same weighted replay score but recomputes all available moves and elimination trials with crowded compatibility. Unique crowded analyses include `complexity.crowdedness`. The separate `CROWDED_COMPLEXITY_BANDS` minima are **0, 6, 23, 67, 197**, calibrated on **250,000 distinct canonical boards (50,000 per crowdedness stratum) / 991,432 unique crowded puzzles**, with crowdedness from **0 to 59**. Normal-mode bands are unchanged.
+Crowded difficulty uses the same v2 replay score and shared boundaries but recomputes all available moves and elimination trials with crowded compatibility. Unique crowded analyses include `complexity.crowdedness`. The older crowded calibration on **250,000 distinct canonical boards / 991,432 unique puzzles** remains historical evidence for the legacy score, not the current boundaries.
 
 See [the crowded analysis report](./CROWDED-ANALYSIS.md) and [machine-readable results](./crowded-calibration.json) for sampling, held-out validation, reasoning composition, clue-policy sensitivity, and per-crowdedness results. Three existing levels (8, 30 and 45) cease to be unique under crowded rules; normal-mode uniqueness must not be reused.
 
@@ -111,11 +106,11 @@ The analysis script reads the committed levels and writes a gitignored catalogue
 node crosspath/generate-puzzle-catalogue.js
 ```
 
-The `crosspath/out/puzzle-catalogue.json` report records each level's code, solution, complexity details, canonical start and end, and nearest other level by canonical distance. If `crosspath/out/complexity-survey.json` is present, its summary is included in the catalogue.
+The `crosspath/out/puzzle-catalogue.json` report records each normal level's code, solution, primary v2 and legacy complexity details, canonical start and end, and nearest other level by canonical distance. It also includes the crowded levels' solutions and both complexity analyses in `crowdedPuzzles`. `computedDifficultyMatches` explicitly reports differences from the intentionally unchanged normal labels. If `crosspath/out/complexity-survey.json` is present, its historical summary is included as `legacyCalibration`.
 
 ## Crowded catalogue
 
-`crowded-levels.js` holds the Crowded Mode puzzles. Their scores sit away from the crowded band boundaries, and every solved board is at least `DISTINCT_DISTANCE` from the other crowded puzzles and from the normal catalogue.
+`crowded-levels.js` holds six Crowded Mode puzzles per shared difficulty band, with strictly increasing crowdedness within each band. The v2 refresh retained **11** matching puzzles at their original indices and replaced **19** mismatches in place; no old puzzle was moved into another band. Retained puzzles may lie on a boundary, while replacements prefer interior scores. Every solved board is at least `DISTINCT_DISTANCE` from the other crowded puzzles and from the normal catalogue.
 
 ## Tests
 

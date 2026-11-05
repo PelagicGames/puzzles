@@ -14,11 +14,11 @@
   const { difficulties, isCompleted, completedCount, createStorageNotice } = window.CrosspathProgress;
   const list = document.querySelector("#difficulty-list");
   const descriptions = {
-    "very-easy": "Most pieces are fixed in place.",
-    easy: "A few fixed pieces and marked ends.",
-    medium: "Fewer clues; some pieces fit in several places.",
-    hard: "Little help; many tempting placements.",
-    "very-hard": "No clues beyond the pieces themselves."
+    "very-easy": "Short solves with straightforward placements.",
+    easy: "Mostly forced moves, with a few distractions.",
+    medium: "More possibilities to compare as the path takes shape.",
+    hard: "Ambiguous placements need careful reasoning.",
+    "very-hard": "The most demanding puzzles, with substantial ambiguity."
   };
 
   if (crowded) {
